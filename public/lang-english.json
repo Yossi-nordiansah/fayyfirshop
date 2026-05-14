@@ -1,0 +1,23 @@
+{
+  "nav.home": "Home",
+  "nav.about": "About Us",
+  "nav.product": "Product",
+  "nav.perfume": "Perfume",
+  "nav.aromaticOil": "Aromatic Oil",
+  "nav.bakhoor": "Bakhoor and Oud",
+  "nav.nutrition": "Healthy and Nutrition",
+  "nav.all": "All",
+  "nav.searchPlaceholder": "Search products...",
+  "sub.mens": "Mens",
+  "sub.womens": "Womens",
+  "sub.unisex": "Unisex",
+  "sub.set": "Perfume Set",
+  "sub.oil": "Aromatic Oil",
+  "sub.dehn": "Dehn Oud",
+  "sub.oud": "Oud",
+  "sub.bakhoor": "Bakhoor",
+  "sub.mamoul": "Mamoul",
+  "sub.saffron": "Saffron",
+  "sub.honey": "Honey",
+  "cat.viewCollection": "View Collection"
+}

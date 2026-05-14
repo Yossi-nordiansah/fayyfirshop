@@ -47,14 +47,14 @@ const SlickSlider = ({children}) => {
                 settings: {
                     slidesToShow: 1,
                     centerMode: true,
-                    centerPadding: '20px',
+                    centerPadding: '7px',
                 }
             }
         ]
     };
 
     return (
-        <section className="bg-white pb-12 px-8 overflow-hidden bg-green-400">
+        <section className="bg-transparent pb-12 px-8 overflow-hidden">
                 {/* React Slick Slider */}
                 <div className="product-slider">
                     <Slider {...settings}>
@@ -68,24 +68,24 @@ const SlickSlider = ({children}) => {
                     bottom: -45px;
                 }
                 .product-slider .slick-dots li button:before {
-                    color: #b7b7b7ff;
+                    color: #949494ff;
                     font-size: 10px;
                     transition: all 0.3s ease;
                 }
                 .product-slider .slick-dots li.slick-active button:before {
-                    color: #f59e0b;
+                    color: #2a22fbff;
                     font-size: 12px;
                 }
                 .product-slider .slick-prev, .product-slider .slick-next {
                     z-index: 20;
-                    width: 40px;
-                    height: 40px;
+                    width: 30px;
+                    height: 30px;
                     background: transparent;
                     border-radius: 50%;
                     transition: all 0.3s ease;
                 }
                 .product-slider .slick-prev:hover, .product-slider .slick-next:hover {
-                    background: #f59e0b;
+                    background: #2a22fbff;
                 }
                 .product-slider .slick-prev:before, .product-slider .slick-next:before {
                     color: #18181b;
@@ -94,8 +94,8 @@ const SlickSlider = ({children}) => {
                 .product-slider .slick-prev:hover:before, .product-slider .slick-next:hover:before {
                     color: white;
                 }
-                .product-slider .slick-prev { left: -35px; }
-                .product-slider .slick-next { right: -35px; }
+                .product-slider .slick-prev { left: -30px; }
+                .product-slider .slick-next { right: -30px; }
                 
                 @media (max-width: 768px) {
                     .product-slider .slick-prev, .product-slider .slick-next {

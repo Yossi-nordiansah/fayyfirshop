@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
  */
 const HeroBackground = ({ image, theme, isActive, children, productImage, className = "" }) => {
     return (
-        <div className={`relative w-full h-full overflow-hidden bg-zinc-950 ${className}`}>
+        <div className={`relative w-full h-full overflow-hidden bg-blue-950 ${className}`}>
             {/* 1. Base Background Image with Zoom Animation */}
             <motion.div
                 initial={{ scale: 1 }}
@@ -23,7 +23,7 @@ const HeroBackground = ({ image, theme, isActive, children, productImage, classN
                 />
                 
                 {/* 2. Aesthetic Overlays */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${theme} via-zinc-950/60 to-zinc-950/20 transition-colors duration-1000`} />
+                <div className={`absolute inset-0 bg-gradient-to-r ${theme} from-blue-800/60 to-blue-400/20 transition-colors duration-1000`} />
                 <div className="absolute inset-0 bg-black/40 backdrop-brightness-75" />
             </motion.div>
 

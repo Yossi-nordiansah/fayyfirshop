@@ -1,0 +1,23 @@
+{
+  "nav.home": "Beranda",
+  "nav.about": "Tentang Kami",
+  "nav.product": "Produk",
+  "nav.perfume": "Parfum",
+  "nav.aromaticOil": "Minyak Aromatik",
+  "nav.bakhoor": "Bakhoor dan Oud",
+  "nav.nutrition": "Kesehatan dan Nutrisi",
+  "nav.all": "Semua",
+  "nav.searchPlaceholder": "Cari produk...",
+  "sub.mens": "Pria",
+  "sub.womens": "Wanita",
+  "sub.unisex": "Unisex",
+  "sub.set": "Set Parfum",
+  "sub.oil": "Minyak Aromatik",
+  "sub.dehn": "Dehn Oud",
+  "sub.oud": "Oud",
+  "sub.bakhoor": "Bakhoor",
+  "sub.mamoul": "Mamoul",
+  "sub.saffron": "Saffron",
+  "sub.honey": "Madu",
+  "cat.viewCollection": "Lihat Koleksi"
+}

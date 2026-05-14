@@ -1,0 +1,23 @@
+{
+  "nav.home": "الصفحة الرئيسية",
+  "nav.about": "معلومات عنا",
+  "nav.product": "المنتجات",
+  "nav.perfume": "عطور",
+  "nav.aromaticOil": "زيت عطري",
+  "nav.bakhoor": "بخور وعود",
+  "nav.nutrition": "الصحة والتغذية",
+  "nav.all": "الكل",
+  "nav.searchPlaceholder": "البحث عن المنتجات...",
+  "sub.mens": "رجالي",
+  "sub.womens": "نسائي",
+  "sub.unisex": "للجنسين",
+  "sub.set": "طقم عطور",
+  "sub.oil": "زيت عطري",
+  "sub.dehn": "دهن العود",
+  "sub.oud": "عود",
+  "sub.bakhoor": "بخور",
+  "sub.mamoul": "معمول",
+  "sub.saffron": "زعفران",
+  "sub.honey": "عسل",
+  "cat.viewCollection": "عرض المجموعة"
+}

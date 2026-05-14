@@ -18,7 +18,7 @@ const SLIDES = [
         image: "/images/hero/bg-perfume.jpg",
         productImage: "/images/hero/perfume.png",
         icon: <Sparkles size={24} />,
-        theme: "from-purple-900/60"
+        theme: "from-blue-900/60"
     },
     {
         id: 2,
@@ -29,7 +29,7 @@ const SLIDES = [
         productImage: "/images/hero/honey.png",
         image: "/images/hero/bg-honey.jpg",
         icon: <Leaf size={24} />,
-        theme: "from-amber-900/60"
+        theme: "from-blue-900/60"
     },
     {
         id: 3,
@@ -40,7 +40,7 @@ const SLIDES = [
         image: "/images/hero/dates.png",
         productImage: "/images/hero/food.png",
         icon: <Coffee size={24} />,
-        theme: "from-emerald-900/60"
+        theme: "from-blue-900/60"
     }
 ];
 
@@ -101,9 +101,9 @@ const HeroSlider = () => {
                             }`}>
                                 
                                 {/* Category Badge */}
-                                <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full w-fit backdrop-blur-md">
-                                    <span className="text-amber-500">{slide.icon}</span>
-                                    <span className="text-amber-400 text-xs font-bold tracking-[0.3em] uppercase font-['Cinzel']">
+                                <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full w-fit backdrop-blur-md">
+                                    <span className="text-white">{slide.icon}</span>
+                                    <span className="text-white text-xs font-bold tracking-[0.3em] uppercase font-['Cinzel']">
                                         {slide.category}
                                     </span>
                                 </div>
@@ -119,7 +119,7 @@ const HeroSlider = () => {
                                 {/* Main Heading */}
                                 <h1 className="text-2xl md:text-3xl lg:text-5xl font-['Amiri'] lg:text-left text-center font-bold leading-tight">
                                     {slide.title}
-                                    <span className="block text-2xl md:text-3xl lg:text-4xl text-amber-500 mt-4 font-normal italic opacity-90 font-serif">
+                                    <span className="block text-2xl md:text-3xl lg:text-4xl text-white mt-4 font-normal italic opacity-90 font-serif">
                                         {slide.subtitle}
                                     </span>
                                 </h1>
@@ -132,7 +132,7 @@ const HeroSlider = () => {
                                 {/* CTA Button */}
                                 <div className="pt-6 md:pt-10">
                                     <button
-                                        className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-amber-900/40 overflow-hidden"
+                                        className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden"
                                     >
                                         <span className="relative z-10 tracking-[0.2em] uppercase text-sm font-['Cinzel']">Explore Collection</span>
                                         <span className="relative z-10 transition-transform group-hover:translate-x-1">
@@ -152,13 +152,13 @@ const HeroSlider = () => {
             <div className="absolute hidden md:flex inset-x-0 md:inset-auto md:bottom-10 md:right-10 top-1/2 -translate-y-1/2 md:translate-y-0 z-50 justify-between md:justify-end px-0 md:gap-4 pointer-events-none">
                 <button 
                     onClick={prevSlide}
-                    className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-amber-600 md:border-white/10 hover:border-amber-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
+                    className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-blue-600 md:border-white/10 hover:border-blue-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
                 >
                     <ChevronLeft size={24} className="md:w-6 md:h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
                 <button 
                     onClick={nextSlide}
-                    className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-amber-600 md:border-white/10 hover:border-amber-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
+                    className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-blue-600 md:border-white/10 hover:border-blue-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
                 >
                     <ChevronRight size={24} className="md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -171,7 +171,7 @@ const HeroSlider = () => {
                         key={index}
                         onClick={() => setCurrentSlide(index)}
                         className={`h-1.5 transition-all duration-500 rounded-full ${
-                            index === currentSlide ? 'w-16 bg-amber-500' : 'w-4 bg-white/20 hover:bg-white/40'
+                            index === currentSlide ? 'w-16 bg-blue-500' : 'w-4 bg-white/20 hover:bg-white/40'
                         }`}
                     />
                 ))}

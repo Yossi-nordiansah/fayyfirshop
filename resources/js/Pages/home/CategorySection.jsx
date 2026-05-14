@@ -1,44 +1,39 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 /**
  * CategorySection Component
- * Featuring 3 main categories: Oud And Oil, Healthy And Nutrition, Food And Drink.
+ * Featuring 4 main categories: Perfume, Aromatic Oil, Bakhoor and Oud, Healthy and Nutrition.
  * Designed with a clean white background and premium image-based cards.
  */
 const CategorySection = () => {
+    const { t } = useLanguage();
+
     const categories = [
         {
-            title: "Oud And Oil",
-            image: "/images/category-background/oudoil.jpg", // Temporary image provided by user
+            title: t('nav.perfume'),
+            image: "/images/category-background/perfume.png",
         },
         {
-            title: "Healthy And Nutrition",
-            image: "/images/category-background/healty.jpg", // Temporary image provided by user
+            title: t('nav.aromaticOil'),
+            image: "/images/category-background/oudoil.jpg",
         },
         {
-            title: "Food And Drink",
-            image: "/images/category-background/kurma.jpg", // Temporary image provided by user
-        }
+            title: t('nav.bakhoor'),
+            image: "/images/category-background/oud.jpg",
+        },
+        {
+            title: t('nav.nutrition'),
+            image: "/images/category-background/healty.jpg",
+        },
     ];
 
     return (
-        <section className="bg-white py-10 px-6 relative overflow-hidden">
-
+        <section className="bg-transparent py-10 px-6 relative overflow-hidden">
             <div className="max-w-7xl mx-auto relative z-10">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <span className="text-amber-600 text-xs font-bold tracking-[0.4em] uppercase font-['Cinzel'] block mb-2">
-                        Collections
-                    </span>
-                    <h2 className="text-4xl md:text-5xl text-zinc-900 font-['Amiri'] font-bold">
-                        Browse by Category
-                    </h2>
-                    <div className="w-20 h-1 bg-amber-500 mx-auto mt-6 rounded-full" />
-                </div>
-
                 {/* Categories Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
                     {categories.map((cat, index) => (
                         <motion.div
                             key={index}
@@ -56,8 +51,11 @@ const CategorySection = () => {
                                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                             />
                             
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-75 transition-opacity duration-500" />
+                           {/* Dark Overlay / Mask */}
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-all duration-500" />
+
+                            {/* Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
                             
                             {/* Content */}
                             <div className="absolute inset-0 flex flex-col items-center justify-end p-10 text-center">
@@ -68,10 +66,10 @@ const CategorySection = () => {
                                         {cat.title}
                                     </h3>
                                     
-                                    <div className="h-[1px] w-12 bg-amber-500 mx-auto mb-6 transition-all duration-500 group-hover:w-24" />
+                                    <div className="h-[1px] w-12 bg-blue-500 mx-auto mb-6 transition-all duration-500 group-hover:w-24" />
                                     
-                                    <button className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-['Cinzel'] font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-zinc-900 transition-all duration-300 rounded-sm">
-                                        View Collection
+                                    <button className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-['Cinzel'] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm">
+                                        {t('cat.viewCollection')}
                                     </button>
                                 </motion.div>
                             </div>
