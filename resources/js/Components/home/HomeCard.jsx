@@ -72,7 +72,7 @@ const ProductCard = ({
             <div className="px-4 p-3 space-y-2">
 
                 {/* Title */}
-                <h3 className="text-base font-semibold text-white line-clamp-1 group-hover:text-amber-500 transition-colors duration-300 font-['Amiri'] tracking-wide">
+                <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-amber-500 transition-colors duration-300 font-['Amiri'] tracking-wide">
                     {title}
                 </h3>
 
@@ -102,17 +102,17 @@ const ProductCard = ({
                     <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
                         <ShoppingBag
                             size={14}
-                            className="text-white"
+                            className="text-zinc-900"
                         />
 
-                        <span className="font-medium">
+                        <span className="text-zinc-900 font-medium">
                             {sold} terjual
                         </span>
                     </div>
 
                     {/* Small Cart Icon */}
                     <button
-                        className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-zinc-300 hover:bg-amber-500 hover:text-black transition-all duration-300"
+                        className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-zinc-300 hover:bg-amber-500 hover:text-black transition-all duration-300 text-zinc-900"
                         aria-label="Add to cart"
                     >
                         <ShoppingCart size={15} />

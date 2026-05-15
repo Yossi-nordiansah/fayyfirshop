@@ -6,7 +6,7 @@
   "nav.aromaticOil": "Minyak Aromatik",
   "nav.bakhoor": "Bakhoor dan Oud",
   "nav.nutrition": "Kesehatan dan Nutrisi",
-  "nav.all": "Semua",
+  "nav.all": "Semua Produk",
   "nav.searchPlaceholder": "Cari produk...",
   "sub.mens": "Pria",
   "sub.womens": "Wanita",
@@ -19,5 +19,29 @@
   "sub.mamoul": "Mamoul",
   "sub.saffron": "Saffron",
   "sub.honey": "Madu",
-  "cat.viewCollection": "Lihat Koleksi"
+  "cat.viewCollection": "Lihat Koleksi",
+  
+"hero.perfume.category": "Parfum Mewah",
+  "hero.perfume.title": "Aroma Kemewahan",
+  "hero.perfume.subtitle": "Eau de Parfum & Fragrance Spray",
+  "hero.perfume.description": "Koleksi wewangian premium dengan konsentrasi tinggi yang memikat, dirancang untuk memancarkan pesona sepanjang hari.",
+  
+  "hero.oil.category": "Minyak Aromatik",
+  "hero.oil.title": "Kemurnian Alam",
+  "hero.oil.subtitle": "Dehn Oud & Campuran Minyak Pilihan",
+  "hero.oil.description": "Tetesan kemurnian dari alam, memberikan ketenangan dan kepercayaan diri dengan aroma yang mendalam.",
+  
+  "hero.bakhoor.category": "Bakhoor & Oud",
+  "hero.bakhoor.title": "Warisan Tradisi",
+  "hero.bakhoor.subtitle": "Dupa Arab Tradisional & Kayu Oud",
+  "hero.bakhoor.description": "Ciptakan suasana hangat dan spiritual di rumah Anda dengan asap wangi dari tradisi Timur Tengah yang kaya.",
+  
+  "hero.nutrition.category": "Kesehatan & Nutrisi",
+  "hero.nutrition.title": "Kebaikan Alami",
+  "hero.nutrition.subtitle": "Madu Sidr & Saffron Premium",
+  "hero.nutrition.description": "Nutrisi alami berkualitas tinggi untuk gaya hidup sehat Anda, langsung dari sumber terbaik di tanah Arab.",
+  "hero.explore": "Jelajahi Koleksi",
+
+  "nav.latest_collection": "Koleksi Terkini",
+"nav.new_arrivals": "Produk Terbaru"
 }

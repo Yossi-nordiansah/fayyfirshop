@@ -29,8 +29,8 @@ export const LanguageProvider = ({ children }) => {
         loadTranslations();
     }, [locale]);
 
-    const t = (key) => {
-        return translations[key] || key;
+    const t = (key, fallback = null) => {
+        return translations[key] || fallback || key;
     };
 
     return (

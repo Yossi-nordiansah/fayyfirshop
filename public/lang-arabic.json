@@ -19,5 +19,29 @@
   "sub.mamoul": "معمول",
   "sub.saffron": "زعفران",
   "sub.honey": "عسل",
-  "cat.viewCollection": "عرض المجموعة"
+  "cat.viewCollection": "عرض المجموعة",
+  
+"hero.perfume.category": "عطور فاخرة",
+  "hero.perfume.title": "عبير الفخامة",
+  "hero.perfume.subtitle": "أو دو بارفان وبخاخات عطرية",
+  "hero.perfume.description": "مجموعة عطور متميزة بتركيز عالٍ تأسر الحواس، مصممة لتنشر الجاذبية طوال يومك.",
+  
+  "hero.oil.category": "زيوت عطرية",
+  "hero.oil.title": "نقاء الطبيعة",
+  "hero.oil.subtitle": "دهن العود ومزيج الزيوت المختارة",
+  "hero.oil.description": "قطرات نقية من الطبيعة، توفر الطمأنينة والثقة بالنفس مع روائح عميقة.",
+  
+  "hero.bakhoor.category": "بخور وعود",
+  "hero.bakhoor.title": "تراث التقاليد",
+  "hero.bakhoor.subtitle": "البخور العربي التقليدي وخشب العود",
+  "hero.bakhoor.description": "خلق جو دافئ وروحي في منزلك مع الدخان العطري من تقاليد الشرق الأوسط الغنية.",
+  
+  "hero.nutrition.category": "صحة وتغذية",
+  "hero.nutrition.title": "أفضل جودة",
+  "hero.nutrition.subtitle": "عسل السدر والزعفران الفاخر",
+  "hero.nutrition.description": "تغذية طبيعية عالية الجودة لنمط حياتك الصحي، مباشرة من أفضل المصادر في الأراضي العربية.",
+  "hero.explore": "استكشف المجموعة",
+
+  "nav.latest_collection": "أحدث المجموعات",
+"nav.new_arrivals": "وصل حديثاً"
 }

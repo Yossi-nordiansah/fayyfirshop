@@ -19,5 +19,29 @@
   "sub.mamoul": "Mamoul",
   "sub.saffron": "Saffron",
   "sub.honey": "Honey",
-  "cat.viewCollection": "View Collection"
+  "cat.viewCollection": "View Collection",
+  
+ "hero.perfume.category": "Luxury Perfume",
+  "hero.perfume.title": "Scent of Luxury",
+  "hero.perfume.subtitle": "Eau de Parfum & Fragrance Spray",
+  "hero.perfume.description": "Premium fragrance collection with high concentration that captivates, designed to radiate charm throughout your day.",
+  
+  "hero.oil.category": "Aromatic Oil",
+  "hero.oil.title": "Purity of Nature",
+  "hero.oil.subtitle": "Dehn Oud & Essential Oil Blends",
+  "hero.oil.description": "Pure drops from nature, providing tranquility and confidence with deep, resonant aromas.",
+  
+  "hero.bakhoor.category": "Bakhoor & Oud",
+  "hero.bakhoor.title": "Heritage of Tradition",
+  "hero.bakhoor.subtitle": "Traditional Arabian Incense & Oud Wood",
+  "hero.bakhoor.description": "Create a warm and spiritual atmosphere in your home with fragrant smoke from rich Middle Eastern traditions.",
+  
+  "hero.nutrition.category": "Health & Nutrition",
+  "hero.nutrition.title": "Ultimate Goodness",
+  "hero.nutrition.subtitle": "Sidr Honey & Premium Saffron",
+  "hero.nutrition.description": "High-quality natural nutrition for your healthy lifestyle, directly from the finest sources in Arab lands.",
+  "hero.explore": "Explore Collection",
+
+  "nav.latest_collection": "Latest Collection",
+"nav.new_arrivals": "New Arrivals"
 }
