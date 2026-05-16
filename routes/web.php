@@ -14,6 +14,13 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/products/{category?}', function ($category = null) {
+    return Inertia::render('products/Products', [
+        'category' => $category,
+        'subCategory' => request('sub')
+    ]);
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

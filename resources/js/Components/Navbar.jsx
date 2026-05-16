@@ -115,7 +115,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Desktop Menu */}
-                    <div className="hidden md:flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
+                    <div className="hidden lg:flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
                         {/* Home */}
                         <Link
                             href="/"
@@ -233,7 +233,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Right Icons */}
-                    <div className={`hidden md:flex items-center space-x-6`}>
+                    <div className={`hidden lg:flex items-center space-x-6`}>
                         {/* Language Selector */}
                         <div
                             className={`${showSearch ? "hidden" : ""} relative`}
@@ -320,7 +320,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Mobile Menu Button */}
-                    <div className="md:hidden flex items-center">
+                    <div className="lg:hidden flex items-center">
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             className="text-white hover:text-blue-500 p-2 transition-colors"
@@ -339,7 +339,7 @@ const Navbar = () => {
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="absolute top-full left-0 right-0 bg-zinc-900 shadow-2xl md:hidden overflow-hidden"
+                        className="absolute top-full left-0 right-0 bg-zinc-900 shadow-2xl lg:hidden overflow-hidden"
                     >
                         <div className="flex flex-col space-y-4 p-6 max-h-[calc(100vh-80px)] overflow-y-auto">
                             {/* Language Mobile */}
