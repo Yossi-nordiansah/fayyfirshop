@@ -21,6 +21,12 @@ Route::get('/products/{category?}', function ($category = null) {
     ]);
 });
 
+Route::get('/product/{slug}', function ($slug) {
+    return Inertia::render('detail-product/DetailProduct', [
+        'slug' => $slug
+    ]);
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -32,3 +38,15 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+Route::get('/api/provinces', function () {
+    return response()->json(\Laravolt\Indonesia\Models\Province::orderBy('name')->get());
+})->name('api.provinces');
+
+Route::get('/api/cities/{province_code}', function ($province_code) {
+    return response()->json(\Laravolt\Indonesia\Models\City::where('province_code', $province_code)->orderBy('name')->get());
+})->name('api.cities');
+
+Route::get('/api/districts/{city_code}', function ($city_code) {
+    return response()->json(\Laravolt\Indonesia\Models\District::where('city_code', $city_code)->orderBy('name')->get());
+})->name('api.districts');

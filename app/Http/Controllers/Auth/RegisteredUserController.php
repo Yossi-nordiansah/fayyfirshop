@@ -16,12 +16,9 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('register/Register');
     }
 
     /**
@@ -34,19 +31,39 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'phone' => 'required|string|max:255',
+            'address' => 'required|string|max:1000',
+            'city' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
+            'district' => 'nullable|string|max:255',
+            'postal_code' => 'required|string|max:20',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
+
+        // Handle avatar upload or use default
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+        } else {
+            $avatarPath = '/images/default-profile.png';
+        }
 
         $user = User::create([
             'name' => $request->name,
+            'avatar' => $avatarPath,
             'email' => $request->email,
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'city' => $request->city,
+            'district' => $request->district,
+            'province' => $request->province,
+            'postal_code' => $request->postal_code,
             'password' => Hash::make($request->password),
         ]);
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        return redirect(route('dashboard', absolute: false));
+        // Do not automatically log in the user, redirect to home page and trigger login modal
+        return redirect('/?login=1')->with('status', 'registered');
     }
 }

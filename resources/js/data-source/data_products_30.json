@@ -1,0 +1,1204 @@
+[
+    {
+        "id": 1,
+        "title": "Oud Al-Fayyfir Premium",
+        "slug": "oud-al-fayyfir-premium",
+        "sold": 14,
+        "image": [
+            "/storage/images/product/1629186514.jpg",
+            "/storage/images/product/16292796493.jpg"
+        ],
+        "reviewCount": 400,
+        "unit": "ml",
+        "size": [
+            "250ml",
+            "30ml"
+        ],
+        "status": "best-seller",
+        "rating": 4.3,
+        "category": "Parfum",
+        "subCategory": "Pria",
+        "stock": 165,
+        "description": "Parfum premium dengan aroma oud khas Timur Tengah yang elegan dan tahan lama.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "OP-250-SIL-49",
+                "color": "Silver",
+                "size": "250ml",
+                "price": 90000,
+                "stock": 25,
+                "image": "/storage/images/product/1776475435.png"
+            },
+            {
+                "id": 2,
+                "sku": "OP-30-BRO-43",
+                "color": "Brown",
+                "size": "30ml",
+                "price": 294000,
+                "stock": 13,
+                "image": "/storage/images/product/1629186514.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "OP-30-NAT-94",
+                "color": "Natural",
+                "size": "30ml",
+                "price": 252000,
+                "stock": 18,
+                "image": "/storage/images/product/1628933156.jpg"
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "title": "Saffron Super Negin",
+        "slug": "saffron-super-negin",
+        "sold": 24,
+        "image": [
+            "/storage/images/product/1623396841.jpg",
+            "/storage/images/product/1623421142.jpg"
+        ],
+        "reviewCount": 176,
+        "unit": "gr",
+        "size": [
+            "3gr"
+        ],
+        "status": "normal",
+        "rating": 4.6,
+        "category": "Rempah",
+        "subCategory": "Premium",
+        "stock": 325,
+        "description": "Saffron kualitas tertinggi dari Iran, kaya akan manfaat kesehatan dan pewarna alami.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "SSN-3-BLU-59",
+                "color": "Blue",
+                "size": "3gr",
+                "price": 69000,
+                "stock": 26,
+                "image": "/storage/images/product/1623396841.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "SSN-3-BRO-43",
+                "color": "Brown",
+                "size": "3gr",
+                "price": 129000,
+                "stock": 26,
+                "image": "/storage/images/product/1625733742.jpg"
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "title": "Madu Yaman Mara'i",
+        "slug": "madu-yaman-marai",
+        "sold": 82,
+        "image": [
+            "/storage/images/product/1625733742.jpg",
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 63,
+        "unit": "kg",
+        "size": [
+            "1kg"
+        ],
+        "status": "normal",
+        "rating": 4.2,
+        "category": "Kesehatan",
+        "subCategory": "Madu",
+        "stock": 128,
+        "description": "Madu murni dari nektar pohon Mara'i di lembah Hadramaut, Yaman.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "MY-1-SIL-97",
+                "color": "Silver",
+                "size": "1kg",
+                "price": 55000,
+                "stock": 8,
+                "image": "/storage/images/product/16292796493.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "MY-1-BLA-28",
+                "color": "Black",
+                "size": "1kg",
+                "price": 84000,
+                "stock": 17,
+                "image": "/storage/images/product/16292796493.jpg"
+            }
+        ]
+    },
+    {
+        "id": 4,
+        "title": "Kurma Ajwa Al-Madinah",
+        "slug": "kurma-ajwa-al-madinah",
+        "sold": 67,
+        "image": [
+            "/storage/images/product/1776475435.png",
+            "/storage/images/product/1623421666.jpg",
+            "/storage/images/product/1623396975.jpg"
+        ],
+        "reviewCount": 61,
+        "unit": "kg",
+        "size": [
+            "1kg",
+            "2kg",
+            "5kg"
+        ],
+        "status": "new-arrival",
+        "rating": 4.4,
+        "category": "Makanan",
+        "subCategory": "Kurma",
+        "stock": 475,
+        "description": "Kurma nabi asli dari Madinah dengan tekstur lembut dan manis yang pas.",
+        "variants": [],
+        "price": 100000,
+        "sku": "SKU-6196"
+    },
+    {
+        "id": 5,
+        "title": "Kopi Arabika Gayo",
+        "slug": "kopi-arabika-gayo",
+        "sold": 132,
+        "image": [
+            "/storage/images/product/1628933156.jpg",
+            "/storage/images/product/1776475435.png"
+        ],
+        "reviewCount": 357,
+        "unit": "gr",
+        "size": [
+            "100gr",
+            "250gr",
+            "500gr"
+        ],
+        "status": "new-arrival",
+        "rating": 4.3,
+        "category": "Minuman",
+        "subCategory": "Kopi",
+        "stock": 409,
+        "description": "Biji kopi kopi Arabika pilihan dari dataran tinggi Gayo, dipanggang dengan tingkat medium.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "KAG-100-WHI-84",
+                "color": "White",
+                "size": "100gr",
+                "price": 87000,
+                "stock": 38,
+                "image": "/storage/images/product/1623421666.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "KAG-100-GOL-94",
+                "color": "Gold",
+                "size": "100gr",
+                "price": 98000,
+                "stock": 35,
+                "image": "/storage/images/product/1776475676.png"
+            },
+            {
+                "id": 3,
+                "sku": "KAG-250-WHI-41",
+                "color": "White",
+                "size": "250gr",
+                "price": 204000,
+                "stock": 31,
+                "image": "/storage/images/product/1625733742.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "KAG-250-RED-64",
+                "color": "Red",
+                "size": "250gr",
+                "price": 100000,
+                "stock": 5,
+                "image": "/storage/images/product/1623396975.jpg"
+            },
+            {
+                "id": 5,
+                "sku": "KAG-500-SIL-25",
+                "color": "Silver",
+                "size": "500gr",
+                "price": 261000,
+                "stock": 6,
+                "image": "/storage/images/product/1628933156.jpg"
+            },
+            {
+                "id": 6,
+                "sku": "KAG-500-BLU-59",
+                "color": "Blue",
+                "size": "500gr",
+                "price": 222000,
+                "stock": 49,
+                "image": "/storage/images/product/1628933156.jpg"
+            }
+        ]
+    },
+    {
+        "id": 6,
+        "title": "Habbatussauda Oil Capsule",
+        "slug": "habbatussauda-oil-capsule",
+        "sold": 319,
+        "image": [
+            "/storage/images/product/16292796493.jpg",
+            "/storage/images/product/1629186514.jpg"
+        ],
+        "reviewCount": 46,
+        "unit": "pcs",
+        "size": [
+            "100pcs",
+            "30pcs"
+        ],
+        "status": "new-arrival",
+        "rating": 4.1,
+        "category": "Kesehatan",
+        "subCategory": "Suplemen",
+        "stock": 64,
+        "description": "Minyak jintan hitam murni dalam bentuk kapsul untuk menjaga daya tahan tubuh.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "HOC-100-SIL-18",
+                "color": "Silver",
+                "size": "100pcs",
+                "price": 104000,
+                "stock": 7,
+                "image": "/storage/images/product/1623421142.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "HOC-100-BLA-33",
+                "color": "Black",
+                "size": "100pcs",
+                "price": 102000,
+                "stock": 9,
+                "image": "/storage/images/product/1625733742.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "HOC-30-WHI-78",
+                "color": "White",
+                "size": "30pcs",
+                "price": 220000,
+                "stock": 11,
+                "image": "/storage/images/product/1623396975.jpg"
+            }
+        ]
+    },
+    {
+        "id": 7,
+        "title": "Garam Bukit Himalaya",
+        "slug": "garam-bukit-himalaya",
+        "sold": 170,
+        "image": [
+            "/storage/images/product/1623396975.jpg",
+            "/storage/images/product/1625733742.jpg",
+            "/storage/images/product/1623396841.jpg"
+        ],
+        "reviewCount": 383,
+        "unit": "gr",
+        "size": [
+            "100gr",
+            "250gr",
+            "500gr"
+        ],
+        "status": "normal",
+        "rating": 4.9,
+        "category": "Bahan Dapur",
+        "subCategory": "Bumbu",
+        "stock": 196,
+        "description": "Garam organik murni tanpa proses pemutihan, mengandung mineral baik untuk tubuh.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "GBH-100-WHI-94",
+                "color": "White",
+                "size": "100gr",
+                "price": 118000,
+                "stock": 32,
+                "image": "/storage/images/product/16292796493.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "GBH-100-BLU-95",
+                "color": "Blue",
+                "size": "100gr",
+                "price": 127000,
+                "stock": 50,
+                "image": "/storage/images/product/1623421666.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "GBH-250-GOL-91",
+                "color": "Gold",
+                "size": "250gr",
+                "price": 150000,
+                "stock": 31,
+                "image": "/storage/images/product/1625733742.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "GBH-500-BRO-90",
+                "color": "Brown",
+                "size": "500gr",
+                "price": 204000,
+                "stock": 21,
+                "image": "/storage/images/product/1776475435.png"
+            },
+            {
+                "id": 5,
+                "sku": "GBH-500-BLU-26",
+                "color": "Blue",
+                "size": "500gr",
+                "price": 207000,
+                "stock": 6,
+                "image": "/storage/images/product/16292796493.jpg"
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "title": "Teh Hijau Matcha Matcha",
+        "slug": "teh-hijau-matcha-matcha",
+        "sold": 114,
+        "image": [
+            "/storage/images/product/1625733742.jpg"
+        ],
+        "reviewCount": 110,
+        "unit": "gr",
+        "size": [
+            "1gr",
+            "3gr"
+        ],
+        "status": "featured",
+        "rating": 4.4,
+        "category": "Minuman",
+        "subCategory": "Teh",
+        "stock": 260,
+        "description": "Bubuk matcha murni kualitas kuliner, cocok untuk latte maupun kue.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "THMM-1-RED-96",
+                "color": "Red",
+                "size": "1gr",
+                "price": 106000,
+                "stock": 30,
+                "image": "/storage/images/product/1623421666.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "THMM-3-WHI-84",
+                "color": "White",
+                "size": "3gr",
+                "price": 218000,
+                "stock": 34,
+                "image": "/storage/images/product/16292796493.jpg"
+            }
+        ]
+    },
+    {
+        "id": 9,
+        "title": "Minyak Zaitun Extra Virgin",
+        "slug": "minyak-zaitun-extra-virgin",
+        "sold": 467,
+        "image": [
+            "/storage/images/product/1625733742.jpg"
+        ],
+        "reviewCount": 75,
+        "unit": "L",
+        "size": [
+            "1L",
+            "2L"
+        ],
+        "status": "normal",
+        "rating": 4.5,
+        "category": "Kesehatan",
+        "subCategory": "Minyak",
+        "stock": 292,
+        "description": "Minyak zaitun perasan pertama cold-pressed, sangat baik untuk kesehatan jantung.",
+        "variants": [],
+        "price": 170000,
+        "sku": "SKU-2673"
+    },
+    {
+        "id": 10,
+        "title": "Cokelat Almond Dark 70%",
+        "slug": "cokelat-almond-dark-70",
+        "sold": 473,
+        "image": [
+            "/storage/images/product/1623396841.jpg",
+            "/storage/images/product/1623396975.jpg"
+        ],
+        "reviewCount": 213,
+        "unit": "gr",
+        "size": [
+            "10gr",
+            "1gr",
+            "5gr"
+        ],
+        "status": "new-arrival",
+        "rating": 4.1,
+        "category": "Makanan",
+        "subCategory": "Cemilan",
+        "stock": 404,
+        "description": "Cokelat hitam premium dengan potongan kacang almond panggang yang renyah.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "CAD-10-RED-17",
+                "color": "Red",
+                "size": "10gr",
+                "price": 98000,
+                "stock": 20,
+                "image": "/storage/images/product/1776475676.png"
+            },
+            {
+                "id": 2,
+                "sku": "CAD-10-SIL-80",
+                "color": "Silver",
+                "size": "10gr",
+                "price": 106000,
+                "stock": 32,
+                "image": "/storage/images/product/1625733909.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "CAD-1-NAT-24",
+                "color": "Natural",
+                "size": "1gr",
+                "price": 168000,
+                "stock": 41,
+                "image": "/storage/images/product/1625733909.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "CAD-1-BRO-19",
+                "color": "Brown",
+                "size": "1gr",
+                "price": 116000,
+                "stock": 34,
+                "image": "/storage/images/product/1776475676.png"
+            },
+            {
+                "id": 5,
+                "sku": "CAD-5-BRO-69",
+                "color": "Brown",
+                "size": "5gr",
+                "price": 321000,
+                "stock": 35,
+                "image": "/storage/images/product/1776475435.png"
+            }
+        ]
+    },
+    {
+        "id": 11,
+        "title": "Oud Al-Fayyfir Premium Vol. 2",
+        "slug": "oud-al-fayyfir-premium-vol-2",
+        "sold": 461,
+        "image": [
+            "/storage/images/product/1629186514.jpg"
+        ],
+        "reviewCount": 48,
+        "unit": "ml",
+        "size": [
+            "30ml",
+            "50ml"
+        ],
+        "status": "best-seller",
+        "rating": 4.9,
+        "category": "Parfum",
+        "subCategory": "Pria",
+        "stock": 492,
+        "description": "Parfum premium dengan aroma oud khas Timur Tengah yang elegan dan tahan lama.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "OP-30-BRO-16",
+                "color": "Brown",
+                "size": "30ml",
+                "price": 63000,
+                "stock": 47,
+                "image": "/storage/images/product/1628933156.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "OP-50-BLA-24",
+                "color": "Black",
+                "size": "50ml",
+                "price": 250000,
+                "stock": 22,
+                "image": "/storage/images/product/1623421142.jpg"
+            }
+        ]
+    },
+    {
+        "id": 12,
+        "title": "Saffron Super Negin Vol. 2",
+        "slug": "saffron-super-negin-vol-2",
+        "sold": 252,
+        "image": [
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 2,
+        "unit": "gr",
+        "size": [
+            "10gr",
+            "1gr",
+            "3gr"
+        ],
+        "status": "normal",
+        "rating": 4.1,
+        "category": "Rempah",
+        "subCategory": "Premium",
+        "stock": 206,
+        "description": "Saffron kualitas tertinggi dari Iran, kaya akan manfaat kesehatan dan pewarna alami.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "SSN-10-BLA-92",
+                "color": "Black",
+                "size": "10gr",
+                "price": 52000,
+                "stock": 29,
+                "image": "/storage/images/product/1629186514.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "SSN-10-BLU-92",
+                "color": "Blue",
+                "size": "10gr",
+                "price": 62000,
+                "stock": 19,
+                "image": "/storage/images/product/1776475676.png"
+            },
+            {
+                "id": 3,
+                "sku": "SSN-1-WHI-12",
+                "color": "White",
+                "size": "1gr",
+                "price": 188000,
+                "stock": 13,
+                "image": "/storage/images/product/1623396975.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "SSN-3-BLA-64",
+                "color": "Black",
+                "size": "3gr",
+                "price": 216000,
+                "stock": 10,
+                "image": "/storage/images/product/1625733909.jpg"
+            },
+            {
+                "id": 5,
+                "sku": "SSN-3-NAT-29",
+                "color": "Natural",
+                "size": "3gr",
+                "price": 339000,
+                "stock": 40,
+                "image": "/storage/images/product/16292796493.jpg"
+            }
+        ]
+    },
+    {
+        "id": 13,
+        "title": "Madu Yaman Mara'i Vol. 2",
+        "slug": "madu-yaman-marai-vol-2",
+        "sold": 219,
+        "image": [
+            "/storage/images/product/1623421142.jpg"
+        ],
+        "reviewCount": 271,
+        "unit": "kg",
+        "size": [
+            "1kg",
+            "2kg",
+            "5kg"
+        ],
+        "status": "normal",
+        "rating": 4.6,
+        "category": "Kesehatan",
+        "subCategory": "Madu",
+        "stock": 339,
+        "description": "Madu murni dari nektar pohon Mara'i di lembah Hadramaut, Yaman.",
+        "variants": [],
+        "price": 170000,
+        "sku": "SKU-7405"
+    },
+    {
+        "id": 14,
+        "title": "Kurma Ajwa Al-Madinah Vol. 2",
+        "slug": "kurma-ajwa-al-madinah-vol-2",
+        "sold": 361,
+        "image": [
+            "/storage/images/product/1623396975.jpg",
+            "/storage/images/product/1623421142.jpg"
+        ],
+        "reviewCount": 11,
+        "unit": "gr",
+        "size": [
+            "250gr"
+        ],
+        "status": "featured",
+        "rating": 4.3,
+        "category": "Makanan",
+        "subCategory": "Kurma",
+        "stock": 355,
+        "description": "Kurma nabi asli dari Madinah dengan tekstur lembut dan manis yang pas.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "KA-250-WHI-35",
+                "color": "White",
+                "size": "250gr",
+                "price": 117000,
+                "stock": 43,
+                "image": "/storage/images/product/1623396975.jpg"
+            }
+        ]
+    },
+    {
+        "id": 15,
+        "title": "Kopi Arabika Gayo Vol. 2",
+        "slug": "kopi-arabika-gayo-vol-2",
+        "sold": 209,
+        "image": [
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 354,
+        "unit": "gr",
+        "size": [
+            "100gr"
+        ],
+        "status": "new-arrival",
+        "rating": 4.9,
+        "category": "Minuman",
+        "subCategory": "Kopi",
+        "stock": 298,
+        "description": "Biji kopi kopi Arabika pilihan dari dataran tinggi Gayo, dipanggang dengan tingkat medium.",
+        "variants": [],
+        "price": 50000,
+        "sku": "SKU-4692"
+    },
+    {
+        "id": 16,
+        "title": "Habbatussauda Oil Capsule Vol. 2",
+        "slug": "habbatussauda-oil-capsule-vol-2",
+        "sold": 451,
+        "image": [
+            "/storage/images/product/1628933156.jpg",
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 92,
+        "unit": "pcs",
+        "size": [
+            "100pcs",
+            "30pcs",
+            "60pcs"
+        ],
+        "status": "normal",
+        "rating": 4.3,
+        "category": "Kesehatan",
+        "subCategory": "Suplemen",
+        "stock": 102,
+        "description": "Minyak jintan hitam murni dalam bentuk kapsul untuk menjaga daya tahan tubuh.",
+        "variants": [],
+        "price": 149000,
+        "sku": "SKU-3396"
+    },
+    {
+        "id": 17,
+        "title": "Garam Bukit Himalaya Vol. 2",
+        "slug": "garam-bukit-himalaya-vol-2",
+        "sold": 188,
+        "image": [
+            "/storage/images/product/1776475676.png",
+            "/storage/images/product/1628933156.jpg"
+        ],
+        "reviewCount": 413,
+        "unit": "gr",
+        "size": [
+            "100gr",
+            "250gr",
+            "500gr"
+        ],
+        "status": "normal",
+        "rating": 4.3,
+        "category": "Bahan Dapur",
+        "subCategory": "Bumbu",
+        "stock": 424,
+        "description": "Garam organik murni tanpa proses pemutihan, mengandung mineral baik untuk tubuh.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "GBH-100-BLU-23",
+                "color": "Blue",
+                "size": "100gr",
+                "price": 117000,
+                "stock": 7,
+                "image": "/storage/images/product/1623396841.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "GBH-250-BRO-71",
+                "color": "Brown",
+                "size": "250gr",
+                "price": 114000,
+                "stock": 31,
+                "image": "/storage/images/product/1623396975.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "GBH-250-GOL-89",
+                "color": "Gold",
+                "size": "250gr",
+                "price": 164000,
+                "stock": 15,
+                "image": "/storage/images/product/1629186514.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "GBH-500-BRO-65",
+                "color": "Brown",
+                "size": "500gr",
+                "price": 399000,
+                "stock": 24,
+                "image": "/storage/images/product/16292796493.jpg"
+            }
+        ]
+    },
+    {
+        "id": 18,
+        "title": "Teh Hijau Matcha Matcha Vol. 2",
+        "slug": "teh-hijau-matcha-matcha-vol-2",
+        "sold": 105,
+        "image": [
+            "/storage/images/product/1623421142.jpg",
+            "/storage/images/product/1625733742.jpg",
+            "/storage/images/product/1625733909.jpg"
+        ],
+        "reviewCount": 216,
+        "unit": "gr",
+        "size": [
+            "1gr",
+            "5gr"
+        ],
+        "status": "normal",
+        "rating": 4.9,
+        "category": "Minuman",
+        "subCategory": "Teh",
+        "stock": 423,
+        "description": "Bubuk matcha murni kualitas kuliner, cocok untuk latte maupun kue.",
+        "variants": [],
+        "price": 127000,
+        "sku": "SKU-1935"
+    },
+    {
+        "id": 19,
+        "title": "Minyak Zaitun Extra Virgin Vol. 2",
+        "slug": "minyak-zaitun-extra-virgin-vol-2",
+        "sold": 269,
+        "image": [
+            "/storage/images/product/1623396841.jpg"
+        ],
+        "reviewCount": 196,
+        "unit": "L",
+        "size": [
+            "1L",
+            "2L",
+            "5L"
+        ],
+        "status": "featured",
+        "rating": 4.9,
+        "category": "Kesehatan",
+        "subCategory": "Minyak",
+        "stock": 188,
+        "description": "Minyak zaitun perasan pertama cold-pressed, sangat baik untuk kesehatan jantung.",
+        "variants": [],
+        "price": 199000,
+        "sku": "SKU-8261"
+    },
+    {
+        "id": 20,
+        "title": "Cokelat Almond Dark 70% Vol. 2",
+        "slug": "cokelat-almond-dark-70-vol-2",
+        "sold": 171,
+        "image": [
+            "/storage/images/product/1623421142.jpg",
+            "/storage/images/product/1776475435.png",
+            "/storage/images/product/1623396841.jpg"
+        ],
+        "reviewCount": 386,
+        "unit": "gr",
+        "size": [
+            "1gr",
+            "3gr",
+            "5gr"
+        ],
+        "status": "featured",
+        "rating": 4.1,
+        "category": "Makanan",
+        "subCategory": "Cemilan",
+        "stock": 149,
+        "description": "Cokelat hitam premium dengan potongan kacang almond panggang yang renyah.",
+        "variants": [],
+        "price": 213000,
+        "sku": "SKU-6856"
+    },
+    {
+        "id": 21,
+        "title": "Oud Al-Fayyfir Premium Vol. 3",
+        "slug": "oud-al-fayyfir-premium-vol-3",
+        "sold": 196,
+        "image": [
+            "/storage/images/product/1628933156.jpg",
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 6,
+        "unit": "ml",
+        "size": [
+            "100ml",
+            "250ml",
+            "50ml"
+        ],
+        "status": "new-arrival",
+        "rating": 4.3,
+        "category": "Parfum",
+        "subCategory": "Pria",
+        "stock": 289,
+        "description": "Parfum premium dengan aroma oud khas Timur Tengah yang elegan dan tahan lama.",
+        "variants": [],
+        "price": 167000,
+        "sku": "SKU-5384"
+    },
+    {
+        "id": 22,
+        "title": "Saffron Super Negin Vol. 3",
+        "slug": "saffron-super-negin-vol-3",
+        "sold": 218,
+        "image": [
+            "/storage/images/product/1776475676.png",
+            "/storage/images/product/1625733909.jpg"
+        ],
+        "reviewCount": 264,
+        "unit": "gr",
+        "size": [
+            "3gr"
+        ],
+        "status": "new-arrival",
+        "rating": 5.0,
+        "category": "Rempah",
+        "subCategory": "Premium",
+        "stock": 169,
+        "description": "Saffron kualitas tertinggi dari Iran, kaya akan manfaat kesehatan dan pewarna alami.",
+        "variants": [],
+        "price": 209000,
+        "sku": "SKU-6104"
+    },
+    {
+        "id": 23,
+        "title": "Madu Yaman Mara'i Vol. 3",
+        "slug": "madu-yaman-marai-vol-3",
+        "sold": 427,
+        "image": [
+            "/storage/images/product/1628933156.jpg",
+            "/storage/images/product/1623396841.jpg",
+            "/storage/images/product/1623421142.jpg"
+        ],
+        "reviewCount": 261,
+        "unit": "gr",
+        "size": [
+            "1kg",
+            "250gr",
+            "500gr"
+        ],
+        "status": "normal",
+        "rating": 4.3,
+        "category": "Kesehatan",
+        "subCategory": "Madu",
+        "stock": 149,
+        "description": "Madu murni dari nektar pohon Mara'i di lembah Hadramaut, Yaman.",
+        "variants": [],
+        "price": 182000,
+        "sku": "SKU-5666"
+    },
+    {
+        "id": 24,
+        "title": "Kurma Ajwa Al-Madinah Vol. 3",
+        "slug": "kurma-ajwa-al-madinah-vol-3",
+        "sold": 95,
+        "image": [
+            "/storage/images/product/1623396841.jpg",
+            "/storage/images/product/1625733909.jpg",
+            "/storage/images/product/1629186514.jpg"
+        ],
+        "reviewCount": 278,
+        "unit": "gr",
+        "size": [
+            "1kg",
+            "250gr",
+            "500gr"
+        ],
+        "status": "new-arrival",
+        "rating": 4.8,
+        "category": "Makanan",
+        "subCategory": "Kurma",
+        "stock": 399,
+        "description": "Kurma nabi asli dari Madinah dengan tekstur lembut dan manis yang pas.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "KA-1kg-BLA-98",
+                "color": "Black",
+                "size": "1kg",
+                "price": 94000,
+                "stock": 10,
+                "image": "/storage/images/product/1776475435.png"
+            },
+            {
+                "id": 2,
+                "sku": "KA-250-SIL-59",
+                "color": "Silver",
+                "size": "250gr",
+                "price": 160000,
+                "stock": 13,
+                "image": "/storage/images/product/1776475676.png"
+            },
+            {
+                "id": 3,
+                "sku": "KA-500-WHI-73",
+                "color": "White",
+                "size": "500gr",
+                "price": 273000,
+                "stock": 30,
+                "image": "/storage/images/product/1628933156.jpg"
+            },
+            {
+                "id": 4,
+                "sku": "KA-500-BLA-88",
+                "color": "Black",
+                "size": "500gr",
+                "price": 411000,
+                "stock": 39,
+                "image": "/storage/images/product/1629186514.jpg"
+            }
+        ]
+    },
+    {
+        "id": 25,
+        "title": "Kopi Arabika Gayo Vol. 3",
+        "slug": "kopi-arabika-gayo-vol-3",
+        "sold": 408,
+        "image": [
+            "/storage/images/product/1623396975.jpg",
+            "/storage/images/product/1623396841.jpg",
+            "/storage/images/product/1623421666.jpg"
+        ],
+        "reviewCount": 353,
+        "unit": "gr",
+        "size": [
+            "250gr",
+            "500gr"
+        ],
+        "status": "featured",
+        "rating": 4.1,
+        "category": "Minuman",
+        "subCategory": "Kopi",
+        "stock": 499,
+        "description": "Biji kopi kopi Arabika pilihan dari dataran tinggi Gayo, dipanggang dengan tingkat medium.",
+        "variants": [],
+        "price": 106000,
+        "sku": "SKU-6519"
+    },
+    {
+        "id": 26,
+        "title": "Habbatussauda Oil Capsule Vol. 3",
+        "slug": "habbatussauda-oil-capsule-vol-3",
+        "sold": 13,
+        "image": [
+            "/storage/images/product/1629186514.jpg",
+            "/storage/images/product/1776475676.png"
+        ],
+        "reviewCount": 60,
+        "unit": "pcs",
+        "size": [
+            "100pcs",
+            "30pcs",
+            "60pcs"
+        ],
+        "status": "new-arrival",
+        "rating": 4.5,
+        "category": "Kesehatan",
+        "subCategory": "Suplemen",
+        "stock": 452,
+        "description": "Minyak jintan hitam murni dalam bentuk kapsul untuk menjaga daya tahan tubuh.",
+        "variants": [],
+        "price": 207000,
+        "sku": "SKU-8019"
+    },
+    {
+        "id": 27,
+        "title": "Garam Bukit Himalaya Vol. 3",
+        "slug": "garam-bukit-himalaya-vol-3",
+        "sold": 428,
+        "image": [
+            "/storage/images/product/1623396841.jpg"
+        ],
+        "reviewCount": 255,
+        "unit": "gr",
+        "size": [
+            "250gr"
+        ],
+        "status": "featured",
+        "rating": 4.5,
+        "category": "Bahan Dapur",
+        "subCategory": "Bumbu",
+        "stock": 290,
+        "description": "Garam organik murni tanpa proses pemutihan, mengandung mineral baik untuk tubuh.",
+        "variants": [],
+        "price": 173000,
+        "sku": "SKU-9024"
+    },
+    {
+        "id": 28,
+        "title": "Teh Hijau Matcha Matcha Vol. 3",
+        "slug": "teh-hijau-matcha-matcha-vol-3",
+        "sold": 229,
+        "image": [
+            "/storage/images/product/1623396975.jpg",
+            "/storage/images/product/1776475676.png"
+        ],
+        "reviewCount": 239,
+        "unit": "gr",
+        "size": [
+            "10gr",
+            "3gr"
+        ],
+        "status": "new-arrival",
+        "rating": 4.4,
+        "category": "Minuman",
+        "subCategory": "Teh",
+        "stock": 385,
+        "description": "Bubuk matcha murni kualitas kuliner, cocok untuk latte maupun kue.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "THMM-10-BLU-82",
+                "color": "Blue",
+                "size": "10gr",
+                "price": 107000,
+                "stock": 19,
+                "image": "/storage/images/product/1623396975.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "THMM-10-BLA-14",
+                "color": "Black",
+                "size": "10gr",
+                "price": 109000,
+                "stock": 11,
+                "image": "/storage/images/product/1623396841.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "THMM-3-BLA-28",
+                "color": "Black",
+                "size": "3gr",
+                "price": 246000,
+                "stock": 23,
+                "image": "/storage/images/product/1776475435.png"
+            },
+            {
+                "id": 4,
+                "sku": "THMM-3-WHI-86",
+                "color": "White",
+                "size": "3gr",
+                "price": 152000,
+                "stock": 26,
+                "image": "/storage/images/product/1776475676.png"
+            }
+        ]
+    },
+    {
+        "id": 29,
+        "title": "Minyak Zaitun Extra Virgin Vol. 3",
+        "slug": "minyak-zaitun-extra-virgin-vol-3",
+        "sold": 235,
+        "image": [
+            "/storage/images/product/1625733742.jpg",
+            "/storage/images/product/1625733909.jpg"
+        ],
+        "reviewCount": 86,
+        "unit": "L",
+        "size": [
+            "2L",
+            "5L"
+        ],
+        "status": "featured",
+        "rating": 4.7,
+        "category": "Kesehatan",
+        "subCategory": "Minyak",
+        "stock": 313,
+        "description": "Minyak zaitun perasan pertama cold-pressed, sangat baik untuk kesehatan jantung.",
+        "variants": [],
+        "price": 212000,
+        "sku": "SKU-4514"
+    },
+    {
+        "id": 30,
+        "title": "Cokelat Almond Dark 70% Vol. 3",
+        "slug": "cokelat-almond-dark-70-vol-3",
+        "sold": 269,
+        "image": [
+            "/storage/images/product/1625733909.jpg",
+            "/storage/images/product/1625733742.jpg"
+        ],
+        "reviewCount": 402,
+        "unit": "gr",
+        "size": [
+            "10gr",
+            "1gr",
+            "3gr"
+        ],
+        "status": "best-seller",
+        "rating": 4.8,
+        "category": "Makanan",
+        "subCategory": "Cemilan",
+        "stock": 252,
+        "description": "Cokelat hitam premium dengan potongan kacang almond panggang yang renyah.",
+        "variants": [
+            {
+                "id": 1,
+                "sku": "CAD-10-BRO-60",
+                "color": "Brown",
+                "size": "10gr",
+                "price": 80000,
+                "stock": 24,
+                "image": "/storage/images/product/1625733742.jpg"
+            },
+            {
+                "id": 2,
+                "sku": "CAD-1-BLU-67",
+                "color": "Blue",
+                "size": "1gr",
+                "price": 130000,
+                "stock": 20,
+                "image": "/storage/images/product/1628933156.jpg"
+            },
+            {
+                "id": 3,
+                "sku": "CAD-3-WHI-18",
+                "color": "White",
+                "size": "3gr",
+                "price": 237000,
+                "stock": 27,
+                "image": "/storage/images/product/1623421666.jpg"
+            }
+        ]
+    }
+]

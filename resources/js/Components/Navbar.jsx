@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import {
     Search,
     ShoppingCart,
@@ -9,33 +9,41 @@ import {
     ChevronDown,
     ChevronRight,
     Globe,
+    LogIn,
+    LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
+import LoginModal from "./LoginModal";
 
-/**
- * Navbar Component
- * Features:
- * - Multi-language support (ID, EN, AR)
- * - Transparent navbar on scroll
- * - Product dropdown menu with subcategories
- * - Responsive mobile menu
- */
+const Navbar = ({ alwaysSolid = false }) => {
+    // Ambil data auth global dari shared props Inertia (Laravel Breeze)
+    const { auth } = usePage().props;
+    const user = auth?.user;
 
-const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeCategory, setActiveCategory] = useState(null);
-    const [showLangDropdown, setShowLangDropdown] = useState(false);
-    const { locale, setLocale, t } = useLanguage();
+    const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
+
+    const { locale, setLocale, t } = useLanguage();
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 30);
         };
-
         window.addEventListener("scroll", handleScroll);
+
+        // Check for login=1 query parameter to trigger login modal
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("login") === "1") {
+            setShowLoginModal(true);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("login");
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
 
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
@@ -48,420 +56,324 @@ const Navbar = () => {
 
     const productDropdown = [
         {
-            name: t("nav.perfume"),
+            name: t("nav.perfume", "Perfume"),
             href: "/products/perfume",
             subCategory: [
-                { name: t("sub.mens"), val: "mens" },
-                { name: t("sub.womens"), val: "womens" },
-                { name: t("sub.unisex"), val: "unisex" },
-                { name: t("sub.set"), val: "parfume-set" },
+                { name: t("sub.mens", "Men's"), val: "mens" },
+                { name: t("sub.womens", "Women's"), val: "womens" },
+                { name: t("sub.unisex", "Unisex"), val: "unisex" },
+                { name: t("sub.set", "Perfume Set"), val: "parfume-set" },
             ],
         },
         {
-            name: t("nav.aromaticOil"),
+            name: t("nav.aromaticOil", "Aromatic Oil"),
             href: "/products/aromatic-oil",
             subCategory: [
-                { name: t("sub.oil"), val: "aromatic-oil" },
-                { name: t("sub.dehn"), val: "dehn-oud" },
+                { name: t("sub.oil", "Aromatic Oil"), val: "aromatic-oil" },
+                { name: t("sub.dehn", "Dehn Al Oud"), val: "dehn-oud" },
             ],
         },
         {
-            name: t("nav.bakhoor"),
+            name: t("nav.bakhoor", "Bakhoor & Oud"),
             href: "/products/bakhoor-and-oud",
             subCategory: [
-                { name: t("sub.oud"), val: "oud" },
-                { name: t("sub.bakhoor"), val: "bakhoor" },
-                { name: t("sub.mamoul"), val: "mamoul" },
+                { name: t("sub.oud", "Oud Wood"), val: "oud" },
+                { name: t("sub.bakhoor", "Bakhoor"), val: "bakhoor" },
+                { name: t("sub.mamoul", "Mamoul"), val: "mamoul" },
             ],
         },
         {
-            name: t("nav.nutrition"),
+            name: t("nav.nutrition", "Healthy Nutrition"),
             href: "/products/healthy-nutrition",
             subCategory: [
-                { name: t("sub.saffron"), val: "saffron" },
-                { name: t("sub.honey"), val: "honey" },
+                { name: t("sub.saffron", "Premium Saffron"), val: "saffron" },
+                { name: t("sub.honey", "Yemeni Honey"), val: "honey" },
             ],
         },
-        { name: t("nav.all"), href: "/products" },
-    ];
-
-    const icons = [
-        { icon: <ShoppingCart size={20} />, label: "Cart" },
-        { icon: <User size={20} />, label: "Account" },
+        { name: t("nav.all", "All Products"), href: "/products" },
     ];
 
     return (
-        <nav
-            className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-                scrolled
+        <>
+            <nav
+                className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled || alwaysSolid
                     ? "bg-gradient-to-l from-blue-900 to-blue-800 backdrop-blur-xl shadow-xl"
                     : "bg-transparent"
-            }`}
-        >
-            <div className="max-w-7xl mx-auto px-6 lg:px-12">
-                <div className="flex justify-between items-center h-20">
-                    {/* Logo */}
-                    <div className="flex-shrink-0 flex items-center">
-                        <Link
-                            href="/"
-                            className="group flex items-center gap-2"
-                        >
-                            <img
-                                src="/images/logo-footer.png"
-                                alt="logo fayyfir"
-                                className="md:h-16 h-12"
-                            />
-                        </Link>
-                    </div>
+                    }`}
+            >
+                <div className="max-w-7xl mx-auto px-6 lg:px-12">
+                    <div className="flex justify-between items-center h-20">
+                        {/* Logo */}
+                        <div className="flex-shrink-0 flex items-center">
+                            <Link href="/" className="group flex items-center gap-2">
+                                <img
+                                    src="/images/logo-footer.png"
+                                    alt="logo fayyfir"
+                                    className="md:h-16 h-12"
+                                />
+                            </Link>
+                        </div>
 
-                    {/* Desktop Menu */}
-                    <div className="hidden lg:flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
-                        {/* Home */}
-                        <Link
-                            href="/"
-                            className="relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
-                        >
-                            {t("nav.home")}
-                            <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
-                        </Link>
+                        {/* Desktop Menu */}
+                        <div className="hidden lg:flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
+                            {/* Home */}
+                            <Link
+                                href="/"
+                                className="relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
+                            >
+                                {t("nav.home", "Home")}
+                                <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
+                            </Link>
 
-                        {/* Product Dropdown */}
-                        <div
-                            className="relative group"
-                            onMouseLeave={() => setActiveCategory(null)}
-                        >
-                            <button className="flex items-center gap-1 relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300">
-                                {t("nav.product")}
-                                <ChevronDown size={14} />
-                            </button>
+                            {/* Product Dropdown */}
+                            <div
+                                className="relative group py-2"
+                                onMouseLeave={() => setActiveCategory(null)}
+                            >
+                                <button className="flex items-center gap-1 relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300">
+                                    {t("nav.product", "Products")}
+                                    <ChevronDown size={14} className="transition-transform duration-300 group-hover:rotate-180" />
+                                </button>
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
 
-                            <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
-
-                            {/* Dropdown Container */}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-6 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                                <div className="relative">
-                                    {/* Main Categories Box */}
-                                    <div className="w-60 bg-white backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2">
-                                        {productDropdown.map((item, index) => (
-                                            <div
-                                                key={index}
-                                                onMouseEnter={() =>
-                                                    item.subCategory
-                                                        ? setActiveCategory(
-                                                              item,
-                                                          )
-                                                        : setActiveCategory(
-                                                              null,
-                                                          )
-                                                }
-                                                className="relative"
-                                            >
-                                                <Link
-                                                    href={item.href}
-                                                    className={`flex items-center justify-between px-6 py-4 text-sm transition-all duration-300 ${activeCategory?.name === item.name ? "text-blue-500 bg-zinc-100" : "text-zinc-700 hover:text-blue-500"}`}
+                                {/* Dropdown Container */}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                                    <div className="relative">
+                                        <div className="w-60 bg-white backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2">
+                                            {productDropdown.map((item, index) => (
+                                                <div
+                                                    key={index}
+                                                    onMouseEnter={() =>
+                                                        item.subCategory
+                                                            ? setActiveCategory(item)
+                                                            : setActiveCategory(null)
+                                                    }
+                                                    className="relative"
                                                 >
-                                                    {item.name}
-                                                    {item.subCategory && (
-                                                        <ChevronRight
-                                                            size={14}
-                                                            className={`transition-transform duration-300 ${activeCategory?.name === item.name ? "translate-x-1" : "opacity-50"}`}
-                                                        />
-                                                    )}
-                                                </Link>
+                                                    <Link
+                                                        href={item.href}
+                                                        className={`flex items-center justify-between px-6 py-4 text-sm transition-all duration-300 ${activeCategory?.name === item.name
+                                                            ? "text-blue-500 bg-zinc-100"
+                                                            : "text-zinc-700 hover:text-blue-500"
+                                                            }`}
+                                                    >
+                                                        {item.name}
+                                                        {item.subCategory && (
+                                                            <ChevronRight
+                                                                size={14}
+                                                                className={`transition-transform duration-300 ${activeCategory?.name === item.name
+                                                                    ? "translate-x-1"
+                                                                    : "opacity-50"
+                                                                    }`}
+                                                            />
+                                                        )}
+                                                    </Link>
 
-                                                {/* Subcategories Flyout Box */}
-                                                <AnimatePresence>
-                                                    {activeCategory?.name ===
-                                                        item.name &&
-                                                        item.subCategory && (
+                                                    {/* Subcategories Flyout Box */}
+                                                    <AnimatePresence>
+                                                        {activeCategory?.name === item.name && item.subCategory && (
                                                             <motion.div
-                                                                initial={{
-                                                                    opacity: 0,
-                                                                    x: -10,
-                                                                }}
-                                                                animate={{
-                                                                    opacity: 1,
-                                                                    x: 0,
-                                                                }}
-                                                                exit={{
-                                                                    opacity: 0,
-                                                                    x: -10,
-                                                                }}
-                                                                transition={{
-                                                                    duration: 0.2,
-                                                                }}
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                exit={{ opacity: 0, x: -10 }}
+                                                                transition={{ duration: 0.2 }}
                                                                 className="absolute left-full top-0 ml-1 w-44 bg-white backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-50"
                                                             >
                                                                 <div className="flex flex-col">
-                                                                    {item.subCategory.map(
-                                                                        (
-                                                                            sub,
-                                                                            sIdx,
-                                                                        ) => (
-                                                                            <Link
-                                                                                key={
-                                                                                    sIdx
-                                                                                }
-                                                                                href={`${item.href}?sub=${sub.val}`}
-                                                                                className="block px-8 py-3 text-sm text-zinc-500 hover:text-blue-600 hover:translate-x-2 hover:bg-zinc-100 transition-all duration-300"
-                                                                            >
-                                                                                {
-                                                                                    sub.name
-                                                                                }
-                                                                            </Link>
-                                                                        ),
-                                                                    )}
+                                                                    {item.subCategory.map((sub, sIdx) => (
+                                                                        <Link
+                                                                            key={sIdx}
+                                                                            href={`${item.href}?sub=${sub.val}`}
+                                                                            className="block px-8 py-3 text-sm text-zinc-500 hover:text-blue-600 hover:translate-x-2 hover:bg-zinc-100 transition-all duration-300"
+                                                                        >
+                                                                            {sub.name}
+                                                                        </Link>
+                                                                    ))}
                                                                 </div>
                                                             </motion.div>
                                                         )}
-                                                </AnimatePresence>
-                                            </div>
-                                        ))}
+                                                    </AnimatePresence>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* About */}
+                            <Link
+                                href="/about"
+                                className="relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
+                            >
+                                {t("nav.about", "About")}
+                                <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
+                            </Link>
                         </div>
 
-                        {/* About */}
-                        <Link
-                            href="/about"
-                            className="relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
-                        >
-                            {t("nav.about")}
-                            <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
-                        </Link>
-                    </div>
+                        {/* Right Icons */}
+                        <div className="hidden lg:flex items-center space-x-6">
+                            {/* Language Selector (Sama seperti Menu Product) */}
+                            <div className={`${showSearch ? "hidden" : ""} relative group py-2`}>
+                                <button
+                                    className="flex items-center gap-1.5 text-white hover:text-blue-500 transition-all duration-300"
+                                >
+                                    <Globe size={18} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                                        {languages.find((l) => l.code === locale)?.label}
+                                    </span>
+                                    <ChevronDown
+                                        size={14}
+                                        className="transition-transform duration-300 group-hover:rotate-180"
+                                    />
+                                </button>
 
-                    {/* Right Icons */}
-                    <div className={`hidden lg:flex items-center space-x-6`}>
-                        {/* Language Selector */}
-                        <div
-                            className={`${showSearch ? "hidden" : ""} relative`}
-                            onMouseLeave={() => setShowLangDropdown(false)}
-                        >
-                            <button
-                                onMouseEnter={() => setShowLangDropdown(true)}
-                                className="flex absolute right-0 pb-10 -top-2 items-center gap-1.5 text-white hover:text-blue-500 transition-all duration-300"
-                            >
-                                <Globe size={18} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">
-                                    {
-                                        languages.find((l) => l.code === locale)
-                                            ?.label
-                                    }
-                                </span>
-                                <ChevronDown
-                                    size={14}
-                                    className={`transition-transform duration-300 ${showLangDropdown ? "rotate-180" : ""}`}
-                                />
-                            </button>
-
-                            <AnimatePresence>
-                                {showLangDropdown && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="absolute top-full right-0 mt-8 w-36 bg-white border border-zinc-100 rounded-xl shadow-2xl overflow-hidden z-[110]"
-                                    >
+                                {/* Dropdown Container dengan Jembatan Hover pt-4 */}
+                                <div className="absolute top-full right-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[110]">
+                                    <div className="w-36 bg-white border border-zinc-100 rounded-xl shadow-2xl overflow-hidden">
                                         {languages.map((lang) => (
                                             <button
                                                 key={lang.code}
                                                 onClick={() => {
                                                     setLocale(lang.code);
-                                                    setShowLangDropdown(false);
                                                 }}
-                                                className={`w-full flex items-center justify-between px-4 py-3 text-xs transition-colors ${
-                                                    locale === lang.code
-                                                        ? "text-blue-600 bg-blue-50 font-bold"
-                                                        : "text-zinc-600 hover:bg-zinc-50"
-                                                }`}
+                                                className={`w-full flex items-center justify-between px-4 py-3 text-xs transition-colors ${locale === lang.code
+                                                    ? "text-blue-600 bg-blue-50 font-bold"
+                                                    : "text-zinc-600 hover:bg-zinc-50"
+                                                    }`}
                                             >
-                                                <span>
-                                                    {lang.flag} {lang.label}
-                                                </span>
+                                                <span>{lang.flag} {lang.label}</span>
                                                 {locale === lang.code && (
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                                                 )}
                                             </button>
                                         ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* Search */}
-                        <div
-                            className="group flex w-10 items-center overflow-hidden rounded-full bg-transparent px-2 py-2 transition-all duration-300 hover:w-64 hover:bg-white/30"
-                            onMouseEnter={() => setShowSearch(true)}
-                            onMouseLeave={() => setShowSearch(false)}
-                        >
-                            <Search size={20} className="shrink-0 text-white" />
-                            <input
-                                type="text"
-                                className="ml-2 w-full border-none bg-transparent p-0 text-sm text-white placeholder-white/70 outline-none focus:ring-0"
-                                placeholder={t("nav.searchPlaceholder")}
-                            />
-                        </div>
-
-                        {/* Icons */}
-                        {icons.map((item, index) => (
-                            <button
-                                key={index}
-                                className="text-white hover:text-blue-500 transition-all duration-300 hover:scale-110 relative group"
-                                aria-label={item.label}
-                            >
-                                {item.icon}
-                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
-                                    {item.label}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Mobile Menu Button */}
-                    <div className="lg:hidden flex items-center">
-                        <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="text-white hover:text-blue-500 p-2 transition-colors"
-                        >
-                            {isOpen ? <X size={28} /> : <Menu size={28} />}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Mobile Menu */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="absolute top-full left-0 right-0 bg-zinc-900 shadow-2xl lg:hidden overflow-hidden"
-                    >
-                        <div className="flex flex-col space-y-4 p-6 max-h-[calc(100vh-80px)] overflow-y-auto">
-                            {/* Language Mobile */}
-                            <div className="flex justify-center gap-4 py-2 border-b border-white/5">
-                                {languages.map((lang) => (
-                                    <button
-                                        key={lang.code}
-                                        onClick={() => setLocale(lang.code)}
-                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                                            locale === lang.code
-                                                ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50"
-                                                : "text-zinc-400 bg-white/5"
-                                        }`}
-                                    >
-                                        {lang.flag} {lang.label}
-                                    </button>
-                                ))}
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Search Mobile */}
-                            <div className="relative">
-                                <Search
-                                    size={18}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-                                />
+                            {/* Search */}
+                            <div
+                                className="group flex w-10 items-center overflow-hidden rounded-full bg-transparent px-2 py-2 transition-all duration-300 hover:w-64 hover:bg-white/30"
+                                onMouseEnter={() => setShowSearch(true)}
+                                onMouseLeave={() => setShowSearch(false)}
+                            >
+                                <Search size={20} className="shrink-0 text-white" />
                                 <input
                                     type="text"
-                                    placeholder={t("nav.searchPlaceholder")}
-                                    className="w-full bg-zinc-950 border border-white/10 rounded-full pl-12 pr-4 py-3 text-sm text-white outline-none focus:border-blue-500 transition-all"
+                                    className="ml-2 w-full border-none bg-transparent p-0 text-sm text-white placeholder-white/70 outline-none focus:ring-0"
+                                    placeholder={t("nav.searchPlaceholder", "Search parameters...")}
                                 />
                             </div>
 
-                            {/* Home */}
-                            <Link
-                                href="/"
-                                className="text-lg font-['Cinzel'] font-bold text-white hover:text-blue-500 py-2 border-b border-white/5"
-                                onClick={() => setIsOpen(false)}
+                            {/* Cart Icon */}
+                            <button
+                                className="text-white hover:text-blue-500 transition-all duration-300 hover:scale-110 relative group py-2"
+                                aria-label="Cart"
                             >
-                                {t("nav.home")}
-                            </Link>
+                                <ShoppingCart size={20} />
+                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+                                    Cart
+                                </span>
+                            </button>
 
-                            {/* Product Dropdown Mobile */}
-                            <details className="w-full group">
-                                <summary className="list-none cursor-pointer flex items-center justify-between text-lg font-['Cinzel'] font-bold text-white hover:text-blue-500 py-2 border-b border-white/5">
-                                    {t("nav.product")}
-                                    <ChevronDown
-                                        size={18}
-                                        className="transition-transform duration-300 group-open:rotate-180"
-                                    />
-                                </summary>
-                                <div className="mt-4 flex flex-col gap-2 pl-4">
-                                    {productDropdown.map((item, index) =>
-                                        item.subCategory ? (
-                                            <details
-                                                key={index}
-                                                className="group/sub"
-                                            >
-                                                <summary className="list-none cursor-pointer flex items-center justify-between py-2 text-zinc-400 hover:text-white transition-colors">
-                                                    {item.name}
-                                                    <ChevronDown
-                                                        size={14}
-                                                        className="transition-transform duration-300 group-open/sub:rotate-180"
-                                                    />
-                                                </summary>
-                                                <div className="flex flex-col gap-2 pl-4 py-2 border-l border-white/10 ml-1">
-                                                    {item.subCategory.map(
-                                                        (sub, sIdx) => (
-                                                            <Link
-                                                                key={sIdx}
-                                                                href={`${item.href}?sub=${sub.val}`}
-                                                                className="text-sm text-zinc-500 hover:text-blue-400"
-                                                                onClick={() =>
-                                                                    setIsOpen(
-                                                                        false,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {sub.name}
-                                                            </Link>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </details>
-                                        ) : (
-                                            <Link
-                                                key={index}
-                                                href={item.href}
-                                                className="py-2 text-zinc-400 hover:text-white"
-                                                onClick={() => setIsOpen(false)}
-                                            >
-                                                {item.name}
-                                            </Link>
-                                        ),
+                            {/* PREMIUM ACCOUNT DROPDOWN */}
+                            <div
+                                className="relative py-2"
+                                onMouseEnter={() => setShowAccountDropdown(true)}
+                                onMouseLeave={() => setShowAccountDropdown(false)}
+                            >
+                                <button
+                                    className="text-white hover:text-amber-400 transition-all duration-300 hover:scale-110 relative flex items-center"
+                                    aria-label="Account"
+                                >
+                                    {user ? (
+                                        <img
+                                            src={
+                                                user.avatar
+                                                    ? user.avatar.startsWith("http") || user.avatar.startsWith("/")
+                                                        ? user.avatar
+                                                        : `/storage/${user.avatar}`
+                                                    : "/images/default-profile.png"
+                                            }
+                                            alt={user.name}
+                                            className="w-7 h-7 rounded-full object-cover border border-white/20 hover:border-amber-400 transition-all"
+                                        />
+                                    ) : (
+                                        <User size={20} />
                                     )}
-                                </div>
-                            </details>
+                                </button>
 
-                            {/* About */}
-                            <Link
-                                href="/about"
-                                className="text-lg font-['Cinzel'] font-bold text-white hover:text-blue-500 py-2 border-b border-white/5"
-                                onClick={() => setIsOpen(false)}
-                            >
-                                {t("nav.about")}
-                            </Link>
-
-                            {/* Icons Mobile */}
-                            <div className="flex justify-around pt-6">
-                                {icons.map((item, index) => (
-                                    <button
-                                        key={index}
-                                        className="text-zinc-400 hover:text-blue-500 p-2"
-                                    >
-                                        {item.icon}
-                                    </button>
-                                ))}
+                                <AnimatePresence>
+                                    {showAccountDropdown && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 15 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute right-0 top-full pt-4 w-52 z-[120]"
+                                        >
+                                            <div className="bg-white backdrop-blur-xl border border-zinc-100 rounded-xl shadow-2xl py-2 overflow-hidden">
+                                                {user ? (
+                                                    <>
+                                                        <div className="px-4 py-2 border-b border-zinc-100 mb-1">
+                                                            <p className="text-xs text-zinc-400">Premium Member</p>
+                                                            <p className="text-sm font-semibold text-zinc-800 truncate">{user.name}</p>
+                                                        </div>
+                                                        <Link
+                                                            href="/profile"
+                                                            className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                                                        >
+                                                            <User size={16} className="text-zinc-400" />
+                                                            {t("nav.account.profile", "Edit Profile")}
+                                                        </Link>
+                                                        <Link
+                                                            href="/logout"
+                                                            method="post"
+                                                            as="button"
+                                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-all duration-200 text-left"
+                                                        >
+                                                            <LogOut size={16} />
+                                                            {t("nav.account.logout", "Sign Out")}
+                                                        </Link>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowAccountDropdown(false);
+                                                            setShowLoginModal(true);
+                                                        }}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 text-left"
+                                                    >
+                                                        <LogIn size={16} className="text-blue-500" />
+                                                        {t("nav.account.login", "Sign In")}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </nav>
+
+                        {/* Mobile Menu Button */}
+                        <div className="lg:hidden flex items-center">
+                            <button
+                                onClick={() => setIsOpen(!isOpen)}
+                                className="text-white hover:text-blue-500 p-2 transition-colors"
+                            >
+                                {isOpen ? <X size={28} /> : <Menu size={28} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <LoginModal
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                t={t}
+            />
+        </>
     );
 };
 
