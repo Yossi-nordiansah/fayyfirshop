@@ -37,7 +37,7 @@ export default function Register() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const isRtl = locale === 'ar';
+    const isRtl = locale === 'arabic';
 
     const currentTxt = {
         name_req: t("register.err.name_req", "Nama lengkap wajib diisi"),
@@ -53,7 +53,6 @@ export default function Register() {
         city_req: t("register.err.city_req", "Kota/Kabupaten wajib diisi"),
         district_req: t("register.err.district_req", "Kecamatan wajib diisi"),
         postal_req: t("register.err.postal_req", "Kode pos wajib diisi"),
-
         placeholder_name: t("register.place.name", "Masukkan nama lengkap Anda"),
         placeholder_email: t("register.place.email", "Masukkan alamat email Anda"),
         placeholder_pass: t("register.place.pass", "Minimal 8 karakter"),
@@ -62,6 +61,7 @@ export default function Register() {
         placeholder_address: t("register.place.address", "Nama jalan, RT/RW, nomor rumah, kelurahan/kecamatan"),
         placeholder_postal: t("register.place.postal", "40123"),
         placeholder_receiver_name: t("register.placeholder_receiver", "Masukkan nama penerima dari alamat anda"),
+        recipient_name_required: t("validation.checkout.recipient_name_required", "Nama penerima wajib diisi")
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -76,6 +76,7 @@ export default function Register() {
         city: "",     // Menyimpan nama kota terpilih
         district: "", // Menyimpan nama kecamatan terpilih
         postal_code: "",
+        receiver_name: "",
         avatar: null,
     });
 
@@ -86,6 +87,13 @@ export default function Register() {
         const previewUrl = URL.createObjectURL(file);
         setAvatarPreview(previewUrl);
     };
+
+    // Re-validate and re-translate errors when locale or translation function changes
+    useEffect(() => {
+        if (Object.keys(clientErrors).length > 0) {
+            validateForm();
+        }
+    }, [locale, t]);
 
     // Mengambil data provinsi ketika user memilih Indonesia
     useEffect(() => {
@@ -166,6 +174,7 @@ export default function Register() {
         if (!data.city.trim()) errs.city = currentTxt.city_req;
         if (data.country === "ID" && !data.district.trim()) errs.district = currentTxt.district_req;
         if (!data.postal_code.trim()) errs.postal_code = currentTxt.postal_req;
+        if (!data.receiver_name.trim()) errs.receiver_name = currentTxt.recipient_name_required;
 
         setClientErrors(errs);
         return Object.keys(errs).length === 0;
@@ -182,32 +191,10 @@ export default function Register() {
         }
     };
 
-    const RenderInput = (props) => (
-        <BaseRenderInput
-            data={data}
-            setData={setData}
-            errors={errors}
-            clientErrors={clientErrors}
-            isRtl={isRtl}
-            {...props}
-        />
-    );
-
-    const renderInput = RenderInput;
-
-    const RenderTextArea = (props) => (
-        <BaseRenderTextArea
-            data={data}
-            setData={setData}
-            errors={errors}
-            clientErrors={clientErrors}
-            isRtl={isRtl}
-            {...props}
-        />
-    );
+    console.log(data);
 
     return (
-        <div className="min-h-screen text-slate-900 font-sans selection:bg-amber-500 selection:text-white lg:pt-20">
+        <div className="min-h-screen text-slate-900 font-sans selection:bg-amber-500 selection:text-white md:pt-16 lg:pt-20">
             <Head title={t("register.title", "Daftar Akun")} />
 
             {/* Full-screen loading overlay */}
@@ -221,7 +208,7 @@ export default function Register() {
 
             <MainLayout>
                 <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-12 overflow-hidden bg-transparent select-none pt-28 pb-12">
-                    <div className="relative z-10 w-full max-w-5xl bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xl p-6 md:p-12 min-h-[600px] flex flex-col justify-between">
+                    <div className="relative z-10 w-full max-w-5xl bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xl py-6 px-3 md:p-12 min-h-[600px] flex flex-col justify-between">
 
                         {/* Header Bagian Atas */}
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8" dir={isRtl ? "rtl" : "ltr"}>
@@ -293,20 +280,30 @@ export default function Register() {
                                     <h2 className="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 border-b border-slate-100 pb-2">
                                         {t("register.account_info", "Informasi Akun")}
                                     </h2>
-                                    {RenderInput({
-                                        label: t("register.name", "Nama Lengkap"),
-                                        id: "name",
-                                        placeholder: currentTxt.placeholder_name,
-                                        icon: User
-                                    })}
+                                    <BaseRenderInput
+                                        label={t("register.name", "Nama Lengkap")}
+                                        id="name"
+                                        placeholder={currentTxt.placeholder_name}
+                                        icon={User}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
 
-                                    {RenderInput({
-                                        label: t("register.email", "Alamat Email"),
-                                        id: "email",
-                                        type: "email",
-                                        placeholder: currentTxt.placeholder_email,
-                                        icon: Mail
-                                    })}
+                                    <BaseRenderInput
+                                        label={t("register.email", "Alamat Email")}
+                                        id="email"
+                                        type="email"
+                                        placeholder={currentTxt.placeholder_email}
+                                        icon={Mail}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {/* Input Password */}
@@ -321,8 +318,13 @@ export default function Register() {
                                                 <input
                                                     type={showPassword ? "text" : "password"}
                                                     id="password"
+                                                    value={data.password}
+                                                    onChange={(e) => setData("password", e.target.value)}
                                                     placeholder={currentTxt.placeholder_pass}
-                                                    className="block w-full rounded-lg border border-zinc-300 bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm"
+                                                    className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password || errors.password)
+                                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                                        : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"
+                                                        }`}
                                                 />
                                                 <button
                                                     type="button"
@@ -332,6 +334,15 @@ export default function Register() {
                                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                                 </button>
                                             </div>
+                                            {(clientErrors.password || errors.password) && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="text-xs text-red-500 mt-1 px-1"
+                                                >
+                                                    {clientErrors.password || errors.password}
+                                                </motion.p>
+                                            )}
                                         </div>
 
                                         {/* Input Konfirmasi Password */}
@@ -346,8 +357,13 @@ export default function Register() {
                                                 <input
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     id="password_confirmation"
+                                                    value={data.password_confirmation}
+                                                    onChange={(e) => setData("password_confirmation", e.target.value)}
                                                     placeholder={currentTxt.placeholder_confirm}
-                                                    className="block w-full rounded-lg border border-zinc-300 bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm"
+                                                    className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password_confirmation || errors.password_confirmation)
+                                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                                        : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"
+                                                        }`}
                                                 />
                                                 <button
                                                     type="button"
@@ -357,6 +373,15 @@ export default function Register() {
                                                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                                 </button>
                                             </div>
+                                            {(clientErrors.password_confirmation || errors.password_confirmation) && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="text-xs text-red-500 mt-1 px-1"
+                                                >
+                                                    {clientErrors.password_confirmation || errors.password_confirmation}
+                                                </motion.p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -385,6 +410,7 @@ export default function Register() {
                                                             country: e.target.value,
                                                             province: "",
                                                             city: "",
+                                                            district: "",
                                                             address: "",
                                                             postal_code: ""
                                                         }));
@@ -398,13 +424,18 @@ export default function Register() {
                                             </div>
                                         </div>
 
-                                        {renderInput({
-                                            label: t("register.phone", "Nomor Telepon / WhatsApp"),
-                                            id: "phone",
-                                            type: "tel",
-                                            placeholder: currentTxt.placeholder_phone,
-                                            icon: Phone
-                                        })}
+                                        <BaseRenderInput
+                                            label={t("register.phone", "Nomor Telepon / WhatsApp")}
+                                            id="phone"
+                                            type="tel"
+                                            placeholder={currentTxt.placeholder_phone}
+                                            icon={Phone}
+                                            data={data}
+                                            setData={setData}
+                                            errors={errors}
+                                            clientErrors={clientErrors}
+                                            isRtl={isRtl}
+                                        />
                                     </div>
 
                                     {/* DYNAMIC FORM BERDASARKAN NEGARA */}
@@ -425,7 +456,7 @@ export default function Register() {
                                                             value={provinces.find(p => p.name === data.province)?.code || ""}
                                                             onChange={(e) => {
                                                                 const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleProvinceChange(e.target.value, selectedOption.text);
+                                                                handleProvinceChange(e.target.value, selectedOption ? selectedOption.text : "");
                                                             }}
                                                             className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${(clientErrors.province || errors.province) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
                                                         >
@@ -454,7 +485,7 @@ export default function Register() {
                                                             disabled={loadingCities || cities.length === 0}
                                                             onChange={(e) => {
                                                                 const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleCityChange(e.target.value, selectedOption.text);
+                                                                handleCityChange(e.target.value, selectedOption ? selectedOption.text : "");
                                                             }}
                                                             className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${(clientErrors.city || errors.city) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
                                                         >
@@ -500,58 +531,88 @@ export default function Register() {
                                                 </div>
 
                                                 {/* Input Kode Pos */}
-                                                {RenderInput({
-                                                    label: t("register.postal_code", "Kode Pos"),
-                                                    id: "postal_code",
-                                                    placeholder: currentTxt.placeholder_postal,
-                                                    icon: Home
-                                                })}
+                                                <BaseRenderInput
+                                                    label={t("register.postal_code", "Kode Pos")}
+                                                    id="postal_code"
+                                                    placeholder={currentTxt.placeholder_postal}
+                                                    icon={Home}
+                                                    data={data}
+                                                    setData={setData}
+                                                    errors={errors}
+                                                    clientErrors={clientErrors}
+                                                    isRtl={isRtl}
+                                                />
                                             </div>
-
-                                            {RenderInput({
-                                                label: t("register.receiver_name", "Nama Penerima"),
-                                                id: "receiver_name",
-                                                placeholder: currentTxt.placeholder_receiver_name,
-                                                icon: User
-                                            })}
                                         </div>
                                     ) : (
                                         /* STRUKTUR REGISTRASI INTERNATIONAL / SAUDI ARABIA */
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                                            {RenderInput({
-                                                label: t("register.sa_region", "Wilayah / Provinsi (Region)"),
-                                                id: "province",
-                                                placeholder: t("register.place.sa_region", "Misal: Makkah Region"),
-                                                icon: Compass
-                                            })}
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 mb-5">
+                                            <BaseRenderInput
+                                                label={t("register.sa_region", "Wilayah / Provinsi (Region)")}
+                                                id="province"
+                                                placeholder={t("register.place.sa_region", "Misal: Makkah Region")}
+                                                icon={Compass}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
 
-                                            {RenderInput({
-                                                label: t("register.sa_city", "Kota (City)"),
-                                                id: "city",
-                                                placeholder: t("register.place.sa_city", "Misal: Jeddah / Mecca"),
-                                                icon: Home
-                                            })}
+                                            <BaseRenderInput
+                                                label={t("register.sa_city", "Kota (City)")}
+                                                id="city"
+                                                placeholder={t("register.place.sa_city", "Misal: Jeddah / Mecca")}
+                                                icon={Home}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
 
-                                            {RenderInput({
-                                                label: t("register.sa_postal", "Kode Pos / ZIP (5 Digit)"),
-                                                id: "postal_code",
-                                                placeholder: "21577",
-                                                icon: Home
-                                            })}
+                                            <BaseRenderInput
+                                                label={t("register.sa_postal", "Kode Pos / ZIP (5 Digit)")}
+                                                id="postal_code"
+                                                placeholder="21577"
+                                                icon={Home}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
                                         </div>
                                     )}
 
-                                    {RenderTextArea({
-                                        label: data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan"),
-                                        id: "address",
-                                        placeholder: data.country === "ID" ? currentTxt.placeholder_address : t("register.place.sa_address", "Nama jalan, nomor bangunan (4 digit), atau distrik"),
-                                        icon: MapPin
-                                    })}
+                                    <BaseRenderInput
+                                        label={t("register.receiver_name", "Nama Penerima")}
+                                        id="receiver_name"
+                                        placeholder={currentTxt.placeholder_receiver_name}
+                                        icon={User}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
+
+                                    <BaseRenderTextArea
+                                        label={data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan")}
+                                        id="address"
+                                        placeholder={data.country === "ID" ? currentTxt.placeholder_address : t("register.place.sa_address", "Nama jalan, nomor bangunan (4 digit), atau distrik")}
+                                        icon={MapPin}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
                                 </div>
                             </div>
 
                             {/* Navigation Buttons */}
-                            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center border-t border-slate-100 pt-6" dir={isRtl ? "rtl" : "ltr"}>
+                            <div className="md:mt-8 flex flex-col sm:flex-row gap-2 md:gap-4 justify-between items-center border-t border-slate-100 pt-6" dir={isRtl ? "rtl" : "ltr"}>
                                 <div className="text-center sm:text-left">
                                     <Link href={route("login")} className="text-xs text-slate-500 hover:text-amber-600 transition-colors inline-flex items-center gap-1 group font-medium">
                                         {t("register.have_account", "Sudah memiliki akun?")}

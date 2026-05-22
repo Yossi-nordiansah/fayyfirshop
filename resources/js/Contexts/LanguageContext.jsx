@@ -15,6 +15,7 @@ export const LanguageProvider = ({ children }) => {
                 const data = await response.json();
                 setTranslations(data);
                 localStorage.setItem('locale', locale);
+                document.cookie = `locale=${locale};path=/;max-age=31536000;SameSite=Lax`;
                 
                 // Keep layout LTR for all languages
                 document.documentElement.dir = 'ltr';

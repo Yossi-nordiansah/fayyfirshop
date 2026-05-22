@@ -8,6 +8,25 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     /**
+     * Handle the incoming request.
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $locale = $request->cookies->get('locale') ?? 'indonesia';
+        
+        $map = [
+            'english' => 'en',
+            'arabic' => 'ar',
+            'indonesia' => 'id',
+        ];
+        
+        $laravelLocale = $map[$locale] ?? 'id';
+        app()->setLocale($laravelLocale);
+        
+        return parent::handle($request, $next);
+    }
+
+    /**
      * The root template that is loaded on the first page visit.
      *
      * @var string

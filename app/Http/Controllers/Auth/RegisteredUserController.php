@@ -37,6 +37,7 @@ class RegisteredUserController extends Controller
             'province' => 'required|string|max:255',
             'district' => 'nullable|string|max:255',
             'postal_code' => 'required|string|max:20',
+            'receiver_name' => 'required|string|max:255',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
@@ -57,6 +58,7 @@ class RegisteredUserController extends Controller
             'city' => $request->city,
             'district' => $request->district,
             'province' => $request->province,
+            'receiver_name' => $request->receiver_name,
             'postal_code' => $request->postal_code,
             'password' => Hash::make($request->password),
         ]);

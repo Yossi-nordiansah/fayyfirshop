@@ -6,41 +6,41 @@ import { Filter, RotateCcw, Grid, ChevronDown } from "lucide-react";
 // Category slug mapping to database values and translations keys
 export const CATEGORY_MAP = {
     perfume: {
-        name: "Parfum",
+        name: "perfume",
         translationKey: "nav.perfume",
         subCategories: {
-            mens: { name: "Pria", translationKey: "sub.mens" },
-            womens: { name: "Wanita", translationKey: "sub.womens" },
+            mens: { name: "mens", translationKey: "sub.mens" },
+            womens: { name: "Womens", translationKey: "sub.womens" },
             unisex: { name: "Unisex", translationKey: "sub.unisex" },
             "parfume-set": { name: "Parfum Set", translationKey: "sub.set" },
         },
     },
     "aromatic-oil": {
-        name: "Minyak Aromatik",
+        name: "aromatic oil",
         translationKey: "nav.aromaticOil",
         subCategories: {
             "aromatic-oil": {
-                name: "Minyak Aromatik",
+                name: "aromatic oil",
                 translationKey: "sub.oil",
             },
-            "dehn-oud": { name: "Dehn Oud", translationKey: "sub.dehn" },
+            "dehn-oud": { name: "dehn oud", translationKey: "sub.dehn" },
         },
     },
     "bakhoor-and-oud": {
-        name: "Bakhoor dan Oud",
+        name: "bakhoor and oud",
         translationKey: "nav.bakhoor",
         subCategories: {
-            oud: { name: "Oud", translationKey: "sub.oud" },
-            bakhoor: { name: "Bakhoor", translationKey: "sub.bakhoor" },
-            mamoul: { name: "Mamoul", translationKey: "sub.mamoul" },
+            oud: { name: "oud", translationKey: "sub.oud" },
+            bakhoor: { name: "bakhoor", translationKey: "sub.bakhoor" },
+            mamoul: { name: "mamoul", translationKey: "sub.mamoul" },
         },
     },
     "healthy-nutrition": {
-        name: "Kesehatan Dan Nutrisi",
+        name: "healthy nutrition",
         translationKey: "nav.nutrition",
         subCategories: {
-            saffron: { name: "Saffron", translationKey: "sub.saffron" },
-            honey: { name: "Madu", translationKey: "sub.honey" },
+            saffron: { name: "saffron", translationKey: "sub.saffron" },
+            honey: { name: "honey", translationKey: "sub.honey" },
         },
     },
 };

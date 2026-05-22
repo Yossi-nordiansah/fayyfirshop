@@ -12,11 +12,11 @@ const RenderInput = ({
     setData,
     errors = {},
     clientErrors = {},
-    isRtl = false
+    isRtl = false,
 }) => {
     const errorMsg = clientErrors[id] || errors[id];
     return (
-        <div className="relative mb-5" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="relative pb-5" dir={isRtl ? "rtl" : "ltr"}>
             <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5 px-1">
                 {label} {required && <span className="text-amber-600">*</span>}
             </label>
@@ -34,7 +34,7 @@ const RenderInput = ({
                         ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                         : "border-slate-200 hover:border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
                         }`}
-                    required={required}
+                // required={required}
                 />
             </div>
             {errorMsg && (

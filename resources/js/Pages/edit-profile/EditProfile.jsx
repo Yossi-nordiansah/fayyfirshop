@@ -20,11 +20,13 @@ import Footer from "@/Components/Footer";
 import MainLayout from "@/Layouts/MainLayout";
 import BaseRenderInput from "@/Components/register/RenderInput";
 import BaseRenderTextArea from "@/Components/register/RenderTextArea";
+import ChangePasswordModal from "@/Components/edit-profile/ChangePasswordModal";
 
 export default function EditProfile({ auth, mustVerifyEmail, status }) {
     const { t, locale } = useLanguage();
     const [clientErrors, setClientErrors] = useState({});
     const isRtl = locale === 'ar';
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
     // Helper for avatar URL resolution
     const getAvatarUrl = () => {
@@ -221,28 +223,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
         }
     };
 
-    const RenderInput = (props) => (
-        <BaseRenderInput
-            data={data}
-            setData={setData}
-            errors={errors}
-            clientErrors={clientErrors}
-            isRtl={isRtl}
-            {...props}
-        />
-    );
-
-    const RenderTextArea = (props) => (
-        <BaseRenderTextArea
-            data={data}
-            setData={setData}
-            errors={errors}
-            clientErrors={clientErrors}
-            isRtl={isRtl}
-            {...props}
-        />
-    );
-
     return (
         <div className="min-h-screen text-slate-900 font-sans selection:bg-amber-500 selection:text-white lg:pt-20">
             <Head title={t("nav.account.profile", "Edit Profil")} />
@@ -346,30 +326,34 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                     <h2 className="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 border-b border-slate-100 pb-2">
                                         {t("register.account_info", "Informasi Akun")}
                                     </h2>
-                                    {RenderInput({
-                                        label: t("register.name", "Nama Lengkap"),
-                                        id: "name",
-                                        placeholder: currentTxt.placeholder_name,
-                                        icon: User
-                                    })}
+                                    <BaseRenderInput
+                                        label={t("register.name", "Nama Lengkap")}
+                                        id="name"
+                                        placeholder={currentTxt.placeholder_name}
+                                        icon={User}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
 
-                                    {RenderInput({
-                                        label: t("register.email", "Alamat Email"),
-                                        id: "email",
-                                        type: "email",
-                                        placeholder: currentTxt.placeholder_email,
-                                        icon: Mail
-                                    })}
+                                    <BaseRenderInput
+                                        label={t("register.email", "Alamat Email")}
+                                        id="email"
+                                        type="email"
+                                        placeholder={currentTxt.placeholder_email}
+                                        icon={Mail}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {RenderInput({
-                                            label: t("register.password", "Kata Sandi Baru (Opsional)"),
-                                            id: "password",
-                                            type: "password",
-                                            placeholder: currentTxt.placeholder_pass,
-                                            icon: Lock
-                                        })}
-                                    </div>
+                                    <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                        {t("profile.button.change_password", "Ubah Kata Sandi")}
+                                    </button>
                                 </div>
 
                                 {/* Address & Contact Info */}
@@ -396,6 +380,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                                             country: e.target.value,
                                                             province: "",
                                                             city: "",
+                                                            district: "",
                                                             address: "",
                                                             postal_code: ""
                                                         }));
@@ -409,13 +394,18 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                             </div>
                                         </div>
 
-                                        {RenderInput({
-                                            label: t("register.phone", "Nomor Telepon / WhatsApp"),
-                                            id: "phone",
-                                            type: "tel",
-                                            placeholder: currentTxt.placeholder_phone,
-                                            icon: Phone
-                                        })}
+                                        <BaseRenderInput
+                                            label={t("register.phone", "Nomor Telepon / WhatsApp")}
+                                            id="phone"
+                                            type="tel"
+                                            placeholder={currentTxt.placeholder_phone}
+                                            icon={Phone}
+                                            data={data}
+                                            setData={setData}
+                                            errors={errors}
+                                            clientErrors={clientErrors}
+                                            isRtl={isRtl}
+                                        />
                                     </div>
 
                                     {/* DYNAMIC REGIONAL FORM */}
@@ -435,7 +425,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                                             value={provinces.find(p => p.name === data.province)?.code || ""}
                                                             onChange={(e) => {
                                                                 const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleProvinceChange(e.target.value, selectedOption.text);
+                                                                handleProvinceChange(e.target.value, selectedOption ? selectedOption.text : "");
                                                             }}
                                                             className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${(clientErrors.province || errors.province) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
                                                         >
@@ -464,7 +454,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                                             disabled={loadingCities || cities.length === 0}
                                                             onChange={(e) => {
                                                                 const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleCityChange(e.target.value, selectedOption.text);
+                                                                handleCityChange(e.target.value, selectedOption ? selectedOption.text : "");
                                                             }}
                                                             className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${(clientErrors.city || errors.city) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
                                                         >
@@ -510,46 +500,71 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                                 </div>
 
                                                 {/* Kode Pos */}
-                                                {RenderInput({
-                                                    label: t("register.postal_code", "Kode Pos"),
-                                                    id: "postal_code",
-                                                    placeholder: currentTxt.placeholder_postal,
-                                                    icon: Home
-                                                })}
+                                                <BaseRenderInput
+                                                    label={t("register.postal_code", "Kode Pos")}
+                                                    id="postal_code"
+                                                    placeholder={currentTxt.placeholder_postal}
+                                                    icon={Home}
+                                                    data={data}
+                                                    setData={setData}
+                                                    errors={errors}
+                                                    clientErrors={clientErrors}
+                                                    isRtl={isRtl}
+                                                />
                                             </div>
                                         </div>
                                     ) : (
                                         /* International (Saudi Arabia) */
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                                            {RenderInput({
-                                                label: t("register.sa_region", "Wilayah / Provinsi (Region)"),
-                                                id: "province",
-                                                placeholder: t("register.place.sa_region", "Misal: Makkah Region"),
-                                                icon: Compass
-                                            })}
+                                            <BaseRenderInput
+                                                label={t("register.sa_region", "Wilayah / Provinsi (Region)")}
+                                                id="province"
+                                                placeholder={t("register.place.sa_region", "Misal: Makkah Region")}
+                                                icon={Compass}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
 
-                                            {RenderInput({
-                                                label: t("register.sa_city", "Kota (City)"),
-                                                id: "city",
-                                                placeholder: t("register.place.sa_city", "Misal: Jeddah / Mecca"),
-                                                icon: Home
-                                            })}
+                                            <BaseRenderInput
+                                                label={t("register.sa_city", "Kota (City)")}
+                                                id="city"
+                                                placeholder={t("register.place.sa_city", "Misal: Jeddah / Mecca")}
+                                                icon={Home}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
 
-                                            {RenderInput({
-                                                label: t("register.sa_postal", "Kode Pos / ZIP (5 Digit)"),
-                                                id: "postal_code",
-                                                placeholder: "21577",
-                                                icon: Home
-                                            })}
+                                            <BaseRenderInput
+                                                label={t("register.sa_postal", "Kode Pos / ZIP (5 Digit)")}
+                                                id="postal_code"
+                                                placeholder="21577"
+                                                icon={Home}
+                                                data={data}
+                                                setData={setData}
+                                                errors={errors}
+                                                clientErrors={clientErrors}
+                                                isRtl={isRtl}
+                                            />
                                         </div>
                                     )}
 
-                                    {RenderTextArea({
-                                        label: data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan"),
-                                        id: "address",
-                                        placeholder: data.country === "ID" ? currentTxt.placeholder_address : t("register.place.sa_address", "Nama jalan, nomor bangunan (4 digit), atau distrik"),
-                                        icon: MapPin
-                                    })}
+                                    <BaseRenderTextArea
+                                        label={data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan")}
+                                        id="address"
+                                        placeholder={data.country === "ID" ? currentTxt.placeholder_address : t("register.place.sa_address", "Nama jalan, nomor bangunan (4 digit), atau distrik")}
+                                        icon={MapPin}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
                                 </div>
                             </div>
 
@@ -576,6 +591,10 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
 
                 <Footer />
             </MainLayout>
+            <ChangePasswordModal
+                isOpen={isPasswordModalOpen}
+                onClose={() => setIsPasswordModalOpen(false)}
+            />
         </div>
     );
 }

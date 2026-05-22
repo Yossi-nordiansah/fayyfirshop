@@ -173,6 +173,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                     <AnimatePresence>
                                                         {activeCategory?.name === item.name && item.subCategory && (
                                                             <motion.div
+                                                                key={item.name}
                                                                 initial={{ opacity: 0, x: -10 }}
                                                                 animate={{ opacity: 1, x: 0 }}
                                                                 exit={{ opacity: 0, x: -10 }}
@@ -306,6 +307,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                 <AnimatePresence>
                                     {showAccountDropdown && (
                                         <motion.div
+                                            key="account-dropdown"
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 15 }}
@@ -316,7 +318,6 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                 {user ? (
                                                     <>
                                                         <div className="px-4 py-2 border-b border-zinc-100 mb-1">
-                                                            <p className="text-xs text-zinc-400">Premium Member</p>
                                                             <p className="text-sm font-semibold text-zinc-800 truncate">{user.name}</p>
                                                         </div>
                                                         <Link
@@ -366,6 +367,119 @@ const Navbar = ({ alwaysSolid = false }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Mobile Menu Drawer */}
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div
+                            key="mobile-menu"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="lg:hidden absolute top-20 left-0 right-0 bg-blue-950/95 backdrop-blur-2xl border-t border-white/10 shadow-2xl z-[90] overflow-y-auto max-h-[calc(100vh-5rem)]"
+                        >
+                            <div className="p-6 space-y-6 text-white" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
+                                {/* Search Bar */}
+                                <div className="relative">
+                                    <Search size={18} className={`absolute ${locale === 'arabic' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-white/50`} />
+                                    <input
+                                        type="text"
+                                        placeholder={t("nav.searchPlaceholder", "Cari produk...")}
+                                        className={`w-full bg-white/10 border border-white/10 rounded-xl ${locale === 'arabic' ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3 text-sm text-white placeholder-white/50 outline-none focus:border-blue-500/50 transition-all`}
+                                    />
+                                </div>
+
+                                {/* Navigation Links */}
+                                <div className="space-y-4">
+                                    <Link
+                                        href="/"
+                                        onClick={() => setIsOpen(false)}
+                                        className="block text-sm font-semibold tracking-wider uppercase py-2 border-b border-white/5 hover:text-blue-400 transition-colors"
+                                    >
+                                        {t("nav.home", "Home")}
+                                    </Link>
+
+                                    {/* Products (with Expandable Submenu) */}
+                                    <MobileProductsMenu productDropdown={productDropdown} t={t} setIsOpen={setIsOpen} />
+
+                                    <Link
+                                        href="/about"
+                                        onClick={() => setIsOpen(false)}
+                                        className="block text-sm font-semibold tracking-wider uppercase py-2 border-b border-white/5 hover:text-blue-400 transition-colors"
+                                    >
+                                        {t("nav.about", "About Us")}
+                                    </Link>
+                                </div>
+
+                                {/* User & Settings Section */}
+                                <div className="pt-4 border-t border-white/10 space-y-4">
+                                    {/* Language Selector */}
+                                    <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} />
+
+                                    {/* Cart */}
+                                    <button className="w-full flex items-center justify-between py-2 border-b border-white/5 hover:text-blue-400 transition-colors">
+                                        <span className="text-sm font-semibold uppercase tracking-wider">Cart</span>
+                                        <ShoppingCart size={18} />
+                                    </button>
+
+                                    {/* Account Actions */}
+                                    {user ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                                                <img
+                                                    src={
+                                                        user.avatar
+                                                            ? user.avatar.startsWith("http") || user.avatar.startsWith("/")
+                                                                ? user.avatar
+                                                                : `/storage/${user.avatar}`
+                                                            : "/images/default-profile.png"
+                                                    }
+                                                    alt={user.name}
+                                                    className="w-9 h-9 rounded-full object-cover border border-white/10"
+                                                />
+                                                <div className="overflow-hidden">
+                                                    <p className="text-sm font-semibold truncate">{user.name}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Link
+                                                    href="/profile"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/15 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all text-center"
+                                                >
+                                                    <User size={14} />
+                                                    {t("nav.account.profile", "Profile")}
+                                                </Link>
+                                                <Link
+                                                    href="/logout"
+                                                    method="post"
+                                                    as="button"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="flex items-center justify-center gap-2 py-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all"
+                                                >
+                                                    <LogOut size={14} />
+                                                    {t("nav.account.logout", "Sign Out")}
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setIsOpen(false);
+                                                setShowLoginModal(true);
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-md"
+                                        >
+                                            <LogIn size={14} />
+                                            {t("nav.account.login", "Sign In")}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </nav>
 
             <LoginModal
@@ -374,6 +488,127 @@ const Navbar = ({ alwaysSolid = false }) => {
                 t={t}
             />
         </>
+    );
+};
+
+// Expandable Product Submenu for Mobile
+const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [expandedCategory, setExpandedCategory] = useState(null);
+
+    return (
+        <div className="border-b border-white/5">
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between py-2 hover:text-blue-400 transition-colors"
+            >
+                <span className="text-sm font-semibold tracking-wider uppercase">
+                    {t("nav.product", "Products")}
+                </span>
+                <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        key="mobile-products-menu"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pl-4 pr-2 py-2 space-y-3 bg-white/5 rounded-xl mt-1 overflow-hidden"
+                    >
+                        {productDropdown.map((item, index) => (
+                            <div key={index} className="space-y-1">
+                                {item.subCategory ? (
+                                    <>
+                                        <button
+                                            onClick={() => setExpandedCategory(expandedCategory === item.name ? null : item.name)}
+                                            className="w-full flex items-center justify-between py-1.5 text-sm text-white/85 hover:text-white transition-colors"
+                                        >
+                                            <span>{item.name}</span>
+                                            <ChevronDown size={14} className={`transition-transform duration-300 ${expandedCategory === item.name ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        {expandedCategory === item.name && (
+                                            <div className="pl-4 py-1 space-y-2 border-l border-white/10">
+                                                {item.subCategory.map((sub, sIdx) => (
+                                                    <Link
+                                                        key={sIdx}
+                                                        href={`${item.href}?sub=${sub.val}`}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className="block text-xs text-white/60 hover:text-blue-400 transition-colors py-1"
+                                                    >
+                                                        {sub.name}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Link
+                                        href={item.href}
+                                        onClick={() => setIsOpen(false)}
+                                        className="block py-1.5 text-sm text-white/85 hover:text-white transition-colors"
+                                    >
+                                        {item.name}
+                                    </Link>
+                                )}
+                            </div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// Expandable Language Selector for Mobile
+const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="border-b border-white/5 pb-2">
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between py-2 hover:text-blue-400 transition-colors"
+            >
+                <div className="flex items-center gap-2">
+                    <Globe size={18} />
+                    <span className="text-sm font-semibold uppercase tracking-wider">
+                        {t("nav.language", "Language")}: {languages.find((l) => l.code === locale)?.label}
+                    </span>
+                </div>
+                <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        key="mobile-language-selector"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="grid grid-cols-3 gap-2 mt-2 overflow-hidden"
+                    >
+                        {languages.map((lang) => (
+                            <button
+                                key={lang.code}
+                                onClick={() => {
+                                    setLocale(lang.code);
+                                    setIsExpanded(false);
+                                }}
+                                className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs transition-all ${locale === lang.code
+                                    ? "bg-blue-600/30 text-white font-bold border border-blue-500/30"
+                                    : "bg-white/5 text-white/70 hover:bg-white/10"
+                                    }`}
+                            >
+                                <span className="text-lg mb-1">{lang.flag}</span>
+                                <span>{lang.label}</span>
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 

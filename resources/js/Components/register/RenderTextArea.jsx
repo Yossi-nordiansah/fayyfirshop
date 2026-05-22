@@ -33,7 +33,7 @@ const RenderTextArea = ({
                         ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                         : "border-slate-200 hover:border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
                         }`}
-                    required={required}
+                // required={required}
                 />
             </div>
             {errorMsg && (

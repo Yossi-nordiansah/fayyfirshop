@@ -122,7 +122,7 @@ const LoginModal = ({ isOpen, onClose, t }) => {
                                 disabled={processing}
                                 className="w-full bg-gradient-to-t from-blue-500 to-blue-800 hover:from-blue-400 hover:to-blue-500 text-zinc-100 text-xs font-bold tracking-widest uppercase py-4 rounded-xl transition-all duration-300 transform hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] disabled:opacity-50"
                             >
-                                {t("auth.modal.btnSubmit", "Sign In Premium")}
+                                {t("auth.modal.btnSubmit", "Sign In")}
                             </button>
                         </form>
 
