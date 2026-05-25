@@ -101,7 +101,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const currentPrice = activeVariant
         ? activeVariant.price
-        : product.variants?.[0]?.price || 0;
+        : product.variants?.[0]?.price || product.price || 0;
     const currentStock = activeVariant
         ? activeVariant.stock
         : product.stock || 0;
@@ -142,21 +142,70 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         });
 
     const isOutOfStock = currentStock === 0;
-    const canBuy = activeVariant && !isOutOfStock;
+    const canBuy = !isOutOfStock && currentPrice > 0;
+    const [cartNotice, setCartNotice] = useState("");
+
+    const handleAddToCart = () => {
+        if (!canBuy) return;
+
+        const cartKey = "fayyfir_cart";
+        const cartItem = {
+            id: product.id,
+            slug: product.slug,
+            title: product.title,
+            category: product.category,
+            subCategory: product.subCategory,
+            image: activeImage || productImages[0] || activeVariant?.image || "",
+            variantId: activeVariant?.id || null,
+            color: selectedColor,
+            size: selectedSize || product.size?.[0] || null,
+            price: currentPrice,
+            stock: currentStock,
+            quantity,
+            sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
+        };
+
+        const currentCart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        const existingIndex = currentCart.findIndex(
+            (item) =>
+                item.id === cartItem.id &&
+                item.variantId === cartItem.variantId &&
+                item.color === cartItem.color &&
+                item.size === cartItem.size,
+        );
+
+        if (existingIndex >= 0) {
+            const existingItem = currentCart[existingIndex];
+            currentCart[existingIndex] = {
+                ...existingItem,
+                quantity: Math.min(existingItem.quantity + quantity, currentStock),
+                stock: currentStock,
+                price: currentPrice,
+                image: cartItem.image,
+            };
+        } else {
+            currentCart.push(cartItem);
+        }
+
+        localStorage.setItem(cartKey, JSON.stringify(currentCart));
+        window.dispatchEvent(new Event("fayyfir-cart-updated"));
+        setCartNotice(t("cart.added", "Produk ditambahkan ke keranjang"));
+        setTimeout(() => setCartNotice(""), 2200);
+    };
 
     return (
         <MainLayout>
             <Head title={`${product.title} - Fayyfir Shop`} />
             <Navbar alwaysSolid={true} />
 
-            <div className="min-h-screen bg-white pt-24 pb-20 font-sans">
+            <div className="min-h-screen pt-24 pb-20 font-sans bg-white">
                 {/* Breadcrumbs */}
-                <div className="bg-zinc-50 border-b border-zinc-100">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <div className="border-b bg-zinc-50 border-zinc-100">
+                    <div className="px-4 py-3 mx-auto max-w-7xl sm:px-6 lg:px-8">
                         <nav className="flex text-xs text-zinc-400 items-center gap-1.5">
                             <Link
                                 href="/"
-                                className="flex items-center gap-1 hover:text-blue-600 transition-colors font-medium"
+                                className="flex items-center gap-1 font-medium transition-colors hover:text-blue-600"
                             >
                                 <ArrowLeft size={12} />
                                 {t("product.detail.home", "Home")}
@@ -164,7 +213,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             <ChevronRight size={12} className="text-zinc-300" />
                             <Link
                                 href={`/products/${product.category.toLowerCase().replace(/\s+/g, "-")}`}
-                                className="hover:text-blue-600 transition-colors font-medium"
+                                className="font-medium transition-colors hover:text-blue-600"
                             >
                                 {product.category}
                             </Link>
@@ -177,8 +226,8 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 </div>
 
                 {/* Main Content */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-16">
+                <div className="px-4 pt-10 mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 xl:gap-16">
                         {/* ─── Left: Image Gallery ─── */}
                         <motion.div
                             initial={{ opacity: 0, x: -30 }}
@@ -190,13 +239,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             className="flex flex-col gap-4"
                         >
                             {/* Main Image */}
-                            <div className="relative rounded-3xl overflow-hidden bg-zinc-50 border border-zinc-100 shadow-xl aspect-square">
+                            <div className="relative overflow-hidden border shadow-xl rounded-3xl bg-zinc-50 border-zinc-100 aspect-square">
                                 <AnimatePresence mode="wait">
                                     <motion.img
                                         key={activeImage}
                                         src={activeImage}
                                         alt={product.title}
-                                        className="w-full h-full object-cover"
+                                        className="object-cover w-full h-full"
                                         initial={{ opacity: 0, scale: 1.04 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.97 }}
@@ -204,7 +253,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     />
                                 </AnimatePresence>
 
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
+                                <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
                                 {/* Status Badge */}
                                 <div className="absolute top-4 left-4">
@@ -234,7 +283,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
                             {/* Thumbnails */}
                             {allImages.length > 0 && (
-                                <div className="flex gap-3 overflow-x-auto py-1 scrollbar-thin scrollbar-thumb-zinc-200 scrollbar-track-transparent">
+                                <div className="flex gap-3 py-1 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-200 scrollbar-track-transparent">
                                     {allImages.map((img, idx) => {
                                         const isActive = activeImage === img;
                                         const variantColor = Object.keys(variantImagesMap).find(
@@ -252,10 +301,10 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                 <img
                                                     src={img}
                                                     alt={variantColor ? `Varian ${variantColor}` : `Foto ${idx + 1}`}
-                                                    className="w-full h-full object-cover"
+                                                    className="object-cover w-full h-full"
                                                 />
                                                 {!isActive && (
-                                                    <div className="absolute inset-0 bg-white/40 hover:bg-white/10 transition-colors" />
+                                                    <div className="absolute inset-0 transition-colors bg-white/40 hover:bg-white/10" />
                                                 )}
                                                 {variantColor && (
                                                     <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] font-bold text-center py-0.5 truncate px-1">
@@ -281,7 +330,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             className="flex flex-col gap-4"
                         >
                             {/* Category + stock pills */}
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 border border-blue-200 bg-blue-50 px-3 py-1 rounded-full">
                                     {product.subCategory || product.category}
                                 </span>
@@ -299,20 +348,20 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 </h1>
 
                                 {/* Rating row */}
-                                <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex flex-wrap items-center gap-3">
                                     <div className="flex items-center gap-0.5">
                                         {renderStars(product.rating)}
                                     </div>
                                     <span className="text-sm font-bold text-amber-500">
                                         {product.rating}
                                     </span>
-                                    <span className="text-zinc-300 text-xs">|</span>
-                                    <span className="text-zinc-500 text-sm">
+                                    <span className="text-xs text-zinc-300">|</span>
+                                    <span className="text-sm text-zinc-500">
                                         {product.reviewCount || product.sold}{" "}
                                         {t("product.detail.reviews", "ulasan")}
                                     </span>
-                                    <span className="text-zinc-300 text-xs">|</span>
-                                    <span className="text-zinc-500 text-sm flex items-center gap-1">
+                                    <span className="text-xs text-zinc-300">|</span>
+                                    <span className="flex items-center gap-1 text-sm text-zinc-500">
                                         <Package size={12} className="text-zinc-400" />
                                         {product.sold} {t("product.detail.sold", "terjual")}
                                     </span>
@@ -322,12 +371,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             <div className="h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent" />
 
                             {/* Price block */}
-                            <div className="bg-gradient-to-br from-blue-50 to-blue-100/60 border border-blue-100 rounded-2xl px-5 py-2">
-                                <p className="text-xs font-bold uppercase tracking-widest text-blue-500">
+                            <div className="px-5 py-2 border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100/60 rounded-2xl">
+                                <p className="text-xs font-bold tracking-widest text-blue-500 uppercase">
                                     {t("product.detail.price_label", "Harga")}
                                 </p>
                                 <div className="flex items-end gap-3">
-                                    <span className="text-2xl font-extrabold text-blue-900 tracking-tight">
+                                    <span className="text-2xl font-extrabold tracking-tight text-blue-900">
                                         {formatPrice(currentPrice)}
                                     </span>
                                 </div>
@@ -342,7 +391,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             {uniqueColors.length > 0 && (
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                                        <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
                                             {t("product.detail.variant_label", "Warna / Varian")}
                                         </h3>
                                         {selectedColor && (
@@ -369,7 +418,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                             <img
                                                                 src={variantImg}
                                                                 alt={color}
-                                                                className="w-full h-full object-cover"
+                                                                className="object-cover w-full h-full"
                                                             />
                                                         </span>
                                                     ) : (
@@ -418,21 +467,21 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
                             {/* Qty + Stock */}
                             <div className="flex items-center gap-5">
-                                <div className="flex items-center rounded-xl overflow-hidden border border-zinc-200 bg-white shadow-sm">
+                                <div className="flex items-center overflow-hidden bg-white border shadow-sm rounded-xl border-zinc-200">
                                     <button
                                         onClick={() => handleQuantityChange("minus")}
                                         disabled={quantity <= 1 || !canBuy}
-                                        className="w-11 h-11 flex items-center justify-center text-zinc-500 hover:text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center transition-colors w-11 h-11 text-zinc-500 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         <Minus size={14} />
                                     </button>
-                                    <div className="w-12 h-11 flex items-center justify-center font-bold text-zinc-800 text-base border-x border-zinc-200">
+                                    <div className="flex items-center justify-center w-12 text-base font-bold h-11 text-zinc-800 border-x border-zinc-200">
                                         {quantity}
                                     </div>
                                     <button
                                         onClick={() => handleQuantityChange("plus")}
                                         disabled={quantity >= currentStock || !canBuy}
-                                        className="w-11 h-11 flex items-center justify-center text-zinc-500 hover:text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center transition-colors w-11 h-11 text-zinc-500 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         <Plus size={14} />
                                     </button>
@@ -441,12 +490,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <div>
                                     {isOutOfStock ? (
                                         <span className="text-red-500 text-sm font-semibold flex items-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
+                                            <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                                             {t("product.detail.stock_out", "Stok habis")}
                                         </span>
                                     ) : (
                                         <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
                                             {/* Mengganti dinamika teks {qty} secara aman */}
                                             {t("product.detail.stock_qty_available", "Stok: {qty} tersedia").replace("{qty}", currentStock)}
                                         </span>
@@ -459,7 +508,8 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
                                     disabled={!canBuy}
-                                    className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl border-2 border-blue-600 text-blue-700 font-bold text-sm hover:bg-blue-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    onClick={handleAddToCart}
+                                    className="flex-1 px-4 flex items-center justify-center gap-2.5 py-4 rounded-2xl border-2 border-blue-600 text-blue-700 font-bold text-sm hover:bg-blue-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-nowrap"
                                 >
                                     <ShoppingCart size={18} />
                                     {t("product.detail.cart_btn", "Keranjang")}
@@ -473,16 +523,30 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     {t("product.detail.buy_btn", "Beli Sekarang")}
                                 </motion.button>
                             </div>
+                            {cartNotice && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    className="flex items-center gap-2 px-4 py-3 text-sm font-semibold border rounded-xl border-emerald-200 bg-emerald-50 text-emerald-700"
+                                >
+                                    <Check size={16} />
+                                    {cartNotice}
+                                    <Link href="/cart" className="ml-auto text-blue-700 hover:underline">
+                                        {t("cart.view", "Lihat Cart")}
+                                    </Link>
+                                </motion.div>
+                            )}
 
                             {/* Payment Method */}
-                            <div className="rounded-2xl bg-zinc-100 shadow-lg border border-zinc-100 px-4 py-2 flex flex-col items-center gap-2">
+                            <div className="flex flex-col items-center gap-2 px-4 py-2 border shadow-lg rounded-2xl bg-zinc-100 border-zinc-100">
                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
                                     {t("product.detail.payment_method", "Metode Pembayaran")}
                                 </p>
                                 <img
                                     src="/images/payment/safecheckout.png"
                                     alt="Metode Pembayaran"
-                                    className="h-16 object-contain transition-opacity"
+                                    className="object-contain h-16 transition-opacity"
                                 />
                             </div>
                         </motion.div>
@@ -493,14 +557,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
-                        className="mt-4 border-t border-zinc-100 pt-10"
+                        className="pt-10 mt-4 border-t border-zinc-100"
                     >
                         <h2 className="text-lg font-['Cinzel'] font-bold text-zinc-900 mb-4 flex items-center gap-3">
                             {t("product.detail.description_title", "Deskripsi Produk")}
                             <span className="flex-1 h-px bg-gradient-to-r from-zinc-200 to-transparent" />
                         </h2>
-                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-6 lg:p-8">
-                            <p className="text-zinc-600 leading-relaxed text-sm whitespace-pre-line">
+                        <div className="p-6 border bg-zinc-50 border-zinc-100 rounded-2xl lg:p-8">
+                            <p className="text-sm leading-relaxed whitespace-pre-line text-zinc-600">
                                 {product.description}
                             </p>
                         </div>

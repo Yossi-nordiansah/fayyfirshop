@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import LoginModal from "./LoginModal";
 
-const Navbar = ({ alwaysSolid = false }) => {
+const Navbar = ({ alwaysSolid = false, topOffset = 0 }) => {
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
     const { auth } = usePage().props;
     const user = auth?.user;
@@ -27,14 +27,24 @@ const Navbar = ({ alwaysSolid = false }) => {
     const [showAccountDropdown, setShowAccountDropdown] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
 
     const { locale, setLocale, t } = useLanguage();
 
     useEffect(() => {
+        const updateCartCount = () => {
+            const cart = JSON.parse(localStorage.getItem("fayyfir_cart") || "[]");
+            setCartCount(cart.reduce((total, item) => total + (item.quantity || 0), 0));
+        };
+
+        updateCartCount();
+
         const handleScroll = () => {
             setScrolled(window.scrollY > 30);
         };
         window.addEventListener("scroll", handleScroll);
+        window.addEventListener("storage", updateCartCount);
+        window.addEventListener("fayyfir-cart-updated", updateCartCount);
 
         // Check for login=1 query parameter to trigger login modal
         const params = new URLSearchParams(window.location.search);
@@ -45,7 +55,11 @@ const Navbar = ({ alwaysSolid = false }) => {
             window.history.replaceState({}, document.title, url.pathname + url.search);
         }
 
-        return () => window.removeEventListener("scroll", handleScroll);
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("storage", updateCartCount);
+            window.removeEventListener("fayyfir-cart-updated", updateCartCount);
+        };
     }, []);
 
     const languages = [
@@ -96,26 +110,27 @@ const Navbar = ({ alwaysSolid = false }) => {
     return (
         <>
             <nav
-                className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled || alwaysSolid
+                style={{ top: topOffset }}
+                className={`fixed left-0 right-0 z-[100] transition-all duration-500 ${scrolled || alwaysSolid
                     ? "bg-gradient-to-l from-blue-900 to-blue-800 backdrop-blur-xl shadow-xl"
                     : "bg-transparent"
                     }`}
             >
-                <div className="max-w-7xl mx-auto px-6 lg:px-12">
-                    <div className="flex justify-between items-center h-20">
+                <div className="px-6 mx-auto max-w-7xl lg:px-12">
+                    <div className="flex items-center justify-between h-20">
                         {/* Logo */}
-                        <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="group flex items-center gap-2">
+                        <div className="flex items-center flex-shrink-0">
+                            <Link href="/" className="flex items-center gap-2 group">
                                 <img
                                     src="/images/logo-footer.png"
                                     alt="logo fayyfir"
-                                    className="md:h-16 h-12"
+                                    className="h-12 md:h-16"
                                 />
                             </Link>
                         </div>
 
                         {/* Desktop Menu */}
-                        <div className="hidden lg:flex items-center space-x-12 absolute left-1/2 -translate-x-1/2">
+                        <div className="absolute items-center hidden space-x-12 -translate-x-1/2 lg:flex left-1/2">
                             {/* Home */}
                             <Link
                                 href="/"
@@ -127,7 +142,7 @@ const Navbar = ({ alwaysSolid = false }) => {
 
                             {/* Product Dropdown */}
                             <div
-                                className="relative group py-2"
+                                className="relative py-2 group"
                                 onMouseLeave={() => setActiveCategory(null)}
                             >
                                 <button className="flex items-center gap-1 relative text-xs font-['Cinzel'] font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300">
@@ -137,9 +152,9 @@ const Navbar = ({ alwaysSolid = false }) => {
                                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
 
                                 {/* Dropdown Container */}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                                <div className="absolute invisible pt-4 transition-all duration-300 -translate-x-1/2 opacity-0 top-full left-1/2 group-hover:opacity-100 group-hover:visible">
                                     <div className="relative">
-                                        <div className="w-60 bg-white backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2">
+                                        <div className="py-2 bg-white border shadow-2xl w-60 backdrop-blur-xl border-white/10 rounded-xl">
                                             {productDropdown.map((item, index) => (
                                                 <div
                                                     key={index}
@@ -178,14 +193,14 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                                 animate={{ opacity: 1, x: 0 }}
                                                                 exit={{ opacity: 0, x: -10 }}
                                                                 transition={{ duration: 0.2 }}
-                                                                className="absolute left-full top-0 ml-1 w-44 bg-white backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-50"
+                                                                className="absolute top-0 z-50 py-1 ml-1 overflow-hidden bg-white border shadow-2xl left-full w-44 backdrop-blur-xl border-white/10 rounded-xl"
                                                             >
                                                                 <div className="flex flex-col">
                                                                     {item.subCategory.map((sub, sIdx) => (
                                                                         <Link
                                                                             key={sIdx}
                                                                             href={`${item.href}?sub=${sub.val}`}
-                                                                            className="block px-8 py-3 text-sm text-zinc-500 hover:text-blue-600 hover:translate-x-2 hover:bg-zinc-100 transition-all duration-300"
+                                                                            className="block px-8 py-3 text-sm transition-all duration-300 text-zinc-500 hover:text-blue-600 hover:translate-x-2 hover:bg-zinc-100"
                                                                         >
                                                                             {sub.name}
                                                                         </Link>
@@ -212,7 +227,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                         </div>
 
                         {/* Right Icons */}
-                        <div className="hidden lg:flex items-center space-x-6">
+                        <div className="items-center hidden space-x-6 lg:flex">
                             {/* Language Selector (Sama seperti Menu Product) */}
                             <div className={`${showSearch ? "hidden" : ""} relative group py-2`}>
                                 <button
@@ -230,7 +245,7 @@ const Navbar = ({ alwaysSolid = false }) => {
 
                                 {/* Dropdown Container dengan Jembatan Hover pt-4 */}
                                 <div className="absolute top-full right-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[110]">
-                                    <div className="w-36 bg-white border border-zinc-100 rounded-xl shadow-2xl overflow-hidden">
+                                    <div className="overflow-hidden bg-white border shadow-2xl w-36 border-zinc-100 rounded-xl">
                                         {languages.map((lang) => (
                                             <button
                                                 key={lang.code}
@@ -254,28 +269,34 @@ const Navbar = ({ alwaysSolid = false }) => {
 
                             {/* Search */}
                             <div
-                                className="group flex w-10 items-center overflow-hidden rounded-full bg-transparent px-2 py-2 transition-all duration-300 hover:w-64 hover:bg-white/30"
+                                className="flex items-center w-10 px-2 py-2 overflow-hidden transition-all duration-300 bg-transparent rounded-full group hover:w-64 hover:bg-white/30"
                                 onMouseEnter={() => setShowSearch(true)}
                                 onMouseLeave={() => setShowSearch(false)}
                             >
-                                <Search size={20} className="shrink-0 text-white" />
+                                <Search size={20} className="text-white shrink-0" />
                                 <input
                                     type="text"
-                                    className="ml-2 w-full border-none bg-transparent p-0 text-sm text-white placeholder-white/70 outline-none focus:ring-0"
+                                    className="w-full p-0 ml-2 text-sm text-white bg-transparent border-none outline-none placeholder-white/70 focus:ring-0"
                                     placeholder={t("nav.searchPlaceholder", "Search parameters...")}
                                 />
                             </div>
 
                             {/* Cart Icon */}
-                            <button
-                                className="text-white hover:text-blue-500 transition-all duration-300 hover:scale-110 relative group py-2"
+                            <Link
+                                href="/cart"
+                                className="relative py-2 text-white transition-all duration-300 hover:text-blue-500 hover:scale-110 group"
                                 aria-label="Cart"
                             >
                                 <ShoppingCart size={20} />
+                                {cartCount > 0 && (
+                                    <span className="absolute -right-2 -top-1 min-w-5 h-5 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold leading-5 text-white text-center shadow-md">
+                                        {cartCount}
+                                    </span>
+                                )}
                                 <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
                                     Cart
                                 </span>
-                            </button>
+                            </Link>
 
                             {/* PREMIUM ACCOUNT DROPDOWN */}
                             <div
@@ -284,7 +305,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                 onMouseLeave={() => setShowAccountDropdown(false)}
                             >
                                 <button
-                                    className="text-white hover:text-amber-400 transition-all duration-300 hover:scale-110 relative flex items-center"
+                                    className="relative flex items-center text-white transition-all duration-300 hover:text-amber-400 hover:scale-110"
                                     aria-label="Account"
                                 >
                                     {user ? (
@@ -297,7 +318,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                     : "/images/default-profile.png"
                                             }
                                             alt={user.name}
-                                            className="w-7 h-7 rounded-full object-cover border border-white/20 hover:border-amber-400 transition-all"
+                                            className="object-cover transition-all border rounded-full w-7 h-7 border-white/20 hover:border-amber-400"
                                         />
                                     ) : (
                                         <User size={20} />
@@ -314,15 +335,15 @@ const Navbar = ({ alwaysSolid = false }) => {
                                             transition={{ duration: 0.2 }}
                                             className="absolute right-0 top-full pt-4 w-52 z-[120]"
                                         >
-                                            <div className="bg-white backdrop-blur-xl border border-zinc-100 rounded-xl shadow-2xl py-2 overflow-hidden">
+                                            <div className="py-2 overflow-hidden bg-white border shadow-2xl backdrop-blur-xl border-zinc-100 rounded-xl">
                                                 {user ? (
                                                     <>
-                                                        <div className="px-4 py-2 border-b border-zinc-100 mb-1">
-                                                            <p className="text-sm font-semibold text-zinc-800 truncate">{user.name}</p>
+                                                        <div className="px-4 py-2 mb-1 border-b border-zinc-100">
+                                                            <p className="text-sm font-semibold truncate text-zinc-800">{user.name}</p>
                                                         </div>
                                                         <Link
                                                             href="/profile"
-                                                            className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                                                            className="flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
                                                         >
                                                             <User size={16} className="text-zinc-400" />
                                                             {t("nav.account.profile", "Edit Profile")}
@@ -331,7 +352,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                             href="/logout"
                                                             method="post"
                                                             as="button"
-                                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-all duration-200 text-left"
+                                                            className="flex items-center w-full gap-3 px-4 py-3 text-sm text-left text-red-600 transition-all duration-200 hover:bg-red-50"
                                                         >
                                                             <LogOut size={16} />
                                                             {t("nav.account.logout", "Sign Out")}
@@ -343,7 +364,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                             setShowAccountDropdown(false);
                                                             setShowLoginModal(true);
                                                         }}
-                                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 text-left"
+                                                        className="flex items-center w-full gap-3 px-4 py-3 text-sm text-left transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
                                                     >
                                                         <LogIn size={16} className="text-blue-500" />
                                                         {t("nav.account.login", "Sign In")}
@@ -357,10 +378,10 @@ const Navbar = ({ alwaysSolid = false }) => {
                         </div>
 
                         {/* Mobile Menu Button */}
-                        <div className="lg:hidden flex items-center">
+                        <div className="flex items-center lg:hidden">
                             <button
                                 onClick={() => setIsOpen(!isOpen)}
-                                className="text-white hover:text-blue-500 p-2 transition-colors"
+                                className="p-2 text-white transition-colors hover:text-blue-500"
                             >
                                 {isOpen ? <X size={28} /> : <Menu size={28} />}
                             </button>
@@ -395,7 +416,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                     <Link
                                         href="/"
                                         onClick={() => setIsOpen(false)}
-                                        className="block text-sm font-semibold tracking-wider uppercase py-2 border-b border-white/5 hover:text-blue-400 transition-colors"
+                                        className="block py-2 text-sm font-semibold tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400"
                                     >
                                         {t("nav.home", "Home")}
                                     </Link>
@@ -406,22 +427,33 @@ const Navbar = ({ alwaysSolid = false }) => {
                                     <Link
                                         href="/about"
                                         onClick={() => setIsOpen(false)}
-                                        className="block text-sm font-semibold tracking-wider uppercase py-2 border-b border-white/5 hover:text-blue-400 transition-colors"
+                                        className="block py-2 text-sm font-semibold tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400"
                                     >
                                         {t("nav.about", "About Us")}
                                     </Link>
                                 </div>
 
                                 {/* User & Settings Section */}
-                                <div className="pt-4 border-t border-white/10 space-y-4">
+                                <div className="pt-4 space-y-4 border-t border-white/10">
                                     {/* Language Selector */}
                                     <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} />
 
                                     {/* Cart */}
-                                    <button className="w-full flex items-center justify-between py-2 border-b border-white/5 hover:text-blue-400 transition-colors">
-                                        <span className="text-sm font-semibold uppercase tracking-wider">Cart</span>
-                                        <ShoppingCart size={18} />
-                                    </button>
+                                    <Link
+                                        href="/cart"
+                                        onClick={() => setIsOpen(false)}
+                                        className="flex items-center justify-between w-full py-2 transition-colors border-b border-white/5 hover:text-blue-400"
+                                    >
+                                        <span className="text-sm font-semibold tracking-wider uppercase">Cart</span>
+                                        <span className="relative">
+                                            <ShoppingCart size={18} />
+                                            {cartCount > 0 && (
+                                                <span className="absolute -right-2 -top-2 min-w-4 h-4 rounded-full bg-amber-500 px-1 text-[9px] font-bold leading-4 text-white text-center">
+                                                    {cartCount}
+                                                </span>
+                                            )}
+                                        </span>
+                                    </Link>
 
                                     {/* Account Actions */}
                                     {user ? (
@@ -436,7 +468,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                             : "/images/default-profile.png"
                                                     }
                                                     alt={user.name}
-                                                    className="w-9 h-9 rounded-full object-cover border border-white/10"
+                                                    className="object-cover border rounded-full w-9 h-9 border-white/10"
                                                 />
                                                 <div className="overflow-hidden">
                                                     <p className="text-sm font-semibold truncate">{user.name}</p>
@@ -446,7 +478,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                 <Link
                                                     href="/profile"
                                                     onClick={() => setIsOpen(false)}
-                                                    className="flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/15 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all text-center"
+                                                    className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider text-center uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl"
                                                 >
                                                     <User size={14} />
                                                     {t("nav.account.profile", "Profile")}
@@ -456,7 +488,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                     method="post"
                                                     as="button"
                                                     onClick={() => setIsOpen(false)}
-                                                    className="flex items-center justify-center gap-2 py-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all"
+                                                    className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider text-red-400 uppercase transition-all bg-red-600/20 hover:bg-red-600/30 rounded-xl"
                                                 >
                                                     <LogOut size={14} />
                                                     {t("nav.account.logout", "Sign Out")}
@@ -469,7 +501,7 @@ const Navbar = ({ alwaysSolid = false }) => {
                                                 setIsOpen(false);
                                                 setShowLoginModal(true);
                                             }}
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-md"
+                                            className="flex items-center justify-center w-full gap-2 py-3 text-xs font-bold tracking-widest text-white uppercase transition-all shadow-md bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 rounded-xl"
                                         >
                                             <LogIn size={14} />
                                             {t("nav.account.login", "Sign In")}
@@ -500,7 +532,7 @@ const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
         <div className="border-b border-white/5">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between py-2 hover:text-blue-400 transition-colors"
+                className="flex items-center justify-between w-full py-2 transition-colors hover:text-blue-400"
             >
                 <span className="text-sm font-semibold tracking-wider uppercase">
                     {t("nav.product", "Products")}
@@ -515,7 +547,7 @@ const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="pl-4 pr-2 py-2 space-y-3 bg-white/5 rounded-xl mt-1 overflow-hidden"
+                        className="py-2 pl-4 pr-2 mt-1 space-y-3 overflow-hidden bg-white/5 rounded-xl"
                     >
                         {productDropdown.map((item, index) => (
                             <div key={index} className="space-y-1">
@@ -529,13 +561,13 @@ const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
                                             <ChevronDown size={14} className={`transition-transform duration-300 ${expandedCategory === item.name ? 'rotate-180' : ''}`} />
                                         </button>
                                         {expandedCategory === item.name && (
-                                            <div className="pl-4 py-1 space-y-2 border-l border-white/10">
+                                            <div className="py-1 pl-4 space-y-2 border-l border-white/10">
                                                 {item.subCategory.map((sub, sIdx) => (
                                                     <Link
                                                         key={sIdx}
                                                         href={`${item.href}?sub=${sub.val}`}
                                                         onClick={() => setIsOpen(false)}
-                                                        className="block text-xs text-white/60 hover:text-blue-400 transition-colors py-1"
+                                                        className="block py-1 text-xs transition-colors text-white/60 hover:text-blue-400"
                                                     >
                                                         {sub.name}
                                                     </Link>
@@ -566,14 +598,14 @@ const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
-        <div className="border-b border-white/5 pb-2">
+        <div className="pb-2 border-b border-white/5">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between py-2 hover:text-blue-400 transition-colors"
+                className="flex items-center justify-between w-full py-2 transition-colors hover:text-blue-400"
             >
                 <div className="flex items-center gap-2">
                     <Globe size={18} />
-                    <span className="text-sm font-semibold uppercase tracking-wider">
+                    <span className="text-sm font-semibold tracking-wider uppercase">
                         {t("nav.language", "Language")}: {languages.find((l) => l.code === locale)?.label}
                     </span>
                 </div>
@@ -601,7 +633,7 @@ const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
                                     : "bg-white/5 text-white/70 hover:bg-white/10"
                                     }`}
                             >
-                                <span className="text-lg mb-1">{lang.flag}</span>
+                                <span className="mb-1 text-lg">{lang.flag}</span>
                                 <span>{lang.label}</span>
                             </button>
                         ))}

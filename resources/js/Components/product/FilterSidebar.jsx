@@ -60,9 +60,9 @@ const FilterSidebar = ({
     const { t } = useLanguage();
 
     return (
-        <aside className="hidden lg:block w-72 shrink-0 sticky top-24 bg-white/80 backdrop-blur-md border border-zinc-100 rounded-3xl p-7 shadow-xl shadow-zinc-200/50">
+        <aside className="sticky hidden border shadow-xl lg:block w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
             {/* Heading */}
-            <div className="flex items-center justify-between pb-5 border-b border-zinc-100 mb-6">
+            <div className="flex items-center justify-between pb-5 mb-6 border-b border-zinc-100">
                 <span className="font-['Cinzel'] font-bold text-xs uppercase tracking-[0.2em] text-zinc-900 flex items-center gap-2">
                     <Filter size={14} className="text-amber-600" />
                     {t("nav.product", "Kategori")}
@@ -95,7 +95,7 @@ const FilterSidebar = ({
 
                     return (
                         <div key={catSlug} className="space-y-1">
-                            <div className="flex items-center justify-between gap-1 w-full rounded-xl">
+                            <div className="flex items-center justify-between w-full gap-1 rounded-xl">
                                 <button
                                     onClick={() =>
                                         handleCategorySelect(catSlug)
@@ -127,7 +127,7 @@ const FilterSidebar = ({
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
-                                        className="overflow-hidden pl-4 border-l border-zinc-100 ml-5 py-1 space-y-1"
+                                        className="py-1 pl-4 ml-5 space-y-1 overflow-hidden border-l border-zinc-100"
                                     >
                                         {Object.entries(
                                             catObj.subCategories,

@@ -72,14 +72,14 @@ const SidebarFilter = ({
                                 </span>
                                 <button
                                     onClick={() => setMobileFiltersOpen(false)}
-                                    className="p-1 rounded-full bg-zinc-50 border border-zinc-100 text-zinc-500 hover:text-zinc-800"
+                                    className="p-1 border rounded-full bg-zinc-50 border-zinc-100 text-zinc-500 hover:text-zinc-800"
                                 >
                                     <X size={16} />
                                 </button>
                             </div>
 
                             {/* Category List */}
-                            <div className="grow overflow-y-auto space-y-4 pr-1">
+                            <div className="pr-1 space-y-4 overflow-y-auto grow">
                                 <button
                                     onClick={() => handleCategorySelect(null)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 ${!selectedCat
@@ -97,7 +97,7 @@ const SidebarFilter = ({
 
                                     return (
                                         <div key={catSlug} className="space-y-1">
-                                            <div className="flex items-center justify-between gap-1 w-full bg-zinc-50 border border-zinc-100 rounded-xl">
+                                            <div className="flex items-center justify-between w-full gap-1 border bg-zinc-50 border-zinc-100 rounded-xl">
                                                 <button
                                                     onClick={() =>
                                                         handleCategorySelect(catSlug)
@@ -130,7 +130,7 @@ const SidebarFilter = ({
                                             </div>
 
                                             {isExpanded && (
-                                                <div className="pl-4 border-l border-zinc-100 ml-5 py-1 space-y-1">
+                                                <div className="py-1 pl-4 ml-5 space-y-1 border-l border-zinc-100">
                                                     {Object.entries(
                                                         catObj.subCategories,
                                                     ).map(([subSlug, subObj]) => {
@@ -171,7 +171,7 @@ const SidebarFilter = ({
                             </div>
 
                             {/* Drawer Footer Actions */}
-                            <div className="pt-4 border-t border-zinc-100 space-y-2">
+                            <div className="pt-4 space-y-2 border-t border-zinc-100">
                                 {(selectedCat || selectedSub || searchQuery) && (
                                     <button
                                         onClick={resetFilters}

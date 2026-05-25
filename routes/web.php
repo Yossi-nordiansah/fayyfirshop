@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -27,9 +28,52 @@ Route::get('/product/{slug}', function ($slug) {
     ]);
 });
 
+Route::get('/cart', function () {
+    return Inertia::render('cart/CartPage');
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::prefix('backoffice')->group(function () {
+    Route::middleware('guest')->group(function () {
+        Route::get('/login', function () {
+            return Inertia::render('backoffice/Login', [
+                'status' => session('status'),
+            ]);
+        })->name('backoffice.login');
+
+        Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+            ->name('backoffice.login.store');
+    });
+});
+
+Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('backoffice/dashboard');
+    })->name('backoffice.dashboard');
+
+    Route::get('/product-management', function () {
+        return Inertia::render('backoffice/menu/ProductManagement');
+    })->name('backoffice.product-management');
+
+    Route::get('/orders', function () {
+        return Inertia::render('backoffice/menu/Orders');
+    })->name('backoffice.orders');
+
+    Route::get('/review', function () {
+        return Inertia::render('backoffice/menu/Reviews');
+    })->name('backoffice.review');
+
+    Route::get('/users', function () {
+        return Inertia::render('backoffice/menu/Users');
+    })->name('backoffice.users');
+
+    Route::get('/reports', function () {
+        return Inertia::render('backoffice/menu/Reports');
+    })->name('backoffice.reports');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -37,7 +81,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::get('/api/provinces', function () {
     return response()->json(\Laravolt\Indonesia\Models\Province::orderBy('name')->get());
