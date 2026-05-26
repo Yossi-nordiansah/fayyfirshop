@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\File;
 
 Route::get('/countries', function () {
     // SINKRONISASI: Mengarah langsung ke storage/app/countries.json sesuai lokasi file Anda
-    $filePath = storage_path('app/countries.json');
+    $filePath = storage_path('app/countries_sorted.json');
 
     if (!File::exists($filePath)) {
         return response()->json([

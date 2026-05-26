@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StoreBranchController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -66,13 +68,33 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         return Inertia::render('backoffice/menu/Reviews');
     })->name('backoffice.review');
 
-    Route::get('/users', function () {
-        return Inertia::render('backoffice/menu/Users');
-    })->name('backoffice.users');
+    Route::get('/admin', [AdminController::class, 'index'])->name('backoffice.admin');
+    Route::get('/admin/create', [AdminController::class, 'create'])->name('backoffice.admin.create');
+    Route::post('/admin', [AdminController::class, 'store'])->name('backoffice.admin.store');
+    Route::get('/admin/{admin}/edit', [AdminController::class, 'edit'])->name('backoffice.admin.edit');
+    Route::patch('/admin/{admin}', [AdminController::class, 'update'])->name('backoffice.admin.update');
+    Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('backoffice.admin.destroy');
+
+    Route::get('/customer', function () {
+        return Inertia::render('backoffice/menu/Customer');
+    })->name('backoffice.customer');
 
     Route::get('/reports', function () {
         return Inertia::render('backoffice/menu/Reports');
     })->name('backoffice.reports');
+
+    Route::get('/store-branches', [StoreBranchController::class, 'index'])
+        ->name('backoffice.store-branches.index');
+    Route::get('/store-branches/create', [StoreBranchController::class, 'create'])
+        ->name('backoffice.store-branches.create');
+    Route::post('/store-branches', [StoreBranchController::class, 'store'])
+        ->name('backoffice.store-branches.store');
+    Route::get('/store-branches/{storeBranch}/edit', [StoreBranchController::class, 'edit'])
+        ->name('backoffice.store-branches.edit');
+    Route::patch('/store-branches/{storeBranch}', [StoreBranchController::class, 'update'])
+        ->name('backoffice.store-branches.update');
+    Route::delete('/store-branches/{storeBranch}', [StoreBranchController::class, 'destroy'])
+        ->name('backoffice.store-branches.destroy');
 });
 
 Route::middleware('auth')->group(function () {

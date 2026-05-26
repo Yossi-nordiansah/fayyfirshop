@@ -1,57 +1,80 @@
 import { Link } from '@inertiajs/react';
+import { useLanguage } from '@/Contexts/LanguageContext';
 import {
+    BadgeCheck,
     BarChart3,
     Boxes,
+    Building2,
     ClipboardList,
+    ContactRound,
     LayoutDashboard,
     MessageSquareText,
-    Users,
 } from 'lucide-react';
 
 const menuItems = [
     {
-        label: 'Dashboard',
+        labelKey: 'backoffice.sidebar.dashboard',
+        fallback: 'Dashboard',
         href: '/backoffice/dashboard',
         icon: LayoutDashboard,
     },
     {
-        label: 'Product Management',
+        labelKey: 'backoffice.sidebar.product_management',
+        fallback: 'Product Management',
         href: '/backoffice/product-management',
         icon: Boxes,
     },
     {
-        label: 'Orders',
+        labelKey: 'backoffice.sidebar.orders',
+        fallback: 'Orders',
         href: '/backoffice/orders',
         icon: ClipboardList,
     },
     {
-        label: 'Review',
+        labelKey: 'backoffice.sidebar.review',
+        fallback: 'Review',
         href: '/backoffice/review',
         icon: MessageSquareText,
     },
     {
-        label: 'Users',
-        href: '/backoffice/users',
-        icon: Users,
+        labelKey: 'backoffice.sidebar.admin',
+        fallback: 'Admin',
+        href: '/backoffice/admin',
+        icon: BadgeCheck,
     },
     {
-        label: 'Reports',
+        labelKey: 'backoffice.sidebar.customer',
+        fallback: 'Customer',
+        href: '/backoffice/customer',
+        icon: ContactRound,
+    },
+    {
+        labelKey: 'backoffice.sidebar.store_branches',
+        fallback: 'Store Branches',
+        href: '/backoffice/store-branches',
+        icon: Building2,
+    },
+    {
+        labelKey: 'backoffice.sidebar.reports',
+        fallback: 'Reports',
         href: '/backoffice/reports',
         icon: BarChart3,
     },
 ];
 
 export default function Sidebar() {
+    const { t } = useLanguage();
     const currentPath =
         typeof window !== 'undefined' ? window.location.pathname : '';
 
     return (
         <aside className="sticky top-0 flex flex-col h-screen max-h-screen px-4 py-6 overflow-y-auto text-white border-r border-blue-800 w-72 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800">
             <div className="px-3 pb-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200">
-                    Backoffice
-                </p>
-                <img src="/images/logo-footer.png" alt="Logo" className="w-auto h-10 mt-4" />
+                <img
+                    src="/images/logo-footer.png"
+                    alt="Logo"
+                    className="w-auto h-10 mt-4"
+                />
             </div>
 
             <nav className="flex flex-col flex-1 gap-1">
@@ -69,7 +92,7 @@ export default function Sidebar() {
                                 }`}
                         >
                             <Icon className="w-5 h-5" aria-hidden="true" />
-                            <span>{item.label}</span>
+                            <span>{t(item.labelKey, item.fallback)}</span>
                         </Link>
                     );
                 })}

@@ -278,7 +278,7 @@ import {
 } from 'recharts';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import { useLanguage } from '../Context/LanguageContext'; // Pastikan path impor ini sesuai
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 const salesTrend = [
     { label: 'Jan', sales: 32 },
@@ -305,14 +305,19 @@ const lowStockProducts = [
 ];
 
 function SalesTrendChart() {
-    const { t, lang } = useLanguage();
+    const { t, locale } = useLanguage();
 
     return (
         <div className="w-full h-80">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                     data={salesTrend}
-                    margin={{ top: 24, right: lang === 'ar' ? 0 : 16, left: lang === 'ar' ? 16 : 0, bottom: 0 }}
+                    margin={{
+                        top: 24,
+                        right: locale === 'arabic' ? 0 : 16,
+                        left: locale === 'arabic' ? 16 : 0,
+                        bottom: 0,
+                    }}
                 >
                     <defs>
                         <linearGradient id="salesArea" x1="0" x2="0" y1="0" y2="1">
@@ -329,7 +334,7 @@ function SalesTrendChart() {
                     />
                     <YAxis
                         axisLine={false}
-                        orientation={lang === 'ar' ? 'right' : 'left'}
+                        orientation={locale === 'arabic' ? 'right' : 'left'}
                         tick={{ fill: '#1e3a8a', fontSize: 13 }}
                         tickLine={false}
                     />
@@ -339,10 +344,21 @@ function SalesTrendChart() {
                             borderRadius: '8px',
                             backgroundColor: '#ffffff',
                             boxShadow: '0 10px 25px rgba(30, 64, 175, 0.05)',
-                            textAlign: lang === 'ar' ? 'right' : 'left'
+                            textAlign: locale === 'arabic' ? 'right' : 'left',
                         }}
-                        formatter={(value) => [`${t['chart.unit_million'].replace('{value}', value)}`, t['chart.sales_label']]}
-                        labelFormatter={(label) => t['chart.month_label'].replace('{name}', label)}
+                        formatter={(value) => [
+                            t('chart.unit_million', '{value} million').replace(
+                                '{value}',
+                                value,
+                            ),
+                            t('chart.sales_label', 'Sales'),
+                        ]}
+                        labelFormatter={(label) =>
+                            t('chart.month_label', 'Month {name}').replace(
+                                '{name}',
+                                label,
+                            )
+                        }
                     />
                     <Area
                         dataKey="sales"
@@ -363,35 +379,44 @@ export default function Dashboard() {
     // Mapping summaryCards di dalam komponen agar pembacaan JSON key berjalan dinamis saat bahasa berganti
     const summaryCards = [
         {
-            title: t['summary.total_sales'],
+            title: t('summary.total_sales', 'Total Sales'),
             value: 'Rp 128.450.000',
-            note: t['summary.last_month_note'].replace('{percent}', '18'),
+            note: t('summary.last_month_note', '+{percent}% from last month').replace(
+                '{percent}',
+                '18',
+            ),
             icon: TrendingUp,
         },
         {
-            title: t['summary.new_orders'],
+            title: t('summary.new_orders', 'New Orders Count'),
             value: '342',
-            note: t['summary.unprocessed_note'].replace('{count}', '28'),
+            note: t('summary.unprocessed_note', '{count} unprocessed').replace(
+                '{count}',
+                '28',
+            ),
             icon: ShoppingBag,
             isAlert: true,
         },
         {
-            title: t['summary.total_customers'],
+            title: t('summary.total_customers', 'Total Customers'),
             value: '4.812',
-            note: t['summary.new_customers_note'].replace('{count}', '126'),
+            note: t('summary.new_customers_note', '+{count} new customers').replace(
+                '{count}',
+                '126',
+            ),
             icon: Users,
         },
         {
-            title: t['summary.products_sold'],
+            title: t('summary.products_sold', 'Products Sold'),
             value: '1.936',
-            note: t['summary.this_month_note'],
+            note: t('summary.this_month_note', 'Throughout this month'),
             icon: PackageCheck,
         },
     ];
 
     return (
         <div className="min-h-screen bg-[#fcfcfd]">
-            <Head title={t['dashboard.title']} />
+            <Head title={t('dashboard.title', 'Fayyfir Backoffice')} />
 
             <div className="flex min-h-screen">
                 <Sidebar />
@@ -435,14 +460,14 @@ export default function Dashboard() {
                             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                                 <div>
                                     <p className="text-xs font-bold tracking-wider uppercase text-amber-600">
-                                        {t['chart.trend_title']}
+                                        {t('chart.trend_title', 'Trend Chart')}
                                     </p>
                                     <h3 className="mt-1 text-xl font-bold tracking-tight text-blue-950">
-                                        {t['chart.monthly_sales']}
+                                        {t('chart.monthly_sales', 'Monthly Sales Chart')}
                                     </h3>
                                 </div>
                                 <span className="px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200/50 rounded-lg">
-                                    {t['dashboard.dummy_data']}
+                                    {t('dashboard.dummy_data', 'Dummy Data')}
                                 </span>
                             </div>
 
@@ -456,10 +481,16 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-50">
                                     <div>
                                         <p className="text-xs font-bold tracking-wider uppercase text-amber-600">
-                                            {t['dashboard.quick_notification']}
+                                            {t(
+                                                'dashboard.quick_notification',
+                                                'Quick Notification',
+                                            )}
                                         </p>
                                         <h3 className="mt-1 text-lg font-bold text-blue-950">
-                                            {t['orders.unprocessed_title']}
+                                            {t(
+                                                'orders.unprocessed_title',
+                                                'Unprocessed Orders',
+                                            )}
                                         </h3>
                                     </div>
                                     <ShoppingBag className="w-5 h-5 text-blue-950" aria-hidden="true" />
@@ -489,10 +520,16 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-50">
                                     <div>
                                         <p className="text-xs font-bold tracking-wider uppercase text-amber-600">
-                                            {t['dashboard.quick_notification']}
+                                            {t(
+                                                'dashboard.quick_notification',
+                                                'Quick Notification',
+                                            )}
                                         </p>
                                         <h3 className="mt-1 text-lg font-bold text-blue-950">
-                                            {t['products.low_stock_title']}
+                                            {t(
+                                                'products.low_stock_title',
+                                                'Low Stock Alert',
+                                            )}
                                         </h3>
                                     </div>
                                     <AlertTriangle className="w-5 h-5 text-amber-600" aria-hidden="true" />
@@ -505,7 +542,10 @@ export default function Dashboard() {
                                                 {product.name}
                                             </p>
                                             <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-rose-50 text-rose-700 border border-rose-100">
-                                                {t['products.stock_left'].replace('{count}', product.stock)}
+                                                {t('products.stock_left', '{count} left').replace(
+                                                    '{count}',
+                                                    product.stock,
+                                                )}
                                             </span>
                                         </div>
                                     ))}
