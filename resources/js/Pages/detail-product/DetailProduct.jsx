@@ -21,70 +21,128 @@ import products from "../../data-source/data_products_30.json";
 import { useLanguage } from "@/Contexts/LanguageContext"; // 1. Import LanguageContext Proyek
 
 export default function DetailProduct({ product: initialProduct, slug }) {
-    const { t } = useLanguage(); // 2. Inisialisasi fungsi translasi t
+    const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
 
     const product =
         initialProduct ||
         (slug ? products.find((p) => p.slug === slug) : null) ||
         products[0];
 
-    const uniqueColors = Array.from(
-        new Set(product.variants?.map((v) => v.color).filter(Boolean)),
-    );
-    const uniqueSizes = Array.from(
-        new Set(product.variants?.map((v) => v.size).filter(Boolean)),
-    );
+    // Tentukan apakah produk ini berasal dari database Eloquent
+    const isDbProduct = React.useMemo(() => {
+        return (
+            product.variants &&
+            product.variants.length > 0 &&
+            product.variants.some((v) => v.type || v.name_translations || v.unit_id || v.unit)
+        );
+    }, [product]);
 
-    const [selectedColor, setSelectedColor] = useState(uniqueColors[0] || null);
-    const [selectedSize, setSelectedSize] = useState(uniqueSizes[0] || null);
-
-    // Build combined gallery: all product images + all variant images
-    const productImages =
-        Array.isArray(product.image) && product.image.length > 0
-            ? product.image
-            : [product.image].filter(Boolean);
-
-    const variantImages =
-        product.variants?.map((v) => v.image).filter(Boolean) || [];
-
-    const allImages = Array.from(new Set([...productImages, ...variantImages]));
-
-    const variantImagesMap = {}; // color -> image url
-    product.variants?.forEach((v) => {
-        if (v.color && v.image && !variantImagesMap[v.color]) {
-            variantImagesMap[v.color] = v.image;
+    // Resolusi nama & deskripsi multi-bahasa dengan fallback yang aman
+    const displayName = React.useMemo(() => {
+        if (product.name_translations && typeof product.name_translations === 'object') {
+            return product.name_translations[locale] || product.name_translations['indonesia'] || product.title || product.name;
         }
-    });
+        return product.title || product.name;
+    }, [product, locale]);
+
+    const displayDescription = React.useMemo(() => {
+        if (product.description_translations && typeof product.description_translations === 'object') {
+            return product.description_translations[locale] || product.description_translations['indonesia'] || product.description;
+        }
+        return product.description;
+    }, [product, locale]);
+
+    const uniqueColors = React.useMemo(() => {
+        if (isDbProduct) return [];
+        return Array.from(
+            new Set(product.variants?.map((v) => v.color).filter(Boolean)),
+        );
+    }, [product.variants, isDbProduct]);
+
+    const uniqueSizes = React.useMemo(() => {
+        if (isDbProduct) return [];
+        return Array.from(
+            new Set(product.variants?.map((v) => v.size).filter(Boolean)),
+        );
+    }, [product.variants, isDbProduct]);
+
+    const [selectedColor, setSelectedColor] = useState(null);
+    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedVariantId, setSelectedVariantId] = useState(null);
+
+    // Resolusi combined gallery: gambar produk (Eloquent / static JSON) + gambar varian
+    const productImages = React.useMemo(() => {
+        if (product.images && product.images.length > 0) {
+            return product.images.map((img) => img.image_path).filter(Boolean);
+        }
+        if (Array.isArray(product.image)) {
+            return product.image;
+        }
+        if (product.image) {
+            return [product.image];
+        }
+        if (product.image_path) {
+            return [product.image_path];
+        }
+        return [];
+    }, [product]);
+
+    const variantImages = React.useMemo(() => {
+        return product.variants?.map((v) => v.image).filter(Boolean) || [];
+    }, [product.variants]);
+
+    const allImages = React.useMemo(() => {
+        const imgs = Array.from(new Set([...productImages, ...variantImages]));
+        return imgs.length > 0 ? imgs : ["/images/placeholder.jpg"];
+    }, [productImages, variantImages]);
+
+    const variantImagesMap = React.useMemo(() => {
+        const map = {}; // color -> image url
+        if (!isDbProduct) {
+            product.variants?.forEach((v) => {
+                if (v.color && v.image && !map[v.color]) {
+                    map[v.color] = v.image;
+                }
+            });
+        }
+        return map;
+    }, [product.variants, isDbProduct]);
 
     const [activeImage, setActiveImage] = useState(allImages[0] || null);
     const [quantity, setQuantity] = useState(1);
 
-    // Reset states when the product changes (e.g. navigation via Link)
+    // Sinkronisasi state ketika produk / locale / image pool berubah
     useEffect(() => {
-        const nextColors = Array.from(
-            new Set(product.variants?.map((v) => v.color).filter(Boolean)),
-        );
-        const nextSizes = Array.from(
-            new Set(product.variants?.map((v) => v.size).filter(Boolean)),
-        );
-        setSelectedColor(nextColors[0] || null);
-        setSelectedSize(nextSizes[0] || null);
-
-        const nextProductImages =
-            Array.isArray(product.image) && product.image.length > 0
-                ? product.image
-                : [product.image].filter(Boolean);
-        const nextVariantImages =
-            product.variants?.map((v) => v.image).filter(Boolean) || [];
-        const nextAllImages = Array.from(
-            new Set([...nextProductImages, ...nextVariantImages]),
-        );
-
-        setActiveImage(nextAllImages[0] || null);
+        if (isDbProduct) {
+            setSelectedColor(null);
+            setSelectedSize(null);
+            if (product.variants && product.variants.length > 0) {
+                setSelectedVariantId(product.variants[0].id);
+                if (product.variants[0].image) {
+                    setActiveImage(product.variants[0].image);
+                } else {
+                    setActiveImage(allImages[0] || null);
+                }
+            } else {
+                setSelectedVariantId(null);
+                setActiveImage(allImages[0] || null);
+            }
+        } else {
+            setSelectedVariantId(null);
+            const nextColors = Array.from(
+                new Set(product.variants?.map((v) => v.color).filter(Boolean)),
+            );
+            const nextSizes = Array.from(
+                new Set(product.variants?.map((v) => v.size).filter(Boolean)),
+            );
+            setSelectedColor(nextColors[0] || null);
+            setSelectedSize(nextSizes[0] || null);
+            setActiveImage(allImages[0] || null);
+        }
         setQuantity(1);
-    }, [product]);
+    }, [product, isDbProduct, allImages]);
 
-    // When color changes, auto-switch to variant's image if it exists
+    // Ketika warna dirubah, ganti gambar aktif ke gambar varian jika tersedia
     const handleColorSelect = (color) => {
         setSelectedColor(color);
         if (variantImagesMap[color]) {
@@ -92,19 +150,34 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         }
     };
 
-    const activeVariant =
-        product.variants?.find(
-            (v) =>
-                (selectedColor ? v.color === selectedColor : true) &&
-                (selectedSize ? v.size === selectedSize : true),
-        ) || product.variants?.[0];
+    const activeVariant = React.useMemo(() => {
+        if (!product.variants || product.variants.length === 0) return null;
+        if (isDbProduct) {
+            return product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
+        } else {
+            return (
+                product.variants.find(
+                    (v) =>
+                        (selectedColor ? v.color === selectedColor : true) &&
+                        (selectedSize ? v.size === selectedSize : true),
+                ) || product.variants[0]
+            );
+        }
+    }, [product.variants, isDbProduct, selectedVariantId, selectedColor, selectedSize]);
 
-    const currentPrice = activeVariant
-        ? activeVariant.price
-        : product.variants?.[0]?.price || product.price || 0;
-    const currentStock = activeVariant
-        ? activeVariant.stock
-        : product.stock || 0;
+    const currentPrice = React.useMemo(() => {
+        if (activeVariant) {
+            return activeVariant.price;
+        }
+        return product.variants?.[0]?.price || product.price || 0;
+    }, [activeVariant, product.variants, product.price]);
+
+    const currentStock = React.useMemo(() => {
+        if (activeVariant) {
+            return activeVariant.stock;
+        }
+        return product.stock || 0;
+    }, [activeVariant, product.stock]);
 
     const handleQuantityChange = (type) => {
         if (type === "minus" && quantity > 1) setQuantity(quantity - 1);
@@ -119,10 +192,11 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             minimumFractionDigits: 0,
         }).format(val);
 
-    const renderStars = (rating) =>
-        [...Array(5)].map((_, i) => {
-            const full = rating >= i + 1;
-            const half = !full && rating >= i + 0.5;
+    const renderStars = (rating) => {
+        const parsedRating = parseFloat(rating) || 5.0;
+        return [...Array(5)].map((_, i) => {
+            const full = parsedRating >= i + 1;
+            const half = !full && parsedRating >= i + 0.5;
             return (
                 <div key={i} className="relative inline-block">
                     <Star size={14} className="text-zinc-200 fill-zinc-100" />
@@ -140,6 +214,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 </div>
             );
         });
+    };
 
     const isOutOfStock = currentStock === 0;
     const canBuy = !isOutOfStock && currentPrice > 0;
@@ -149,16 +224,30 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         if (!canBuy) return;
 
         const cartKey = "fayyfir_cart";
+
+        // Resolusi nama kategori & subkategori yang kompatibel
+        const categoryName = typeof product.category === 'object' && product.category !== null
+            ? product.category.name
+            : product.category || 'Perfume';
+
+        const subCategoryName = typeof product.subCategory === 'object' && product.subCategory !== null
+            ? product.subCategory.name
+            : typeof product.sub_category === 'object' && product.sub_category !== null
+                ? product.sub_category.name
+                : product.subCategory || '';
+
         const cartItem = {
             id: product.id,
             slug: product.slug,
-            title: product.title,
-            category: product.category,
-            subCategory: product.subCategory,
-            image: activeImage || productImages[0] || activeVariant?.image || "",
+            title: displayName,
+            category: categoryName,
+            subCategory: subCategoryName,
+            image: activeImage || allImages[0] || "",
             variantId: activeVariant?.id || null,
-            color: selectedColor,
-            size: selectedSize || product.size?.[0] || null,
+            color: isDbProduct ? null : selectedColor,
+            size: isDbProduct
+                ? (activeVariant?.name_translations?.[locale] || activeVariant?.name)
+                : (selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null),
             price: currentPrice,
             stock: currentStock,
             quantity,
@@ -193,9 +282,37 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         setTimeout(() => setCartNotice(""), 2200);
     };
 
+    // Helper resolusi teks kategori & subkategori reaktif
+    const categoryName = React.useMemo(() => {
+        return typeof product.category === 'object' && product.category !== null
+            ? product.category.name
+            : product.category || 'Perfume';
+    }, [product.category]);
+
+    const categorySlug = React.useMemo(() => {
+        return typeof product.category === 'object' && product.category !== null
+            ? product.category.slug || product.category.name.toLowerCase().replace(/\s+/g, "-")
+            : (product.category || 'perfume').toLowerCase().replace(/\s+/g, "-");
+    }, [product.category]);
+
+    const subCategoryName = React.useMemo(() => {
+        return typeof product.subCategory === 'object' && product.subCategory !== null
+            ? product.subCategory.name
+            : typeof product.sub_category === 'object' && product.sub_category !== null
+                ? product.sub_category.name
+                : product.subCategory || '';
+    }, [product.subCategory, product.sub_category]);
+
+    // Dapatkan tipe varian (Ukuran, Rasa, Warna, dll.)
+    const variantType = React.useMemo(() => {
+        if (!product.variants || product.variants.length === 0) return 'Varian';
+        const type = product.variants[0].type || 'Varian';
+        return type.charAt(0).toUpperCase() + type.slice(1);
+    }, [product.variants]);
+
     return (
         <MainLayout>
-            <Head title={`${product.title} - Fayyfir Shop`} />
+            <Head title={`${displayName} - Fayyfir Shop`} />
             <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen pt-24 pb-20 font-sans bg-white">
@@ -212,14 +329,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             </Link>
                             <ChevronRight size={12} className="text-zinc-300" />
                             <Link
-                                href={`/products/${product.category.toLowerCase().replace(/\s+/g, "-")}`}
+                                href={`/products/${categorySlug}`}
                                 className="font-medium transition-colors hover:text-blue-600"
                             >
-                                {product.category}
+                                {categoryName}
                             </Link>
                             <ChevronRight size={12} className="text-zinc-300" />
                             <span className="text-zinc-600 truncate max-w-[180px] font-medium">
-                                {product.title}
+                                {displayName}
                             </span>
                         </nav>
                     </div>
@@ -244,7 +361,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     <motion.img
                                         key={activeImage}
                                         src={activeImage}
-                                        alt={product.title}
+                                        alt={displayName}
                                         className="object-cover w-full h-full"
                                         initial={{ opacity: 0, scale: 1.04 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -282,11 +399,11 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             </div>
 
                             {/* Thumbnails */}
-                            {allImages.length > 0 && (
+                            {allImages.length > 1 && (
                                 <div className="flex gap-3 py-1 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-200 scrollbar-track-transparent">
                                     {allImages.map((img, idx) => {
                                         const isActive = activeImage === img;
-                                        const variantColor = Object.keys(variantImagesMap).find(
+                                        const variantColor = !isDbProduct && Object.keys(variantImagesMap).find(
                                             (c) => variantImagesMap[c] === img,
                                         );
                                         return (
@@ -332,7 +449,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             {/* Category + stock pills */}
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 border border-blue-200 bg-blue-50 px-3 py-1 rounded-full">
-                                    {product.subCategory || product.category}
+                                    {subCategoryName || categoryName}
                                 </span>
                                 {!isOutOfStock && (
                                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700 border border-emerald-200 bg-emerald-50 px-3 py-1 rounded-full flex items-center gap-1">
@@ -344,7 +461,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             {/* Title */}
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-['Cinzel'] font-bold text-zinc-900 leading-tight tracking-wide mb-3">
-                                    {product.title}
+                                    {displayName}
                                 </h1>
 
                                 {/* Rating row */}
@@ -357,13 +474,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     </span>
                                     <span className="text-xs text-zinc-300">|</span>
                                     <span className="text-sm text-zinc-500">
-                                        {product.reviewCount || product.sold}{" "}
+                                        {product.reviewCount || product.sold || 0}{" "}
                                         {t("product.detail.reviews", "ulasan")}
                                     </span>
                                     <span className="text-xs text-zinc-300">|</span>
                                     <span className="flex items-center gap-1 text-sm text-zinc-500">
                                         <Package size={12} className="text-zinc-400" />
-                                        {product.sold} {t("product.detail.sold", "terjual")}
+                                        {product.sold || 0} {t("product.detail.sold", "terjual")}
                                     </span>
                                 </div>
                             </div>
@@ -380,15 +497,81 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                         {formatPrice(currentPrice)}
                                     </span>
                                 </div>
-                                {uniqueSizes.length > 0 && (
+                                {((!isDbProduct && uniqueSizes.length > 0) || (isDbProduct && product.variants && product.variants.length > 1)) && (
                                     <p className="text-xs text-zinc-400 mt-1.5">
                                         {t("product.detail.price_notice", "Harga dapat berubah sesuai varian yang dipilih")}
                                     </p>
                                 )}
                             </div>
 
-                            {/* Color / Variant Selection */}
-                            {uniqueColors.length > 0 && (
+                            {/* Database Variant Selection */}
+                            {isDbProduct && product.variants && product.variants.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
+                                            {t(`product.detail.select_${variantType.toLowerCase()}`, `Pilih ${variantType}`)}
+                                        </h3>
+                                        {activeVariant && (
+                                            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                                {activeVariant.name_translations?.[locale] || activeVariant.name}
+                                                {activeVariant.unit && ` (${activeVariant.unit.name || activeVariant.unit})`}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2.5">
+                                        {product.variants.map((variant) => {
+                                            const isSelected = selectedVariantId === variant.id;
+                                            const variantName = variant.name_translations?.[locale] || variant.name;
+                                            const isVariantOutOfStock = variant.stock === 0;
+
+                                            return (
+                                                <button
+                                                    key={variant.id}
+                                                    onClick={() => {
+                                                        setSelectedVariantId(variant.id);
+                                                        if (variant.image) {
+                                                            setActiveImage(variant.image);
+                                                        }
+                                                    }}
+                                                    disabled={isVariantOutOfStock}
+                                                    className={`flex items-center gap-2.5 pl-1.5 pr-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-300 ${
+                                                        isSelected
+                                                            ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200 scale-[1.03]"
+                                                            : "bg-white border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
+                                                    } ${isVariantOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                >
+                                                    {variant.image ? (
+                                                        <span className={`w-8 h-8 rounded-lg overflow-hidden border flex-shrink-0 ${
+                                                            isSelected ? "border-white/40" : "border-zinc-200"
+                                                        }`}>
+                                                            <img
+                                                                src={variant.image}
+                                                                alt={variantName}
+                                                                className="object-cover w-full h-full"
+                                                            />
+                                                        </span>
+                                                    ) : (
+                                                        isSelected && <Check size={12} className="ml-1" />
+                                                    )}
+                                                    <div className="text-left">
+                                                        <span className="block leading-tight">{variantName}</span>
+                                                        {variant.price && variant.price !== product.price ? (
+                                                            <span className={`text-[10px] block ${
+                                                                isSelected ? "text-blue-100" : "text-slate-400"
+                                                            }`}>
+                                                                {formatPrice(variant.price)}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Color / Variant Selection (Static JSON) */}
+                            {!isDbProduct && uniqueColors.length > 0 && (
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
                                         <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
@@ -432,8 +615,8 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 </div>
                             )}
 
-                            {/* Sizes Selection */}
-                            {uniqueSizes.length > 0 && (
+                            {/* Sizes Selection (Static JSON) */}
+                            {!isDbProduct && uniqueSizes.length > 0 && (
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
                                         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -496,7 +679,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     ) : (
                                         <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5">
                                             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                                            {/* Mengganti dinamika teks {qty} secara aman */}
                                             {t("product.detail.stock_qty_available", "Stok: {qty} tersedia").replace("{qty}", currentStock)}
                                         </span>
                                     )}
@@ -565,11 +747,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         </h2>
                         <div className="p-6 border bg-zinc-50 border-zinc-100 rounded-2xl lg:p-8">
                             <p className="text-sm leading-relaxed whitespace-pre-line text-zinc-600">
-                                {product.description}
+                                {displayDescription}
                             </p>
                         </div>
                     </motion.div>
                 </div>
+
             </div>
 
             <Footer />

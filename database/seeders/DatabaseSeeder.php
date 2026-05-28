@@ -21,5 +21,11 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        $units = ['ml', 'gr', 'kg', 'pcs', 'liter', 'box', 'pack'];
+        foreach ($units as $unit) {
+            \App\Models\Unit::firstOrCreate(['name' => $unit]);
+        }
     }
 }
+

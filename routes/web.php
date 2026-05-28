@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreBranchController;
 use Illuminate\Foundation\Application;
@@ -26,10 +27,16 @@ Route::get('/products/{category?}', function ($category = null) {
 });
 
 Route::get('/product/{slug}', function ($slug) {
+    $product = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+        ->where('slug', $slug)
+        ->first();
+
     return Inertia::render('detail-product/DetailProduct', [
+        'product' => $product,
         'slug' => $slug
     ]);
 });
+
 
 Route::get('/cart', function () {
     return Inertia::render('cart/CartPage');
@@ -57,9 +64,23 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         return Inertia::render('backoffice/dashboard');
     })->name('backoffice.dashboard');
 
-    Route::get('/product-management', function () {
-        return Inertia::render('backoffice/menu/ProductManagement');
-    })->name('backoffice.product-management');
+    Route::get('/product-management', [ProductController::class, 'index'])
+        ->name('backoffice.product-management');
+
+    // Alias agar Ziggy bisa me-resolve 'backoffice.products.index'
+    Route::get('/products', [ProductController::class, 'index'])
+        ->name('backoffice.products.index');
+
+    Route::get('/products/create', [ProductController::class, 'create'])
+        ->name('backoffice.products.create');
+    Route::post('/products', [ProductController::class, 'store'])
+        ->name('backoffice.products.store');
+    Route::get('/products/{product:slug}/edit', [ProductController::class, 'edit'])
+        ->name('backoffice.products.edit');
+    Route::patch('/products/{product:slug}', [ProductController::class, 'update'])
+        ->name('backoffice.products.update');
+    Route::delete('/products/{product:slug}', [ProductController::class, 'destroy'])
+        ->name('backoffice.products.destroy');
 
     Route::get('/product-categories', [ProductCategoryController::class, 'index'])
         ->name('backoffice.product-categories.index');

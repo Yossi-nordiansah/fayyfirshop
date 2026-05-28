@@ -139,3 +139,146 @@ Untuk file `public/lang-arabic.json`:
 - Memberikan saran desain UI yang "Wow" dan mewah (vibrant, modern, glassmorphism, micro-animations).
 - Memastikan semua teks baru terintegrasi dengan fitur Change Language.
 - Menjaga kebersihan kode (Clean Code) dan performa aplikasi.
+
+---
+
+### 8. ALUR REGISTRASI & TRANSAKSI CHECKOUT MULTI-NEGARA
+Fayyfir Shop mengadopsi sistem perdagangan multi-regional yang mencakup tiga negara utama: **Indonesia (ID)**, **Malaysia (MY)**, dan **Saudi Arabia (SA)**. Berikut adalah alur terperinci dari pendaftaran pengguna hingga proses penyelesaian pesanan:
+
+#### 1. Alur Pendaftaran Pengguna / Customer
+1. Pelanggan mengakses formulir registrasi (`Register.jsx`).
+2. Pelanggan memilih negara asal mereka (`country`):
+   - **Indonesia (ID):** Form memicu input bertingkat berbasis API wilayah domestik (Provinsi -> Kabupaten/Kota -> Kecamatan) yang terintegrasi dengan database administratif lokal Indonesia untuk menjamin akurasi alamat.
+   - **Malaysia (MY) / Saudi Arabia (SA):** Form secara dinamis menampilkan isian alamat standar internasional yang fleksibel (kolom teks untuk Provinsi/Negara Bagian, Kota, Kode Pos, dan Detail Alamat lengkap).
+3. Setelah data lolos validasi client-side dan server-side (`RegisterRequest`), data disimpan di tabel `users` dengan atribut `country` ('ID' / 'MY' / 'SA') dan default profil.
+
+#### 2. Alur Pembelian & Penambahan ke Keranjang
+1. Pelanggan menjelajahi katalog produk premium dan masuk ke halaman detail produk (`DetailProduct.jsx`).
+2. Pelanggan dapat memilih varian produk (jika ada) seperti ukuran atau warna.
+3. Seluruh harga disimpan secara sentral dalam database menggunakan mata uang **Rupiah (IDR)**. Saat ditampilkan di frontend, nilai dikonversi dan diformat secara dinamis berdasarkan preferensi bahasa atau regional pelanggan (misal: menampilkan Rupiah `Rp` untuk pasar Indonesia, Ringgit `RM` untuk Malaysia, dan Riyal `SAR` untuk Arab Saudi).
+4. Pelanggan menekan tombol "Tambah ke Keranjang" atau "Beli Sekarang", menyimpan data produk, varian, dan kuantitas terpilih ke state keranjang belanja.
+
+#### 3. Alur Checkout & Mekanisme Pengalihan Stok Multi-Cabang (Multi-Branch Stock Switcher)
+1. Ketika pelanggan melanjutkan ke halaman **Checkout**:
+   - Sistem membaca alamat pengiriman default pelanggan serta kode negara asal mereka (`users.country`).
+   - Sistem secara default menargetkan **Cabang Toko / Gudang Terdekat** yang melayani negara tersebut (`store_branches`):
+     - **Indonesia (ID):** Gudang pemroses default adalah `Fayyfir Store Mojokerto` (ID: 1).
+     - **Malaysia (MY):** Gudang pemroses default adalah `Fayyfir Selangor Batu Cave` (ID: 2).
+     - **Saudi Arabia (SA):** Gudang pemroses default adalah `Fayyfir Store Riyadh` (ID: 3).
+2. **Validasi Ketersediaan Stok Terlokalisasi:**
+   - Sistem memeriksa stok produk/varian spesifik pada tabel `product_branch_stocks` atau `product_variant_branch_stocks` untuk `store_branch_id` default negara pelanggan.
+3. **Mekanisme Pengalihan Cabang (Stock Branch Selector):**
+   - **Kasus A (Stok Tersedia):** Jika stok pada cabang lokal mencukupi, pesanan akan secara otomatis ditangani oleh cabang tersebut.
+   - **Kasus B (Stok Habis di Cabang Lokal):** Jika stok produk/varian di cabang asal pelanggan (misalnya Malaysia `MY`) habis/kosong (`stock <= 0`):
+     - Sistem **tidak akan memblokir** transaksi pembelian.
+     - Halaman Checkout akan mendeteksi cabang-cabang aktif lainnya (`store_branches`) yang memiliki stok mencukupi untuk item tersebut.
+     - Antarmuka checkout akan menampilkan opsi **Gudang Pengirim Alternatif (Shipping Warehouse/Branch Selector)** dalam bentuk dropdown/radio buttons yang interaktif.
+     - Pelanggan dapat memilih untuk mengirimkan barang dari cabang alternatif yang tersedia (contoh: stok dikirim dari Cabang Indonesia `ID` atau Cabang Riyadh `SA` ke Malaysia).
+     - Jika pelanggan memilih cabang alternatif, sistem akan memperbarui estimasi tarif pengiriman (`shipping_cost`) secara internasional dari lokasi cabang pemroses terpilih ke alamat tujuan.
+4. **Penyelesaian Pesanan:**
+   - Saat pesanan dibuat (`POST /orders`):
+     - ID cabang pemroses yang dipilih disimpan di kolom `store_branch_id` pada tabel `orders`.
+     - Kuantitas stok akan didecrement (dikurangi) atau dialokasikan pada tabel stok cabang yang memproses transaksi tersebut (`product_branch_stocks` atau `product_variant_branch_stocks` sesuai dengan ID cabang terpilih).
+
+---
+
+### 9. SKEMA DATABASE & RELASI TABEL
+Berdasarkan struktur database riil dari dump SQL terbaru, berikut adalah skema tabel utama serta relasi antar-entitas di dalam Fayyfir Shop:
+
+#### ERD Diagram (Mermaid Visualisation)
+```mermaid
+erDiagram
+    users ||--o{ orders : "places"
+    store_branches ||--o{ orders : "fulfills"
+    store_branches ||--o{ product_branch_stocks : "has stocks"
+    store_branches ||--o{ product_variant_branch_stocks : "has variant stocks"
+    products ||--o{ product_branch_stocks : "stocked in"
+    products ||--o{ product_images : "has"
+    products ||--o{ product_variants : "has"
+    products ||--o{ product_reviews : "receives"
+    product_variants ||--o{ product_variant_branch_stocks : "stocked in"
+    product_variants ||--o{ product_reviews : "rated with variant"
+    orders ||--|{ order_items : "contains"
+    products ||--o{ order_items : "ordered"
+    product_variants ||--o{ order_items : "ordered variant"
+    product_categories ||--o{ product_sub_categories : "categorizes"
+    users ||--o{ product_reviews : "writes"
+```
+
+#### 1. Tabel Cabang Toko (`store_branches`)
+Menyimpan informasi gudang/cabang fisik yang beroperasi di masing-masing dari 3 negara.
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `code` | varchar(20) | Kode unik cabang (misal: 'ID', 'MY', 'SA') |
+| `name` | varchar(255) | Nama lengkap cabang toko |
+| `country_code` | varchar(2) | Kode negara ISO 2-digit (ID, MY, SA) |
+| `country_name` | varchar(255) | Nama negara asal cabang |
+| `currency_code` | varchar(3) | Kode mata uang lokal (IDR, RM, SAR) |
+| `currency_symbol` | varchar(10) | Simbol mata uang (Rp, RM, ⃁) |
+| `is_default` | tinyint(1) | `1` jika merupakan cabang utama/default |
+| `is_active` | tinyint(1) | Status aktif operasional cabang |
+| `city` / `province` / `postal_code` | varchar(255) | Rincian administratif alamat gudang cabang |
+
+#### 2. Tabel Pengguna (`users`)
+Menampung data identitas, peran, dan alamat pengiriman default pelanggan/admin.
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `name` | varchar(255) | Nama lengkap pengguna |
+| `avatar` | varchar(255) | Lokasi file gambar profil / avatar (nullable) |
+| `email` | varchar(255) | Alamat email unik (digunakan untuk login) |
+| `country` | varchar(2) | Kode negara domisili (default: 'ID') |
+| `role` | varchar(255) | Peran pengguna ('customer', 'admin', 'super_admin') |
+| `phone` | varchar(255) | Nomor kontak aktif |
+| `address` / `city` / `province` | text / varchar | Rincian alamat pengiriman default |
+| `postal_code` | varchar(255) | Kode pos alamat pengiriman |
+| `assigned_branch_id` | bigint UNSIGNED | Foreign Key ke `store_branches.id` (khusus staff/admin cabang) |
+
+#### 3. Tabel Inventaris & Stok Cabang
+##### A. Stok Produk Standar (`product_branch_stocks`)
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `product_id` | bigint UNSIGNED | Foreign Key ke `products.id` (Cascade) |
+| `store_branch_id` | bigint UNSIGNED | Foreign Key ke `store_branches.id` (Cascade) |
+| `stock` | int UNSIGNED | Jumlah fisik stok yang tersedia di cabang tersebut |
+| `reserved_stock` | int UNSIGNED | Stok yang sedang dipesan tapi belum dikirim |
+| `is_available` | tinyint(1) | Apakah item dapat dibeli di cabang ini |
+
+##### B. Stok Varian Produk (`product_variant_branch_stocks`)
+Digunakan jika produk memiliki variasi khusus (misalnya ukuran botol parfum atau kemasan madu).
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `product_variant_id` | bigint UNSIGNED | Foreign Key ke `product_variants.id` (Cascade) |
+| `store_branch_id` | bigint UNSIGNED | Foreign Key ke `store_branches.id` (Cascade) |
+| `stock` | int UNSIGNED | Jumlah stok fisik varian pada cabang terpilih |
+| `reserved_stock` | int UNSIGNED | Jumlah alokasi pemesanan aktif |
+
+#### 4. Tabel Transaksi Penjualan
+##### A. Pesanan Utama (`orders`)
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `invoice_number` | varchar(255) | Kode invoice unik transaksi (Unique) |
+| `user_id` | bigint UNSIGNED | Foreign Key ke `users.id` (Cascade) |
+| `store_branch_id` | bigint UNSIGNED | Foreign Key ke `store_branches.id` (Cabang pemroses transaksi) |
+| `subtotal` | decimal(12,2) | Total harga seluruh item sebelum potongan & ongkir (IDR) |
+| `discount_amount` | decimal(12,2) | Potongan harga kupon/diskon (IDR) |
+| `shipping_cost` | decimal(12,2) | Ongkos kirim pengiriman domestik/internasional (IDR) |
+| `total_amount` | decimal(12,2) | Total pembayaran bersih yang harus dibayar (IDR) |
+| `status` | enum | Status pesanan ('pending', 'processing', 'shipped', 'completed', 'cancelled') |
+| `payment_status` | enum | Status pembayaran ('unpaid', 'paid', 'expired', 'refunded') |
+| `shipping_address` | text | Alamat lengkap tujuan pengiriman saat pesanan dibuat |
+
+##### B. Rincian Item Pesanan (`order_items`)
+| Nama Kolom | Tipe Data | Atribut / Keterangan |
+| :--- | :--- | :--- |
+| `id` | bigint UNSIGNED | Primary Key, Auto Increment |
+| `order_id` | bigint UNSIGNED | Foreign Key ke `orders.id` (Cascade) |
+| `product_id` | bigint UNSIGNED | Foreign Key ke `products.id` (Cascade) |
+| `product_variant_id` | bigint UNSIGNED | Foreign Key ke `product_variants.id` (Set Null) |
+| `quantity` | int | Jumlah kuantitas item yang dibeli |
+| `price` | decimal(12,2) | Harga per-item saat dibeli (IDR) untuk menghindari bias fluktuasi harga |
+

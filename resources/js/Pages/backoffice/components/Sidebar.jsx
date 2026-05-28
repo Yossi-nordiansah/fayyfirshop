@@ -68,7 +68,7 @@ export default function Sidebar() {
         typeof window !== 'undefined' ? window.location.pathname : '';
 
     return (
-        <aside className="sticky top-0 flex flex-col h-screen max-h-screen px-4 py-6 overflow-y-auto text-white border-r border-blue-800 w-72 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800">
+        <aside className="sticky top-0 flex flex-col h-screen max-h-screen px-4 py-6 overflow-y-auto text-white border-r border-blue-800 w-54 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800">
             <div className="px-3 pb-8">
                 <img
                     src="/images/logo-footer.png"
