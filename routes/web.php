@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreBranchController;
 use Illuminate\Foundation\Application;
@@ -59,6 +60,21 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::get('/product-management', function () {
         return Inertia::render('backoffice/menu/ProductManagement');
     })->name('backoffice.product-management');
+
+    Route::get('/product-categories', [ProductCategoryController::class, 'index'])
+        ->name('backoffice.product-categories.index');
+    Route::get('/product-categories/create', [ProductCategoryController::class, 'create'])
+        ->name('backoffice.product-categories.create');
+    Route::post('/product-categories', [ProductCategoryController::class, 'store'])
+        ->name('backoffice.product-categories.store');
+    Route::get('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'show'])
+        ->name('backoffice.product-categories.show');
+    Route::get('/product-categories/{productCategory:slug}/edit', [ProductCategoryController::class, 'edit'])
+        ->name('backoffice.product-categories.edit');
+    Route::patch('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'update'])
+        ->name('backoffice.product-categories.update');
+    Route::delete('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'destroy'])
+        ->name('backoffice.product-categories.destroy');
 
     Route::get('/orders', function () {
         return Inertia::render('backoffice/menu/Orders');

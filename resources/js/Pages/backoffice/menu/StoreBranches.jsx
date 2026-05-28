@@ -1,10 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, Edit3, Plus, Trash2, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { CheckCircle2, Edit3, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import ConfirmModal from '../components/ConfirmModal';
+import SuccessModal from '../components/SuccessModal';
 
 export default function StoreBranches({ storeBranches, status, statusAction }) {
     const { t, locale } = useLanguage();
@@ -17,69 +19,43 @@ export default function StoreBranches({ storeBranches, status, statusAction }) {
         setShowCreatedModal(statusAction === 'created' && Boolean(status));
     }, [status, statusAction]);
 
-    const removeBranch = (branch) => {
-        const confirmMessage = `${t('backoffice.store_branches.confirm_delete', 'Delete store branch')} "${branch.name}"?`;
-        if (!window.confirm(confirmMessage)) {
-            return;
-        }
+    const [pendingDelete, setPendingDelete] = useState(null);
 
-        router.delete(route('backoffice.store-branches.destroy', branch.id), {
+    const removeBranch = (branch) => {
+        setPendingDelete(branch);
+    };
+
+    const confirmRemoveBranch = () => {
+        if (!pendingDelete) return;
+        router.delete(route('backoffice.store-branches.destroy', pendingDelete.id), {
             preserveScroll: true,
         });
+        setPendingDelete(null);
     };
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800">
             <Head title={t('backoffice.store_branches.title', 'Store Branches')} />
 
-            {/* PREMIUM ANIMATED MODAL SUKSES (FRAMER MOTION) */}
-            <AnimatePresence>
-                {showCreatedModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-blue-950/40 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
-                            className="w-full max-w-md p-6 bg-white border shadow-2xl rounded-xl border-blue-50"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="inline-flex items-center justify-center w-12 h-12 border rounded-full shrink-0 bg-emerald-50 text-emerald-600 border-emerald-100">
-                                        <CheckCircle2 className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-bold text-blue-950">
-                                            {t('backoffice.store_branches.success_title', 'Data successfully created')}
-                                        </h2>
-                                        <p className="mt-1 text-sm text-slate-600">
-                                            {status}
-                                        </p>
-                                    </div>
-                                </div>
+            {/* GLOBAL CONFIRM MODAL */}
+            <ConfirmModal
+                show={Boolean(pendingDelete)}
+                title={t('backoffice.store_branches.confirm_delete', 'Delete store branch')}
+                message={`${t('backoffice.store_branches.confirm_delete', 'Delete store branch')} "${pendingDelete?.name}"?`}
+                confirmLabel={t('backoffice.store_branches.form.buttons.cancel', 'Hapus') === 'Cancel' ? 'Hapus' : t('backoffice.store_branches.form.buttons.cancel', 'Hapus')}
+                cancelLabel={t('backoffice.store_branches.form.buttons.cancel', 'Batal')}
+                onConfirm={confirmRemoveBranch}
+                onCancel={() => setPendingDelete(null)}
+            />
 
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCreatedModal(false)}
-                                    className="inline-flex items-center justify-center w-8 h-8 transition rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCreatedModal(false)}
-                                    className="rounded-lg bg-blue-950 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-blue-900 border border-amber-500/20 shadow-md active:scale-[0.98]"
-                                >
-                                    {t('backoffice.store_branches.success_btn', 'Okay')}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* GLOBAL SUCCESS MODAL */}
+            <SuccessModal
+                show={showCreatedModal}
+                title={t('backoffice.store_branches.success_title', 'Data successfully created')}
+                message={status ?? ''}
+                btnLabel={t('backoffice.store_branches.success_btn', 'Okay')}
+                onClose={() => setShowCreatedModal(false)}
+            />
 
             <div className="flex min-h-screen">
                 <Sidebar />

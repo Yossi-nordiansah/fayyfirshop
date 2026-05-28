@@ -1,21 +1,25 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Edit3, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { useLanguage } from '@/Contexts/LanguageContext'; // Mengimpor custom hook
+import ConfirmModal from '../components/ConfirmModal';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 export default function Admin({ admins, status }) {
     const { t } = useLanguage();
+    const [pendingDelete, setPendingDelete] = useState(null);
 
     const removeAdmin = (admin) => {
-        // Integrasi konfirmasi multi-bahasa
-        if (!window.confirm(`${t('admin.management.confirm.delete', 'Delete admin')} "${admin.name}"?`)) {
-            return;
-        }
+        setPendingDelete(admin);
+    };
 
-        router.delete(route('backoffice.admin.destroy', admin.id), {
+    const confirmRemove = () => {
+        if (!pendingDelete) return;
+        router.delete(route('backoffice.admin.destroy', pendingDelete.id), {
             preserveScroll: true,
         });
+        setPendingDelete(null);
     };
 
     const getAvatarUrl = (avatar) => {
@@ -27,6 +31,16 @@ export default function Admin({ admins, status }) {
     return (
         <div className="min-h-screen bg-blue-50">
             <Head title={t('admin.management.title', 'Admin Management')} />
+
+            <ConfirmModal
+                show={Boolean(pendingDelete)}
+                title={t('admin.management.confirm.delete', 'Delete admin')}
+                message={`${t('admin.management.confirm.delete', 'Delete admin')} "${pendingDelete?.name}"?`}
+                confirmLabel={t('admin.management.action.aria.delete', 'Hapus')}
+                cancelLabel={t('admin.form.button.cancel', 'Batal')}
+                onConfirm={confirmRemove}
+                onCancel={() => setPendingDelete(null)}
+            />
 
             <div className="flex min-h-screen">
                 <Sidebar />
