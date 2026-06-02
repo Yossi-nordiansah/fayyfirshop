@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 /**
  * Reusable confirmation dialog for the backoffice.
@@ -16,14 +17,21 @@ import { AlertTriangle } from 'lucide-react';
  */
 export default function ConfirmModal({
     show = false,
-    title = 'Konfirmasi',
-    message = 'Apakah Anda yakin?',
-    confirmLabel = 'Hapus',
-    cancelLabel = 'Batal',
+    title,
+    message,
+    confirmLabel,
+    cancelLabel,
     variant = 'danger',
     onConfirm,
     onCancel,
 }) {
+    const { t } = useLanguage();
+
+    const resolvedTitle = title ?? t('common.confirm_modal.title', 'Konfirmasi');
+    const resolvedMessage = message ?? t('common.confirm_modal.message', 'Apakah Anda yakin?');
+    const resolvedConfirmLabel = confirmLabel ?? t('common.confirm_modal.confirm', 'Hapus');
+    const resolvedCancelLabel = cancelLabel ?? t('common.confirm_modal.cancel', 'Batal');
+
     const variantMap = {
         danger: {
             icon: 'bg-rose-50 text-rose-600 border-rose-100',
@@ -61,8 +69,8 @@ export default function ConfirmModal({
                                 <AlertTriangle className="h-5 w-5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <h3 className="text-base font-bold text-blue-950">{title}</h3>
-                                <p className="mt-1.5 text-sm text-slate-600">{message}</p>
+                                <h3 className="text-base font-bold text-blue-950">{resolvedTitle}</h3>
+                                <p className="mt-1.5 text-sm text-slate-600">{resolvedMessage}</p>
                             </div>
                         </div>
 
@@ -72,14 +80,14 @@ export default function ConfirmModal({
                                 onClick={onCancel}
                                 className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
                             >
-                                {cancelLabel}
+                                {resolvedCancelLabel}
                             </button>
                             <button
                                 type="button"
                                 onClick={onConfirm}
                                 className={`rounded-lg px-4 py-2.5 text-sm font-bold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-1 ${colors.confirm}`}
                             >
-                                {confirmLabel}
+                                {resolvedConfirmLabel}
                             </button>
                         </div>
                     </motion.div>
@@ -88,3 +96,4 @@ export default function ConfirmModal({
         </AnimatePresence>
     );
 }
+

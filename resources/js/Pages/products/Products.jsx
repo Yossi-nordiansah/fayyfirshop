@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import Navbar from "@/Components/Navbar";
 import Footer from "@/Components/Footer";
 import MainLayout from "@/Layouts/MainLayout";
@@ -19,8 +19,182 @@ import {
     RotateCcw,
 } from "lucide-react";
 
-export default function Products({ category = null, subCategory = null }) {
+export default function Products({ category = null, subCategory = null, products = [] }) {
     const { t, locale } = useLanguage();
+    const { navCategories = [] } = usePage().props;
+
+    // Helper functions to map selected database category and subcategory to the format in productsData (data_products_30.json)
+    const getProductCategoryKey = (catNameOrSlug) => {
+        const lower = String(catNameOrSlug).toLowerCase();
+        if (lower === 'parfum' || lower === 'perfume') return 'perfume';
+        if (lower === 'kesehatan dan nutrisi' || lower === 'healthy nutrition' || lower === 'kesehatan-dan-nutrisi' || lower === 'healthy-nutrition') return 'healthy nutrition';
+        if (lower === 'minyak aromaterapi' || lower === 'aromatic oil' || lower === 'minyak-aromaterapi' || lower === 'aromatic-oil') return 'aromatic oil';
+        if (lower === 'bakhoor-and-oud' || lower === 'bakhoor and oud') return 'bakhoor and oud';
+        return lower;
+    };
+
+    const getProductSubcategoryKey = (subNameOrVal) => {
+        const lower = String(subNameOrVal).toLowerCase();
+        if (lower === 'pria' || lower === 'mens' || lower === 'men') return 'mens';
+        if (lower === 'wanita' || lower === 'womens' || lower === 'woman') return 'womens';
+        if (lower === 'unisex') return 'unisex';
+        if (lower === 'parfum set' || lower === 'parfume-set' || lower === 'perfume set') return 'parfume-set';
+        if (lower === 'saffron') return 'saffron';
+        if (lower === 'honey') return 'honey';
+        if (lower === 'oud') return 'oud';
+        if (lower === 'bakhoor') return 'bakhoor';
+        if (lower === 'mamoul') return 'mamoul';
+        if (lower === 'dehn-oud' || lower === 'dehn oud') return 'dehn oud';
+        if (lower === 'aromatic-oil' || lower === 'aromatic oil') return 'aromatic oil';
+        return lower;
+    };
+
+    const dynamicCategoryMap = useMemo(() => {
+        // If database categories exist, build ONLY from database categories to avoid duplication!
+        if (navCategories && navCategories.length > 0) {
+            const map = {};
+            navCategories.forEach((cat) => {
+                const catSlug = cat.slug;
+                const subCategoriesObj = {};
+                if (cat.subCategories) {
+                    cat.subCategories.forEach((sub) => {
+                        subCategoriesObj[sub.val] = {
+                            id: sub.id,
+                            name: sub.name,
+                            name_translations: sub.name_translations,
+                            translationKey: null,
+                        };
+                    });
+                }
+
+                map[catSlug] = {
+                    id: cat.id,
+                    name: cat.name,
+                    name_translations: cat.name_translations,
+                    translationKey: null,
+                    subCategories: subCategoriesObj,
+                };
+            });
+            return map;
+        }
+
+        // Fallback static map if database is empty
+        return {
+            perfume: {
+                name: "perfume",
+                translationKey: "nav.perfume",
+                subCategories: {
+                    mens: { name: "mens", translationKey: "sub.mens" },
+                    womens: { name: "Womens", translationKey: "sub.womens" },
+                    unisex: { name: "Unisex", translationKey: "sub.unisex" },
+                    "parfume-set": { name: "Parfum Set", translationKey: "sub.set" },
+                },
+            },
+            "aromatic-oil": {
+                name: "aromatic oil",
+                translationKey: "nav.aromaticOil",
+                subCategories: {
+                    "aromatic-oil": { name: "aromatic oil", translationKey: "sub.oil" },
+                    "dehn-oud": { name: "dehn oud", translationKey: "sub.dehn" },
+                },
+            },
+            "bakhoor-and-oud": {
+                name: "bakhoor and oud",
+                translationKey: "nav.bakhoor",
+                subCategories: {
+                    oud: { name: "oud", translationKey: "sub.oud" },
+                    bakhoor: { name: "bakhoor", translationKey: "sub.bakhoor" },
+                    mamoul: { name: "mamoul", translationKey: "sub.mamoul" },
+                },
+            },
+            "healthy-nutrition": {
+                name: "healthy nutrition",
+                translationKey: "nav.nutrition",
+                subCategories: {
+                    saffron: { name: "saffron", translationKey: "sub.saffron" },
+                    honey: { name: "honey", translationKey: "sub.honey" },
+                },
+            },
+        };
+    }, [navCategories]);
+
+    // Fallback/Legacy productsData vs Database products prop
+    const productsList = useMemo(() => {
+        return products && products.length > 0 ? products : productsData;
+    }, [products]);
+
+    // Helper function to extract product images dynamically (database structure vs mock data)
+    const getProductImage = (prod) => {
+        if (prod.image) {
+            return prod.image;
+        }
+        if (prod.images && prod.images.length > 0) {
+            return prod.images.map(img => {
+                if (!img.image_path) return '/images/logo-footer.png';
+                return img.image_path.startsWith('http') || img.image_path.startsWith('/') 
+                    ? img.image_path 
+                    : `/storage/${img.image_path}`;
+            });
+        }
+        return '/images/logo-footer.png';
+    };
+
+    const matchCategory = (prod, selectedCatSlug) => {
+        if (!selectedCatSlug) return true;
+        
+        // Database product category object
+        if (prod.category && typeof prod.category === 'object') {
+            return prod.category.slug === selectedCatSlug;
+        }
+        
+        // Legacy mock category string fallback
+        const mappedCat = dynamicCategoryMap[selectedCatSlug];
+        if (!mappedCat) return false;
+        
+        const productCatKey = getProductCategoryKey(prod.category);
+        const mappedCatKey = getProductCategoryKey(mappedCat.name);
+        return productCatKey === mappedCatKey;
+    };
+
+    const matchSubCategory = (prod, selectedSubVal, selectedCatSlug) => {
+        if (!selectedSubVal) return true;
+        
+        // Database product subcategory relation
+        const sub = prod.sub_category || prod.subCategory;
+        if (sub && typeof sub === 'object') {
+            // Slugify subcategory name for comparison
+            const subSlug = String(sub.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            return subSlug === selectedSubVal;
+        }
+        
+        // Legacy mock subcategory string fallback
+        const mappedCat = dynamicCategoryMap[selectedCatSlug];
+        if (!mappedCat) return false;
+        
+        const mappedSub = mappedCat.subCategories?.[selectedSubVal];
+        if (!mappedSub) return false;
+        
+        const productSubKey = getProductSubcategoryKey(prod.subCategory);
+        const mappedSubKey = getProductSubcategoryKey(mappedSub.name);
+        return productSubKey === mappedSubKey;
+    };
+
+    // Helper to get normalized category slug (maps legacy slugs to database slugs if database categories exist)
+    const getNormalizedCategorySlug = (slug) => {
+        if (!slug) return slug;
+        if (navCategories && navCategories.length > 0) {
+            const legacyMapping = {
+                'perfume': 'parfum',
+                'aromatic-oil': 'minyak-aromaterapi',
+                'healthy-nutrition': 'kesehatan-dan-nutrisi',
+            };
+            const mapped = legacyMapping[slug.toLowerCase()];
+            if (mapped && navCategories.some(cat => cat.slug === mapped)) {
+                return mapped;
+            }
+        }
+        return slug;
+    };
 
     // Core filtering & sorting states
     const [selectedCat, setSelectedCat] = useState(category);
@@ -39,9 +213,9 @@ export default function Products({ category = null, subCategory = null }) {
 
     // Synchronize local states with URL/Inertia props
     useEffect(() => {
-        setSelectedCat(category);
+        setSelectedCat(getNormalizedCategorySlug(category));
         setSelectedSub(subCategory);
-    }, [category, subCategory]);
+    }, [category, subCategory, navCategories]);
 
     // Expand category on sidebar if active
     useEffect(() => {
@@ -55,15 +229,16 @@ export default function Products({ category = null, subCategory = null }) {
 
     // Handle internal page category navigation (preserves quick responsive feel while syncing URL)
     const handleCategorySelect = (catSlug, subSlug = null) => {
-        setSelectedCat(catSlug);
+        const normalized = getNormalizedCategorySlug(catSlug);
+        setSelectedCat(normalized);
         setSelectedSub(subSlug);
         setSearchQuery("");
         setMobileFiltersOpen(false);
 
         // Update URL bar without standard hard visit to keep SPA routing elegant
         let newUrl = "/products";
-        if (catSlug) {
-            newUrl += `/${catSlug}`;
+        if (normalized) {
+            newUrl += `/${normalized}`;
             if (subSlug) {
                 newUrl += `?sub=${subSlug}`;
             }
@@ -97,51 +272,51 @@ export default function Products({ category = null, subCategory = null }) {
     // Active Category Object Details
     const activeCategoryInfo = useMemo(() => {
         if (!selectedCat) return null;
-        return CATEGORY_MAP[selectedCat] || null;
-    }, [selectedCat]);
+        return dynamicCategoryMap[selectedCat] || null;
+    }, [selectedCat, dynamicCategoryMap]);
 
     // Active Subcategory Object Details
     const activeSubcategoryInfo = useMemo(() => {
         if (!activeCategoryInfo || !selectedSub) return null;
-        return activeCategoryInfo.subCategories[selectedSub] || null;
+        return activeCategoryInfo.subCategories?.[selectedSub] || null;
     }, [activeCategoryInfo, selectedSub]);
 
     // 1. Filter products based on selected category, subcategory and search term
     const filteredProducts = useMemo(() => {
-        return productsData.filter((product) => {
+        return productsList.filter((product) => {
             // Category check
-            if (selectedCat) {
-                const mappedCat = CATEGORY_MAP[selectedCat];
-                if (!mappedCat || product.category !== mappedCat.name) {
-                    return false;
-                }
+            if (!matchCategory(product, selectedCat)) {
+                return false;
+            }
 
-                // Subcategory check
-                if (selectedSub) {
-                    const mappedSub = mappedCat.subCategories[selectedSub];
-                    if (!mappedSub || product.subCategory !== mappedSub.name) {
-                        return false;
-                    }
-                }
+            // Subcategory check
+            if (!matchSubCategory(product, selectedSub, selectedCat)) {
+                return false;
             }
 
             // Search query check
             if (searchQuery.trim() !== "") {
                 const query = searchQuery.toLowerCase();
-                const titleMatch = product.title.toLowerCase().includes(query);
+                const titleMatch = (product.title || "").toLowerCase().includes(query);
                 const descMatch = (product.description || "")
                     .toLowerCase()
                     .includes(query);
-                const catMatch = product.category.toLowerCase().includes(query);
-                const subMatch = product.subCategory
-                    .toLowerCase()
-                    .includes(query);
+                
+                const catName = typeof product.category === 'object' 
+                    ? (product.category?.name || "") 
+                    : (product.category || "");
+                const subName = typeof product.subCategory === 'object' || typeof product.sub_category === 'object'
+                    ? ((product.subCategory || product.sub_category)?.name || "")
+                    : (product.subCategory || "");
+
+                const catMatch = String(catName).toLowerCase().includes(query);
+                const subMatch = String(subName).toLowerCase().includes(query);
                 return titleMatch || descMatch || catMatch || subMatch;
             }
 
             return true;
         });
-    }, [selectedCat, selectedSub, searchQuery]);
+    }, [selectedCat, selectedSub, searchQuery, productsList, dynamicCategoryMap]);
 
     // Helper to get actual minimum price for sorting
     const getProductPrice = (product) => {
@@ -173,28 +348,26 @@ export default function Products({ category = null, subCategory = null }) {
     // Dynamic translation headings
     const bannerTitle = useMemo(() => {
         if (activeSubcategoryInfo) {
-            return t(
-                activeSubcategoryInfo.translationKey,
-                activeSubcategoryInfo.name,
-            );
+            return activeSubcategoryInfo.name_translations?.[locale] || 
+                   activeSubcategoryInfo.name || 
+                   t(activeSubcategoryInfo.translationKey, activeSubcategoryInfo.name);
         }
         if (activeCategoryInfo) {
-            return t(
-                activeCategoryInfo.translationKey,
-                activeCategoryInfo.name,
-            );
+            return activeCategoryInfo.name_translations?.[locale] || 
+                   activeCategoryInfo.name || 
+                   t(activeCategoryInfo.translationKey, activeCategoryInfo.name);
         }
         return t("nav.all", "Semua Produk");
-    }, [activeCategoryInfo, activeSubcategoryInfo, t]);
+    }, [activeCategoryInfo, activeSubcategoryInfo, locale, t]);
 
     const bannerSubtitle = useMemo(() => {
-        if (selectedCat === "perfume") {
+        if (selectedCat === "perfume" || selectedCat === "parfum") {
             return t(
                 "hero.perfume.subtitle",
                 "Eau de Parfum & Fragrance Spray",
             );
         }
-        if (selectedCat === "aromatic-oil") {
+        if (selectedCat === "aromatic-oil" || selectedCat === "minyak-aromaterapi") {
             return t("hero.oil.subtitle", "Dehn Oud & Campuran Minyak Pilihan");
         }
         if (selectedCat === "bakhoor-and-oud") {
@@ -203,7 +376,7 @@ export default function Products({ category = null, subCategory = null }) {
                 "Dupa Arab Tradisional & Kayu Oud",
             );
         }
-        if (selectedCat === "healthy-nutrition") {
+        if (selectedCat === "healthy-nutrition" || selectedCat === "kesehatan-dan-nutrisi") {
             return t("hero.nutrition.subtitle", "Madu Sidr & Saffron Premium");
         }
         return t(
@@ -367,6 +540,7 @@ export default function Products({ category = null, subCategory = null }) {
                             resetFilters={resetFilters}
                             mobileFiltersOpen={mobileFiltersOpen}
                             setMobileFiltersOpen={setMobileFiltersOpen}
+                            categoryMap={dynamicCategoryMap}
                         />
 
                         {/* 2b. Main Products Area */}
@@ -386,7 +560,7 @@ export default function Products({ category = null, subCategory = null }) {
                                         </strong>{" "}
                                         {t("catalog.of", "of")}{" "}
                                         <strong className="text-zinc-800 font-bold">
-                                            {productsData.length}
+                                            {productsList.length}
                                         </strong>{" "}
                                         {t("nav.product", "products")}
                                     </span>
@@ -555,9 +729,11 @@ export default function Products({ category = null, subCategory = null }) {
                                                     price={product.price}
                                                     variants={product.variants}
                                                     sold={product.sold}
-                                                    image={product.image}
+                                                    image={getProductImage(product)}
                                                     status={product.status}
-                                                    rating={product.rating}
+                                                    is_new={product.is_new}
+                                                    is_best_seller={product.is_best_seller}
+                                                    rating={Number(product.rating || 0)}
                                                 />
                                             </motion.div>
                                         ))}

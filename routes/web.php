@@ -11,18 +11,32 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    $newProducts = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+        ->where('is_new', true)
+        ->get();
+
+    $bestSellerProducts = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+        ->where('is_best_seller', true)
+        ->get();
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'newProducts' => $newProducts,
+        'bestSellerProducts' => $bestSellerProducts,
     ]);
 });
 
 Route::get('/products/{category?}', function ($category = null) {
+    $products = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+        ->get();
+
     return Inertia::render('products/Products', [
         'category' => $category,
-        'subCategory' => request('sub')
+        'subCategory' => request('sub'),
+        'products' => $products
     ]);
 });
 
@@ -75,6 +89,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.products.create');
     Route::post('/products', [ProductController::class, 'store'])
         ->name('backoffice.products.store');
+    Route::get('/products/{product:slug}', [ProductController::class, 'show'])
+        ->name('backoffice.products.show');
     Route::get('/products/{product:slug}/edit', [ProductController::class, 'edit'])
         ->name('backoffice.products.edit');
     Route::patch('/products/{product:slug}', [ProductController::class, 'update'])

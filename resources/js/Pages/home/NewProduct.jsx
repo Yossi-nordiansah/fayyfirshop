@@ -12,68 +12,15 @@ import "slick-carousel/slick/slick-theme.css";
  * Displays a carousel of new arrivals using react-slick.
  * Showcases 4 products at a time on desktop with infinite looping.
  */
-const NewProduct = () => {
-    const { t } = useLanguage();
-    // Sample product data
-    const products = [
-        {
-            id: 1,
-            title: "Oud Al-Fayyfir Premium",
-            price: 350000,
-            sold: 120,
-            image: "/storage/images/product/1623396841.jpg",
-            status: "new",
-            rating: 4.5,
-        },
-        {
-            id: 2,
-            title: "Sidr Honey Raw 500g",
-            price: 175000,
-            sold: 85,
-            image: "/storage/images/product/1623396975.jpg",
-            status: "new",
-            rating: 4.5,
-        },
-        {
-            id: 3,
-            title: "Negin Saffron Super",
-            price: 250000,
-            sold: 45,
-            image: "/storage/images/product/1623421142.jpg",
-            status: "new",
-            rating: 5,
-        },
-        {
-            id: 4,
-            title: "Ajwa Al-Madinah",
-            price: 250000,
-            sold: 210,
-            image: "/storage/images/product/1623421666.jpg",
-            status: "new",
-            rating: 5,
-        },
-        {
-            id: 5,
-            title: "Arabic Coffee Spiced",
-            price: 95000,
-            sold: 67,
-            image: "/storage/images/product/1625733742.jpg",
-            status: "new",
-            rating: 0,
-        },
-        {
-            id: 6,
-            title: "Premium Attar Oil",
-            price: 85000,
-            sold: 92,
-            image: "/storage/images/product/1625733909.jpg",
-            status: "new",
-            rating: 1,
-        },
-    ];
+const NewProduct = ({ products = [] }) => {
+    const { t, locale } = useLanguage();
+
+    if (products.length === 0) return null;
+
+    const useSlider = products.length > 4;
 
     return (
-        <section className="bg-transparent pt-6 pb-8 px-2 overflow-hidden bg-red-500">
+        <section className="bg-transparent pt-6 pb-8 px-2 overflow-hidden">
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <div className="mb-3 text-center md:text-left px-8">
@@ -86,20 +33,42 @@ const NewProduct = () => {
                     <div className="w-16 h-1 bg-blue-500 mt-4 mx-auto md:mx-0 rounded-full" />
                 </div>
 
-                {/* React Slick Slider */}
+                {/* Products Grid or Slider */}
                 <div className="product-slider -mx-2">
-                    <SlickSlider>
-                        {products.map((product) => (
-                            <ProductCard
-                                title={product.title}
-                                price={product.price}
-                                sold={product.sold}
-                                image={product.image}
-                                status={product.status}
-                                rating={product.rating}
-                            />
-                        ))}
-                    </SlickSlider>
+                    {useSlider ? (
+                        <SlickSlider>
+                            {products.map((product) => (
+                                <div key={product.id} className="px-2">
+                                    <ProductCard
+                                        title={product.name_translations?.[locale] || product.title}
+                                        price={product.price}
+                                        sold={product.sold}
+                                        image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
+                                        status={product.status}
+                                        is_new={product.is_new}
+                                        is_best_seller={product.is_best_seller}
+                                        rating={Number(product.rating || 0)}
+                                    />
+                                </div>
+                            ))}
+                        </SlickSlider>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-8 max-w-7xl mx-auto">
+                            {products.map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    title={product.name_translations?.[locale] || product.title}
+                                    price={product.price}
+                                    sold={product.sold}
+                                    image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
+                                    status={product.status}
+                                    is_new={product.is_new}
+                                    is_best_seller={product.is_best_seller}
+                                    rating={Number(product.rating || 0)}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

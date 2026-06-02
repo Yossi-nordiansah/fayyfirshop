@@ -1,16 +1,17 @@
-import { 
-    ShoppingBag, 
-    ChevronLeft, 
-    ChevronRight, 
-    Leaf, 
-    Sparkles, 
-    Coffee, 
-    Droplets, 
-    Flame 
+import {
+    ShoppingBag,
+    ChevronLeft,
+    ChevronRight,
+    Leaf,
+    Sparkles,
+    Coffee,
+    Droplets,
+    Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import { useState, useCallback, useEffect } from 'react';
+import { Link } from '@inertiajs/react';
 
 /**
  * HeroSlider Component
@@ -35,7 +36,8 @@ const HeroSlider = () => {
             image: "/images/hero/bg-perfume.jpg",
             productImage: "/images/hero/perfume.png",
             icon: <Sparkles size={24} />,
-            theme: "from-blue-900/60"
+            theme: "from-blue-900/60",
+            slug: "parfum"
         },
         {
             id: 2,
@@ -46,7 +48,8 @@ const HeroSlider = () => {
             image: "/images/hero/aromatic-oil2.jpg",
             productImage: "/images/hero/oil.png",
             icon: <Droplets size={24} />,
-            theme: "from-blue-800/60"
+            theme: "from-blue-800/60",
+            slug: "minyak-aromatik"
         },
         {
             id: 3,
@@ -54,10 +57,11 @@ const HeroSlider = () => {
             title: t('hero.bakhoor.title', 'Warisan Tradisi'),
             subtitle: t('hero.bakhoor.subtitle', 'Dupa Arab Tradisional & Kayu Oud'),
             description: t('hero.bakhoor.description', 'Ciptakan suasana hangat dan spiritual di rumah Anda dengan asap wangi dari tradisi Timur Tengah yang kaya.'),
-            image: "/images/hero/bakhoor.jpg", 
+            image: "/images/hero/bakhoor.jpg",
             productImage: "/images/hero/oud.png",
             icon: <Flame size={24} />,
-            theme: "from-amber-900/60"
+            theme: "from-amber-900/60",
+            slug: "bakhoor-dan-oud"
         },
         {
             id: 4,
@@ -68,7 +72,8 @@ const HeroSlider = () => {
             image: "/images/hero/bg-honey.jpg",
             productImage: "/images/hero/honey.png",
             icon: <Leaf size={24} />,
-            theme: "from-blue-900/60"
+            theme: "from-blue-900/60",
+            slug: "kesehatan-dan-nutrisi"
         }
     ];
 
@@ -106,9 +111,8 @@ const HeroSlider = () => {
                 {SLIDES.map((slide, index) => (
                     <div
                         key={slide.id}
-                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                            index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                        }`}
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                            }`}
                     >
                         <HeroBackground
                             image={slide.image}
@@ -118,10 +122,9 @@ const HeroSlider = () => {
                         >
                             {/* Content Area */}
                             <div className="h-full lg:max-w-7xl w-full mx-auto px-6 lg:px-12 flex flex-col justify-center items-start text-white">
-                                <div className={`max-w-3xl lg:mx-0 mx-auto md:space-y-4 space-y-2 transition-all duration-700 transform ${
-                                    index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-10 opacity-0'
-                                }`}>
-                                    
+                                <div className={`max-w-3xl lg:mx-0 mx-auto md:space-y-4 space-y-2 transition-all duration-700 transform ${index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-10 opacity-0'
+                                    }`}>
+
                                     {/* Category Badge */}
                                     <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full w-fit backdrop-blur-md">
                                         <span className="text-white">{slide.icon}</span>
@@ -131,10 +134,10 @@ const HeroSlider = () => {
                                     </div>
 
                                     <div className="lg:hidden block py-4">
-                                        <img 
-                                            src={slide.productImage} 
-                                            alt={slide.title} 
-                                            className="w-48 md:w-96 mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating" 
+                                        <img
+                                            src={slide.productImage}
+                                            alt={slide.title}
+                                            className="w-48 md:w-96 mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating"
                                         />
                                     </div>
 
@@ -153,8 +156,9 @@ const HeroSlider = () => {
 
                                     {/* CTA Button */}
                                     <div className="pt-6 md:pt-10">
-                                        <button
-                                            className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden"
+                                        <Link
+                                            href={`/products/${slide.slug}`}
+                                            className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
                                         >
                                             <span className="relative z-10 tracking-[0.2em] uppercase text-sm font-['Cinzel']">
                                                 {t('hero.explore', 'Jelajahi Koleksi')}
@@ -163,7 +167,7 @@ const HeroSlider = () => {
                                                 <ShoppingBag size={20} />
                                             </span>
                                             <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40 group-hover:animate-shine" />
-                                        </button>
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
@@ -174,13 +178,13 @@ const HeroSlider = () => {
 
             {/* Navigation Arrows */}
             <div className="absolute hidden md:flex inset-x-0 md:inset-auto md:bottom-10 md:right-10 top-1/2 -translate-y-1/2 md:translate-y-0 z-50 justify-between md:justify-end px-0 md:gap-4 pointer-events-none">
-                <button 
+                <button
                     onClick={prevSlide}
                     className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-blue-600 md:border-white/10 hover:border-blue-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
                 >
                     <ChevronLeft size={24} className="md:w-6 md:h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <button 
+                <button
                     onClick={nextSlide}
                     className="p-2 md:p-4 bg-transparent md:bg-white/5 hover:bg-blue-600 md:border-white/10 hover:border-blue-600 rounded-full text-white transition-all duration-300 md:backdrop-blur-md group pointer-events-auto shadow-2xl"
                 >
@@ -194,14 +198,14 @@ const HeroSlider = () => {
                     <button
                         key={index}
                         onClick={() => setCurrentSlide(index)}
-                        className={`h-1.5 transition-all duration-500 rounded-full ${
-                            index === currentSlide ? 'w-16 bg-blue-500' : 'w-4 bg-white/20 hover:bg-white/40'
-                        }`}
+                        className={`h-1.5 transition-all duration-500 rounded-full ${index === currentSlide ? 'w-16 bg-blue-500' : 'w-4 bg-white/20 hover:bg-white/40'
+                            }`}
                     />
                 ))}
             </div>
 
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes shine {
                     100% {
                         left: 125%;

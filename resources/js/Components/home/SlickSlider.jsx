@@ -16,7 +16,7 @@ const SlickSlider = ({ children }) => {
         dots: true,
         infinite: true,
         speed: 600,
-        slidesToShow: 4,
+        slidesToShow: 4, // Default for desktop (4 cards)
         slidesToScroll: 1,
         autoplay: true,
         autoplaySpeed: 4000,
@@ -24,29 +24,18 @@ const SlickSlider = ({ children }) => {
         arrows: true,
         responsive: [
             {
-                breakpoint: 1280,
+                breakpoint: 1024, // Screens <= 1024px (Tablet)
                 settings: {
-                    slidesToShow: 4,
+                    slidesToShow: 2, // 2 cards on tablet
+                    slidesToScroll: 1,
                 },
             },
             {
-                breakpoint: 1024,
+                breakpoint: 640, // Screens <= 640px (Mobile)
                 settings: {
-                    slidesToShow: 3,
-                },
-            },
-            {
-                breakpoint: 768,
-                settings: {
-                    slidesToShow: 2,
-                },
-            },
-            {
-                breakpoint: 480,
-                settings: {
-                    slidesToShow: 1,
-                    centerMode: true,
-                    centerPadding: "7px",
+                    slidesToShow: 1, // 1 card on mobile
+                    slidesToScroll: 1,
+                    centerMode: false,
                 },
             },
         ],

@@ -56,8 +56,9 @@ const FilterSidebar = ({
     toggleCategoryExpand,
     handleCategorySelect,
     resetFilters,
+    categoryMap = CATEGORY_MAP,
 }) => {
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
 
     return (
         <aside className="sticky hidden border shadow-xl lg:block w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
@@ -89,7 +90,7 @@ const FilterSidebar = ({
                 </button>
 
                 {/* Mapping categorized folders */}
-                {Object.entries(CATEGORY_MAP).map(([catSlug, catObj]) => {
+                {Object.entries(categoryMap).map(([catSlug, catObj]) => {
                     const isSelected = selectedCat === catSlug;
                     const isExpanded = expandedCategories[catSlug];
 
@@ -102,7 +103,7 @@ const FilterSidebar = ({
                                     }
                                     className={`grow text-left text-nowrap flex items-center justify-between px-4 py-3 rounded-l-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${isSelected && !selectedSub ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg shadow-blue-900/20" : isSelected ? "text-blue-600 font-extrabold bg-blue-50/50" : "text-zinc-600 hover:text-blue-600 hover:bg-zinc-50"}`}
                                 >
-                                    {t(catObj.translationKey, catObj.name)}
+                                    {catObj.name_translations?.[locale] || catObj.name || t(catObj.translationKey, catObj.name)}
                                 </button>
 
                                 <button
@@ -129,7 +130,7 @@ const FilterSidebar = ({
                                         transition={{ duration: 0.2 }}
                                         className="py-1 pl-4 ml-5 space-y-1 overflow-hidden border-l border-zinc-100"
                                     >
-                                        {Object.entries(
+                                        {catObj.subCategories && Object.entries(
                                             catObj.subCategories,
                                         ).map(([subSlug, subObj]) => {
                                             const isSubSelected =
@@ -147,10 +148,7 @@ const FilterSidebar = ({
                                                     className={`w-full text-left px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between ${isSubSelected ? "text-amber-600 bg-amber-50/50 font-bold" : "text-zinc-500 hover:text-amber-600 hover:bg-zinc-50"}`}
                                                 >
                                                     <span>
-                                                        {t(
-                                                            subObj.translationKey,
-                                                            subObj.name,
-                                                        )}
+                                                        {subObj.name_translations?.[locale] || subObj.name || t(subObj.translationKey, subObj.name)}
                                                     </span>
                                                     {isSubSelected && (
                                                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />

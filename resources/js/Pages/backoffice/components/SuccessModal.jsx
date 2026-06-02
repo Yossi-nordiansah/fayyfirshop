@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, X } from 'lucide-react';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 /**
  * Reusable success feedback modal for the backoffice.
@@ -11,13 +12,36 @@ import { CheckCircle2, X } from 'lucide-react';
  *  - btnLabel  {string}    Confirm / close button label  (default: "OK")
  *  - onClose   {function}  Called when user closes the modal
  */
+const statusTranslationMap = {
+    'Produk berhasil ditambahkan.': 'status.product.created',
+    'Produk berhasil diperbarui.': 'status.product.updated',
+    'Produk berhasil dihapus.': 'status.product.deleted',
+    'Store branch created successfully.': 'status.branch.created',
+    'Store branch updated successfully.': 'status.branch.updated',
+    'Store branch deleted successfully.': 'status.branch.deleted',
+    'Category created successfully.': 'status.category.created',
+    'Category updated successfully.': 'status.category.updated',
+    'Category deleted successfully.': 'status.category.deleted',
+    'Admin created successfully.': 'status.admin.created',
+    'Admin updated successfully.': 'status.admin.updated',
+    'Admin deleted successfully.': 'status.admin.deleted',
+    'You cannot delete the currently signed-in admin.': 'status.admin.delete_self_error',
+};
+
 export default function SuccessModal({
     show = false,
-    title = 'Berhasil!',
+    title,
     message = '',
-    btnLabel = 'OK',
+    btnLabel,
     onClose,
 }) {
+    const { t } = useLanguage();
+    const resolvedTitle = title ?? t('common.success_modal.title', 'Berhasil!');
+    const resolvedBtnLabel = btnLabel ?? t('common.success_modal.btn_label', 'OK');
+
+    const translationKey = statusTranslationMap[message];
+    const resolvedMessage = translationKey ? t(translationKey, message) : message;
+
     return (
         <AnimatePresence>
             {show && (
@@ -35,9 +59,9 @@ export default function SuccessModal({
                                     <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-bold text-blue-950">{title}</h2>
-                                    {message && (
-                                        <p className="mt-1 text-sm text-slate-600">{message}</p>
+                                    <h2 className="text-base font-bold text-blue-950">{resolvedTitle}</h2>
+                                    {resolvedMessage && (
+                                        <p className="mt-1 text-sm text-slate-600">{resolvedMessage}</p>
                                     )}
                                 </div>
                             </div>
@@ -58,7 +82,7 @@ export default function SuccessModal({
                                 onClick={onClose}
                                 className="rounded-lg border border-amber-500/20 bg-blue-950 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-900 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-800 focus:ring-offset-1"
                             >
-                                {btnLabel}
+                                {resolvedBtnLabel}
                             </button>
                         </div>
                     </motion.div>
@@ -67,3 +91,4 @@ export default function SuccessModal({
         </AnimatePresence>
     );
 }
+

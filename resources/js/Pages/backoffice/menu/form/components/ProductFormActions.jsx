@@ -3,7 +3,7 @@ import { Link } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 
 // ─── Component 5: Button Submit dan Cancel ────────────────────────────────────
-export default function ProductFormActions({ processing, isEditing }) {
+export default function ProductFormActions({ processing, isEditing, t }) {
     return (
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <button
@@ -13,16 +13,16 @@ export default function ProductFormActions({ processing, isEditing }) {
             >
                 <Check className="h-4 w-4" />
                 {processing
-                    ? 'Menyimpan...'
+                    ? t('backoffice.product.form.saving', 'Menyimpan...')
                     : isEditing
-                    ? 'Simpan Perubahan'
-                    : 'Publish Produk'}
+                        ? t('backoffice.product.form.btn_submit_edit', 'Simpan Perubahan')
+                        : t('backoffice.product.form.btn_submit_create', 'Publish Produk')}
             </button>
             <Link
                 href={route('backoffice.products.index')}
-                className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100"
             >
-                Batal
+                {t('backoffice.product.btn_cancel', 'Batal')}
             </Link>
         </div>
     );

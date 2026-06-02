@@ -22,26 +22,30 @@ export default function ProductClassificationSection({
     categories,
     availableSubCategories,
     handleCategoryChange,
+    t,
+    locale,
 }) {
     return (
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <h3 className="mb-4 border-b border-slate-100 pb-2 text-sm font-black uppercase tracking-wider text-blue-950">
-                Klasifikasi & Finansial
+                {t('backoffice.product.form.classification_title', 'Klasifikasi & Finansial')}
             </h3>
             <div className="space-y-4">
                 {/* Category */}
                 <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700">
-                        Kategori Utama <span className="text-rose-500">*</span>
+                        {t('backoffice.product.form.main_category', 'Kategori Utama')} <span className="text-rose-500">*</span>
                     </label>
                     <select
                         value={data.product_category_id}
                         onChange={handleCategoryChange}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-950 focus:bg-white"
                     >
-                        <option value="">Pilih Kategori</option>
+                        <option value="">{t('backoffice.product.form.select_category', 'Pilih Kategori')}</option>
                         {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            <option key={cat.id} value={cat.id}>
+                                {cat.name_translations?.[locale] || cat.name}
+                            </option>
                         ))}
                     </select>
                     {errors.product_category_id && (
@@ -51,7 +55,7 @@ export default function ProductClassificationSection({
 
                 {/* Sub-category */}
                 <div>
-                    <label className="mb-1.5 block text-xs font-bold text-slate-700">Sub Kategori</label>
+                    <label className="mb-1.5 block text-xs font-bold text-slate-700">{t('backoffice.product.form.sub_category', 'Sub Kategori')}</label>
                     <select
                         value={data.product_sub_category_id}
                         disabled={!data.product_category_id}
@@ -60,13 +64,15 @@ export default function ProductClassificationSection({
                     >
                         <option value="">
                             {!data.product_category_id
-                                ? 'Pilih kategori dulu'
+                                ? t('backoffice.product.form.select_cat_first', 'Pilih kategori dulu')
                                 : availableSubCategories.length === 0
-                                ? 'Tidak ada sub kategori'
-                                : 'Pilih Sub Kategori'}
+                                    ? t('backoffice.product.modal.no_subcategory', 'Tanpa Sub Kategori')
+                                    : t('backoffice.product.form.select_sub_cat', 'Pilih Sub Kategori')}
                         </option>
                         {availableSubCategories.map(sub => (
-                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                            <option key={sub.id} value={sub.id}>
+                                {sub.name_translations?.[locale] || sub.name}
+                            </option>
                         ))}
                     </select>
                 </div>
@@ -76,7 +82,7 @@ export default function ProductClassificationSection({
                 {/* SKU */}
                 <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700">
-                        Base SKU <span className="text-rose-500">*</span>
+                        {t('backoffice.product.th_sku', 'SKU Induk')} <span className="text-rose-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -93,7 +99,7 @@ export default function ProductClassificationSection({
                 {/* Price */}
                 <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700">
-                        Harga Dasar (IDR) <span className="text-rose-500">*</span>
+                        {t('backoffice.product.th_base_price', 'Harga Dasar (IDR)')} {!data.has_variants && <span className="text-rose-500">*</span>}
                     </label>
                     <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
@@ -109,7 +115,9 @@ export default function ProductClassificationSection({
                         <p className="mt-1 text-xs text-rose-600">{errors.price}</p>
                     )}
                     <p className="mt-1 text-[10px] text-slate-400">
-                        Disimpan dalam IDR. Frontend mengkonversi ke SAR/MYR secara dinamis.
+                        {data.has_variants
+                            ? t('backoffice.product.form.price_hint_variants', 'Jika field input ini tidak di isi, maka akan mengambil data harga dari variant/sub variant yang termurah')
+                            : t('backoffice.product.modal.price_note', 'Disimpan dalam Rupiah (IDR) dan divalidasi otomatis.')}
                     </p>
                 </div>
             </div>

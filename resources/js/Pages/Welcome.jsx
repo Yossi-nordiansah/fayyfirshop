@@ -12,7 +12,7 @@ import CustomerRating from "./home/CustomerRating";
 import Footer from "@/Components/Footer";
 import TopVerticalTicker from "./home/TopVerticalTicker";
 
-export default function Welcome({ auth, laravelVersion, phpVersion }) {
+export default function Welcome({ auth, laravelVersion, phpVersion, newProducts = [], bestSellerProducts = [] }) {
     const tickerHeight = 36;
     const [navbarOffset, setNavbarOffset] = useState(tickerHeight);
 
@@ -34,8 +34,8 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
             <MainLayout>
                 <HeroSlider />
                 <CategorySection />
-                <NewProduct />
-                <BestSeller />
+                <NewProduct products={newProducts} />
+                <BestSeller products={bestSellerProducts} />
                 <FeaturedProduct />
                 <UniqueSellingProposition />
                 <CustomerRating />

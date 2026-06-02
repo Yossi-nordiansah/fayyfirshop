@@ -7,7 +7,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useLanguage } from '@/Contexts/LanguageContext';
 
 export default function ProductCategories({ categories, status, statusAction }) {
-    const { locale } = useLanguage();
+    const { locale, t } = useLanguage();
 
     const getLocalizedName = (item) => {
         const translations = item?.name_translations;
@@ -50,14 +50,14 @@ export default function ProductCategories({ categories, status, statusAction }) 
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title="Category Product" />
+            <Head title={t('backoffice.category.title', 'Kategori Produk')} />
 
             <ConfirmModal
                 show={Boolean(pendingDelete)}
-                title="Delete Category"
-                message={`Delete category "${getLocalizedName(pendingDelete)}"? This action cannot be undone.`}
-                confirmLabel="Delete"
-                cancelLabel="Cancel"
+                title={t('backoffice.category.delete.title', 'Hapus Kategori')}
+                message={t('backoffice.category.delete.confirm', 'Hapus kategori "{name}"? Tindakan ini tidak dapat dibatalkan.').replace('{name}', getLocalizedName(pendingDelete))}
+                confirmLabel={t('backoffice.category.delete.btn_confirm', 'Hapus')}
+                cancelLabel={t('backoffice.category.buttons.cancel', 'Batal')}
                 onConfirm={confirmRemoveCategory}
                 onCancel={() => setPendingDelete(null)}
             />
@@ -72,10 +72,10 @@ export default function ProductCategories({ categories, status, statusAction }) 
                         <section className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold tracking-normal text-blue-950">
-                                    Category Product
+                                    {t('backoffice.category.title', 'Kategori Produk')}
                                 </h1>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Manage product categories and sub categories.
+                                    {t('backoffice.category.desc', 'Kelola kategori produk dan sub kategori.')}
                                 </p>
                             </div>
 
@@ -84,14 +84,14 @@ export default function ProductCategories({ categories, status, statusAction }) 
                                     href={route('backoffice.product-management')}
                                     className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50"
                                 >
-                                    Back to Product Management
+                                    {t('backoffice.category.back_to_product_management', 'Kembali ke Manajemen Produk')}
                                 </Link>
                                 <Link
                                     href={route('backoffice.product-categories.create')}
                                     className="inline-flex items-center gap-2 rounded-lg bg-blue-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-800"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    Add Category
+                                    {t('backoffice.category.add_category', 'Tambah Kategori')}
                                 </Link>
                             </div>
                         </section>
@@ -105,9 +105,11 @@ export default function ProductCategories({ categories, status, statusAction }) 
                         <section className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm">
                             <div className="flex items-center justify-between border-b border-blue-100 px-5 py-4">
                                 <div>
-                                    <h2 className="text-lg font-bold text-blue-950">Category List</h2>
+                                    <h2 className="text-lg font-bold text-blue-950">
+                                        {t('backoffice.category.list_title', 'Daftar Kategori')}
+                                    </h2>
                                     <p className="text-sm text-slate-500">
-                                        {categories.length} data available
+                                        {t('backoffice.category.data_available', '{count} data tersedia').replace('{count}', categories.length)}
                                     </p>
                                 </div>
                             </div>
@@ -116,9 +118,15 @@ export default function ProductCategories({ categories, status, statusAction }) 
                                 <table className="min-w-full divide-y divide-blue-100">
                                     <thead className="bg-blue-50/70">
                                         <tr className="text-left text-xs font-bold uppercase tracking-wider text-blue-800">
-                                            <th className="px-5 py-3">Category</th>
-                                            <th className="px-5 py-3">Sub Categories</th>
-                                            <th className="px-5 py-3 text-right">Action</th>
+                                            <th className="px-5 py-3">
+                                                {t('backoffice.category.table.category', 'Kategori')}
+                                            </th>
+                                            <th className="px-5 py-3">
+                                                {t('backoffice.category.table.sub_categories', 'Sub Kategori')}
+                                            </th>
+                                            <th className="px-5 py-3 text-right">
+                                                {t('backoffice.category.table.action', 'Aksi')}
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-blue-50 text-sm text-slate-700">
@@ -128,20 +136,20 @@ export default function ProductCategories({ categories, status, statusAction }) 
                                                     colSpan={3}
                                                     className="px-5 py-12 text-center text-slate-500"
                                                 >
-                                                    No category data yet.
+                                                    {t('backoffice.category.empty_data', 'Belum ada data kategori.')}
                                                 </td>
                                             </tr>
                                         ) : (
                                             categories.map((category) => (
                                                 <tr key={category.id} className="align-top">
                                                     <td className="px-5 py-4">
-                                                        <p className="font-semibold text-blue-950">
+                                                        <p className="font-semibold text-blue-950" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
                                                             {getLocalizedName(category)}
                                                         </p>
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <div className="space-y-2">
-                                                            <p className="text-xs text-slate-600">
+                                                            <p className="text-xs text-slate-600" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
                                                                 {getSubCategoriesLabel(category)}
                                                             </p>
                                                         </div>

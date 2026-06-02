@@ -18,7 +18,7 @@ import LoginModal from "./LoginModal";
 
 const Navbar = ({ alwaysSolid = false, topOffset = 0 }) => {
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
-    const { auth } = usePage().props;
+    const { auth, navCategories = [] } = usePage().props;
     const user = auth?.user;
 
     const [isOpen, setIsOpen] = useState(false);
@@ -69,41 +69,16 @@ const Navbar = ({ alwaysSolid = false, topOffset = 0 }) => {
     ];
 
     const productDropdown = [
-        {
-            name: t("nav.perfume", "Perfume"),
-            href: "/products/perfume",
-            subCategory: [
-                { name: t("sub.mens", "Men's"), val: "mens" },
-                { name: t("sub.womens", "Women's"), val: "womens" },
-                { name: t("sub.unisex", "Unisex"), val: "unisex" },
-                { name: t("sub.set", "Perfume Set"), val: "parfume-set" },
-            ],
-        },
-        {
-            name: t("nav.aromaticOil", "Aromatic Oil"),
-            href: "/products/aromatic-oil",
-            subCategory: [
-                { name: t("sub.oil", "Aromatic Oil"), val: "aromatic-oil" },
-                { name: t("sub.dehn", "Dehn Al Oud"), val: "dehn-oud" },
-            ],
-        },
-        {
-            name: t("nav.bakhoor", "Bakhoor & Oud"),
-            href: "/products/bakhoor-and-oud",
-            subCategory: [
-                { name: t("sub.oud", "Oud Wood"), val: "oud" },
-                { name: t("sub.bakhoor", "Bakhoor"), val: "bakhoor" },
-                { name: t("sub.mamoul", "Mamoul"), val: "mamoul" },
-            ],
-        },
-        {
-            name: t("nav.nutrition", "Healthy Nutrition"),
-            href: "/products/healthy-nutrition",
-            subCategory: [
-                { name: t("sub.saffron", "Premium Saffron"), val: "saffron" },
-                { name: t("sub.honey", "Yemeni Honey"), val: "honey" },
-            ],
-        },
+        ...navCategories.map((cat) => ({
+            name: cat.name_translations?.[locale] || cat.name,
+            href: cat.href,
+            subCategory: cat.subCategories && cat.subCategories.length > 0
+                ? cat.subCategories.map((sub) => ({
+                      name: sub.name_translations?.[locale] || sub.name,
+                      val: sub.val,
+                  }))
+                : null,
+        })),
         { name: t("nav.all", "All Products"), href: "/products" },
     ];
 

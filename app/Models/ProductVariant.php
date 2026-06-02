@@ -14,6 +14,7 @@ class ProductVariant extends Model
     protected $fillable = [
         'product_id',
         'type',
+        'type_translations',
         'name',
         'name_translations',
         'sku',
@@ -25,6 +26,7 @@ class ProductVariant extends Model
 
     protected $casts = [
         'name_translations' => 'array',
+        'type_translations' => 'array',
         'price' => 'integer',
         'stock' => 'integer',
         'unit_id' => 'integer',

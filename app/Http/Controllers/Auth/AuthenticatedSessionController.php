@@ -50,11 +50,17 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $role = Auth::user()?->role;
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+
+        if (in_array($role, ['admin', 'super_admin'], true)) {
+            return redirect()->route('backoffice.login');
+        }
 
         return redirect('/');
     }

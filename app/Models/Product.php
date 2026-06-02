@@ -21,6 +21,8 @@ class Product extends Model
         'price',
         'stock',
         'status',
+        'is_new',
+        'is_best_seller',
         'rating',
         'review_count',
         'sold',
@@ -38,6 +40,12 @@ class Product extends Model
         'rating' => 'decimal:1',
         'review_count' => 'integer',
         'sold' => 'integer',
+        'is_new' => 'boolean',
+        'is_best_seller' => 'boolean',
+    ];
+
+    protected $appends = [
+        'status',
     ];
 
     protected static function booted(): void
@@ -61,6 +69,20 @@ class Product extends Model
     public function getNameAttribute()
     {
         return $this->title ?: ($this->name_translations['indonesia'] ?? '');
+    }
+
+    /**
+     * Compatibility accessor for Status
+     */
+    public function getStatusAttribute()
+    {
+        if ($this->is_best_seller) {
+            return 'best-seller';
+        }
+        if ($this->is_new) {
+            return 'new';
+        }
+        return 'normal';
     }
 
     /**

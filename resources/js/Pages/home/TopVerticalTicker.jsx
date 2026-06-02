@@ -17,7 +17,7 @@ export default function TopVerticalTicker() {
     const CurrentIcon = promoItems[currentIndex].icon;
 
     return (
-        <div className="relative w-full bg-[#03153d] text-slate-100 h-9 overflow-hidden border-b border-amber-500/20 shadow-sm z-[110]">
+        <div className="relative w-full bg-[#03153d] text-slate-100 md:h-9 h-11 py-2 overflow-hidden border-b border-amber-500/20 shadow-sm z-[110]">
             <div className="flex items-center justify-center h-full px-4 mx-auto max-w-7xl">
                 <AnimatePresence mode="wait">
                     <motion.div

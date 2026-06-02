@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
 
@@ -12,24 +11,14 @@ const ProductCard = ({
     sold = 0,
     image,
     status,
+    is_new,
+    is_best_seller,
     rating = 0,
 }) => {
     const { t, locale } = useLanguage();
 
-    // Konfigurasi Badge Multi-bahasa & Tema Warna Premium
-    const badgeConfig = {
-        new: {
-            label: t("product.badge.new", "NEW"),
-            className: "bg-gradient-to-r from-blue-600 to-cyan-600 text-white",
-        },
-        "best-seller": {
-            label: t("product.badge.best_seller", "BEST SELLER"),
-            className:
-                "bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold",
-        },
-    };
-
-    const currentBadge = badgeConfig[status];
+    const showNew = is_new || status === "new";
+    const showBestSeller = is_best_seller || status === "best-seller";
 
     // Helper formatting Rupiah IDN / Internasional sesuai Locale aktif
     const formatPrice = (value) => {
@@ -54,27 +43,30 @@ const ProductCard = ({
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -6 }}
-            transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-            className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-100 shadow-sm shadow-xl transition-shadow duration-500 mx-2 mt-4 my-7"
+        <div
+            className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1.5 mx-2 mt-4 my-7"
         >
-            {/* Badge */}
-            {currentBadge && (
-                <div className="absolute top-3 right-3 z-20">
-                    <span
-                        className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm ${currentBadge.className}`}
-                    >
-                        {status === "best-seller" && (
+            {/* Badges */}
+            {(showNew || showBestSeller) && (
+                <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+                    {showBestSeller && (
+                        <span
+                            className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-500 to-blue-600 text-black text-white"
+                        >
                             <Flame
                                 size={10}
-                                className="fill-current animate-pulse"
+                                className="fill-current animate-pulse text-white"
                             />
-                        )}
-                        {currentBadge.label}
-                    </span>
+                            {t("product.badge.best_seller", "BEST SELLER")}
+                        </span>
+                    )}
+                    {showNew && (
+                        <span
+                            className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
+                        >
+                            {t("product.badge.new", "NEW")}
+                        </span>
+                    )}
                 </div>
             )}
 
@@ -160,16 +152,15 @@ const ProductCard = ({
                     </div>
 
                     {/* Premium Cart Button */}
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors duration-300 shadow-sm"
+                    <button
+                        className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-300 shadow-sm active:scale-90"
                         aria-label="Add to cart"
                     >
                         <ShoppingCart size={14} />
-                    </motion.button>
+                    </button>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 };
 

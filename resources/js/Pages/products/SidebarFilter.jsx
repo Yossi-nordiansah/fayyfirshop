@@ -27,8 +27,9 @@ const SidebarFilter = ({
     resetFilters,
     mobileFiltersOpen,
     setMobileFiltersOpen,
+    categoryMap = CATEGORY_MAP,
 }) => {
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
 
     return (
         <>
@@ -41,6 +42,7 @@ const SidebarFilter = ({
                 toggleCategoryExpand={toggleCategoryExpand}
                 handleCategorySelect={handleCategorySelect}
                 resetFilters={resetFilters}
+                categoryMap={categoryMap}
             />
 
             {/* ── Mobile Slide-in Drawer ── */}
@@ -91,7 +93,7 @@ const SidebarFilter = ({
                                     {t("nav.all", "Semua Produk")}
                                 </button>
 
-                                {Object.entries(CATEGORY_MAP).map(([catSlug, catObj]) => {
+                                {Object.entries(categoryMap).map(([catSlug, catObj]) => {
                                     const isSelected = selectedCat === catSlug;
                                     const isExpanded = expandedCategories[catSlug];
 
@@ -109,7 +111,7 @@ const SidebarFilter = ({
                                                             : "text-zinc-600"
                                                         }`}
                                                 >
-                                                    {t(catObj.translationKey, catObj.name)}
+                                                    {catObj.name_translations?.[locale] || catObj.name || t(catObj.translationKey, catObj.name)}
                                                 </button>
 
                                                 <button
@@ -131,7 +133,7 @@ const SidebarFilter = ({
 
                                             {isExpanded && (
                                                 <div className="py-1 pl-4 ml-5 space-y-1 border-l border-zinc-100">
-                                                    {Object.entries(
+                                                    {catObj.subCategories && Object.entries(
                                                         catObj.subCategories,
                                                     ).map(([subSlug, subObj]) => {
                                                         const isSubSelected =
@@ -152,10 +154,7 @@ const SidebarFilter = ({
                                                                     }`}
                                                             >
                                                                 <span>
-                                                                    {t(
-                                                                        subObj.translationKey,
-                                                                        subObj.name,
-                                                                    )}
+                                                                    {subObj.name_translations?.[locale] || subObj.name || t(subObj.translationKey, subObj.name)}
                                                                 </span>
                                                                 {isSubSelected && (
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />

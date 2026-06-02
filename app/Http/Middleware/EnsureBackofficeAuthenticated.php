@@ -24,6 +24,17 @@ class EnsureBackofficeAuthenticated
             abort(403);
         }
 
+        // Inactivity timeout: 2 hours (7200 seconds)
+        $lastActivity = session('admin_last_activity');
+        if ($lastActivity && (time() - $lastActivity > 7200)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('backoffice.login')->with('status', 'Sesi Anda telah berakhir karena tidak ada aktivitas.');
+        }
+
+        session(['admin_last_activity' => time()]);
+
         return $next($request);
     }
 }

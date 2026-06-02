@@ -373,22 +373,22 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
                                 {/* Status Badge */}
-                                <div className="absolute top-4 left-4">
-                                    {product.status === "best-seller" && (
-                                        <span className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
-                                            <Flame
-                                                size={11}
-                                                className="fill-current animate-pulse"
-                                            />
-                                            {t("product.detail.best_seller", "Best Seller")}
-                                        </span>
-                                    )}
-                                    {product.status === "new" && (
-                                        <span className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-blue-400/40">
-                                            {t("product.detail.new_arrival", "New Arrival")}
-                                        </span>
-                                    )}
-                                </div>
+                                <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+                                     {(product.is_best_seller || product.status === "best-seller") && (
+                                         <span className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
+                                             <Flame
+                                                 size={11}
+                                                 className="fill-current animate-pulse"
+                                             />
+                                             {t("product.detail.best_seller", "Best Seller")}
+                                         </span>
+                                     )}
+                                     {(product.is_new || product.status === "new") && (
+                                         <span className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-blue-400/40">
+                                             {t("product.detail.new_arrival", "New Arrival")}
+                                         </span>
+                                     )}
+                                 </div>
 
                                 {/* Image counter */}
                                 {allImages.length > 1 && (

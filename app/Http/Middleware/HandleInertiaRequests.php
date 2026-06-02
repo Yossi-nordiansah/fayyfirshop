@@ -48,11 +48,74 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $notifications = [];
+        $user = $request->user();
+
+        if ($user) {
+            // Retrieve only required columns for maximum query performance
+            $products = \App\Models\Product::select('id', 'title', 'name_translations', 'description_translations', 'stock', 'slug')->get();
+
+            foreach ($products as $product) {
+                // 1. Stock < 10 notifications
+                if ($product->stock < 10) {
+                    $name = $product->name_translations['indonesia'] ?? $product->title;
+                    $notifications[] = [
+                        'id' => 'stock_' . $product->id,
+                        'type' => 'stock',
+                        'title' => 'Stok Menipis (<10)',
+                        'message' => "Stok produk \"{$name}\" menipis ({$product->stock} Pcs).",
+                        'link' => route('backoffice.products.show', $product->slug),
+                    ];
+                }
+
+                // 2. Missing language translation notifications
+                $missingLangs = [];
+                $names = $product->name_translations ?? [];
+                $descs = $product->description_translations ?? [];
+                foreach (['indonesia', 'english', 'arabic'] as $lang) {
+                    $nameVal = trim($names[$lang] ?? '');
+                    $descVal = trim($descs[$lang] ?? '');
+                    if ($nameVal === '' || $descVal === '') {
+                        $missingLangs[] = $lang;
+                    }
+                }
+
+                if (!empty($missingLangs)) {
+                    $name = $product->name_translations['indonesia'] ?? $product->title;
+                    $langsStr = implode(', ', array_map('ucfirst', $missingLangs));
+                    $notifications[] = [
+                        'id' => 'translation_' . $product->id,
+                        'type' => 'translation',
+                        'title' => 'Translasi Belum Lengkap',
+                        'message' => "Produk \"{$name}\" belum memiliki bahasa: {$langsStr}.",
+                        'link' => route('backoffice.products.show', $product->slug),
+                    ];
+                }
+            }
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
+            'notifications' => $notifications,
+            'navCategories' => fn () => \App\Models\ProductCategory::with('subCategories')
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($cat) => [
+                    'id'    => $cat->id,
+                    'name'  => $cat->name,
+                    'name_translations' => $cat->name_translations,
+                    'slug'  => $cat->slug,
+                    'href'  => '/products/' . $cat->slug,
+                    'subCategories' => $cat->subCategories->map(fn ($sub) => [
+                        'id'   => $sub->id,
+                        'name' => $sub->name,
+                        'name_translations' => $sub->name_translations,
+                        'val'  => \Illuminate\Support\Str::slug($sub->name),
+                    ]),
+                ]),
         ];
     }
 }
