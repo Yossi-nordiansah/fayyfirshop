@@ -20,6 +20,25 @@ import Footer from "@/Components/Footer";
 import products from "../../data-source/data_products_30.json";
 import { useLanguage } from "@/Contexts/LanguageContext"; // 1. Import LanguageContext Proyek
 
+const resolveProductImage = (img) => {
+    if (!img) return "/images/placeholder.jpg";
+    if (typeof img !== 'string') return "/images/placeholder.jpg";
+    if (
+        img.startsWith("http://") ||
+        img.startsWith("https://") ||
+        img.startsWith("data:") ||
+        img.startsWith("/images/") ||
+        img.startsWith("images/") ||
+        img.startsWith("/storage/") ||
+        img.startsWith("storage/")
+    ) {
+        if (img.startsWith("images/")) return `/${img}`;
+        if (img.startsWith("storage/")) return `/${img}`;
+        return img;
+    }
+    return `/storage/${img}`;
+};
+
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
 
@@ -69,6 +88,137 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const [selectedColor, setSelectedColor] = useState(null);
     const [selectedSize, setSelectedSize] = useState(null);
     const [selectedVariantId, setSelectedVariantId] = useState(null);
+    const [selectedParentKey, setSelectedParentKey] = useState(null);
+
+    // Helper to group flat database variants into parent-sub-variant structure
+    const groupedVariants = React.useMemo(() => {
+        if (!isDbProduct || !product.variants || product.variants.length === 0) return [];
+
+        const parentGroups = {};
+
+        product.variants.forEach(v => {
+            // Safely parse name_translations
+            let nameTrans = {};
+            if (v.name_translations) {
+                if (typeof v.name_translations === 'string') {
+                    try {
+                        nameTrans = JSON.parse(v.name_translations);
+                    } catch (e) {
+                        nameTrans = {};
+                    }
+                } else if (typeof v.name_translations === 'object') {
+                    nameTrans = v.name_translations;
+                }
+            }
+
+            const indonesiaName = String(nameTrans?.indonesia || v.name || '');
+            const englishName = String(nameTrans?.english || '');
+            const arabicName = String(nameTrans?.arabic || '');
+
+            // Extract suffixes in parentheses at the end of the string
+            const regex = /\(([^)]+)\)/g;
+            const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
+            const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
+            const matchesAra = [...arabicName.matchAll(regex)].map(m => m[1]);
+
+            const cleanName = (str) => String(str || '').replace(/\s*\([^)]+\)/g, '').trim();
+            const parentNameIndo = cleanName(indonesiaName);
+            const parentNameEng = cleanName(englishName);
+            const parentNameAra = cleanName(arabicName);
+
+            // If type contains '|', split it
+            let parentType = String(v.type || '');
+            let subType = null;
+            if (parentType.includes(' | ')) {
+                const parts = parentType.split(' | ');
+                parentType = parts[0].trim();
+                subType = parts[1].trim();
+            }
+
+            const parentKey = `${parentType}_${parentNameIndo}`;
+            const hasSub = matchesIndo.length > 0;
+
+            if (!parentGroups[parentKey]) {
+                // Extract type_translations safely
+                let parentTypeTranslations = { indonesia: parentType, english: parentType, arabic: parentType };
+                let subTypeTranslations = null;
+                if (v.type_translations) {
+                    let tObj = {};
+                    if (typeof v.type_translations === 'string') {
+                        try {
+                            tObj = JSON.parse(v.type_translations);
+                        } catch (e) {
+                            tObj = {};
+                        }
+                    } else if (typeof v.type_translations === 'object') {
+                        tObj = v.type_translations;
+                    }
+
+                    const splitT = (str) => {
+                        const sStr = String(str || '');
+                        return sStr && sStr.includes(' | ') ? sStr.split(' | ').map(s => s.trim()) : [sStr.trim() || '', null];
+                    };
+                    const [pI, sI] = splitT(tObj?.indonesia || '');
+                    const [pE, sE] = splitT(tObj?.english || '');
+                    const [pA, sA] = splitT(tObj?.arabic || '');
+                    parentTypeTranslations = { indonesia: pI || parentType, english: pE || pI || parentType, arabic: pA || pI || parentType };
+                    if (sI || sE || sA) {
+                        subTypeTranslations = { indonesia: sI || '', english: sE || sI || '', arabic: sA || sI || '' };
+                    }
+                }
+
+                parentGroups[parentKey] = {
+                    key: parentKey,
+                    id: hasSub ? null : v.id,
+                    type: parentType,
+                    type_translations: parentTypeTranslations,
+                    sku: hasSub ? '' : v.sku,
+                    price: hasSub ? '' : v.price,
+                    unit: v.unit,
+                    image: v.image,
+                    stock: hasSub ? 0 : (v.stock || 0),
+                    name_translations: {
+                        indonesia: parentNameIndo,
+                        english: parentNameEng,
+                        arabic: parentNameAra,
+                    },
+                    has_sub_variants: hasSub,
+                    sub_variants: [],
+                    _subTypeTranslations: subTypeTranslations,
+                };
+            }
+
+            if (hasSub) {
+                const valIndo = matchesIndo[0] || '';
+                const valEng = matchesEng[0] || '';
+                const valAra = matchesAra[0] || '';
+
+                parentGroups[parentKey].sub_variants.push({
+                    id: v.id,
+                    type: subType || 'Custom',
+                    type_translations: parentGroups[parentKey]._subTypeTranslations || {
+                        indonesia: subType || 'Custom',
+                        english: subType || 'Custom',
+                        arabic: subType || 'مخصص',
+                    },
+                    name_translations: {
+                        indonesia: valIndo,
+                        english: valEng,
+                        arabic: valAra,
+                    },
+                    unit: v.unit,
+                    sku: v.sku || '',
+                    price: v.price || '',
+                    image: v.image,
+                    stock: v.stock || 0,
+                });
+                // Accumulate stock
+                parentGroups[parentKey].stock += (v.stock || 0);
+            }
+        });
+
+        return Object.values(parentGroups);
+    }, [product.variants, isDbProduct, locale]);
 
     // Resolusi combined gallery: gambar produk (Eloquent / static JSON) + gambar varian
     const productImages = React.useMemo(() => {
@@ -116,18 +266,34 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         if (isDbProduct) {
             setSelectedColor(null);
             setSelectedSize(null);
-            if (product.variants && product.variants.length > 0) {
-                setSelectedVariantId(product.variants[0].id);
-                if (product.variants[0].image) {
-                    setActiveImage(product.variants[0].image);
+            if (groupedVariants && groupedVariants.length > 0) {
+                const firstParent = groupedVariants[0];
+                setSelectedParentKey(firstParent.key);
+                if (firstParent.has_sub_variants && firstParent.sub_variants.length > 0) {
+                    const firstSub = firstParent.sub_variants[0];
+                    setSelectedVariantId(firstSub.id);
+                    if (firstSub.image) {
+                        setActiveImage(firstSub.image);
+                    } else if (firstParent.image) {
+                        setActiveImage(firstParent.image);
+                    } else {
+                        setActiveImage(allImages[0] || null);
+                    }
                 } else {
-                    setActiveImage(allImages[0] || null);
+                    setSelectedVariantId(firstParent.id);
+                    if (firstParent.image) {
+                        setActiveImage(firstParent.image);
+                    } else {
+                        setActiveImage(allImages[0] || null);
+                    }
                 }
             } else {
+                setSelectedParentKey(null);
                 setSelectedVariantId(null);
                 setActiveImage(allImages[0] || null);
             }
         } else {
+            setSelectedParentKey(null);
             setSelectedVariantId(null);
             const nextColors = Array.from(
                 new Set(product.variants?.map((v) => v.color).filter(Boolean)),
@@ -140,7 +306,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             setActiveImage(allImages[0] || null);
         }
         setQuantity(1);
-    }, [product, isDbProduct, allImages]);
+    }, [product, isDbProduct, allImages, groupedVariants]);
 
     // Ketika warna dirubah, ganti gambar aktif ke gambar varian jika tersedia
     const handleColorSelect = (color) => {
@@ -227,13 +393,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryName = typeof product.category === 'object' && product.category !== null
-            ? product.category.name
+            ? (product.category.name_translations?.[locale] || product.category.name)
             : product.category || 'Perfume';
 
         const subCategoryName = typeof product.subCategory === 'object' && product.subCategory !== null
-            ? product.subCategory.name
+            ? (product.subCategory.name_translations?.[locale] || product.subCategory.name)
             : typeof product.sub_category === 'object' && product.sub_category !== null
-                ? product.sub_category.name
+                ? (product.sub_category.name_translations?.[locale] || product.sub_category.name)
                 : product.subCategory || '';
 
         const cartItem = {
@@ -242,7 +408,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             title: displayName,
             category: categoryName,
             subCategory: subCategoryName,
-            image: activeImage || allImages[0] || "",
+            image: resolveProductImage(activeImage || allImages[0] || ""),
             variantId: activeVariant?.id || null,
             color: isDbProduct ? null : selectedColor,
             size: isDbProduct
@@ -284,10 +450,11 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     // Helper resolusi teks kategori & subkategori reaktif
     const categoryName = React.useMemo(() => {
-        return typeof product.category === 'object' && product.category !== null
-            ? product.category.name
-            : product.category || 'Perfume';
-    }, [product.category]);
+        if (typeof product.category === 'object' && product.category !== null) {
+            return product.category.name_translations?.[locale] || product.category.name;
+        }
+        return product.category || 'Perfume';
+    }, [product.category, locale]);
 
     const categorySlug = React.useMemo(() => {
         return typeof product.category === 'object' && product.category !== null
@@ -296,12 +463,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     }, [product.category]);
 
     const subCategoryName = React.useMemo(() => {
-        return typeof product.subCategory === 'object' && product.subCategory !== null
-            ? product.subCategory.name
-            : typeof product.sub_category === 'object' && product.sub_category !== null
-                ? product.sub_category.name
-                : product.subCategory || '';
-    }, [product.subCategory, product.sub_category]);
+        if (typeof product.subCategory === 'object' && product.subCategory !== null) {
+            return product.subCategory.name_translations?.[locale] || product.subCategory.name;
+        }
+        if (typeof product.sub_category === 'object' && product.sub_category !== null) {
+            return product.sub_category.name_translations?.[locale] || product.sub_category.name;
+        }
+        return product.subCategory || '';
+    }, [product.subCategory, product.sub_category, locale]);
 
     // Dapatkan tipe varian (Ukuran, Rasa, Warna, dll.)
     const variantType = React.useMemo(() => {
@@ -360,7 +529,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <AnimatePresence mode="wait">
                                     <motion.img
                                         key={activeImage}
-                                        src={activeImage}
+                                        src={resolveProductImage(activeImage)}
                                         alt={displayName}
                                         className="object-cover w-full h-full"
                                         initial={{ opacity: 0, scale: 1.04 }}
@@ -374,21 +543,21 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
                                 {/* Status Badge */}
                                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-                                     {(product.is_best_seller || product.status === "best-seller") && (
-                                         <span className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
-                                             <Flame
-                                                 size={11}
-                                                 className="fill-current animate-pulse"
-                                             />
-                                             {t("product.detail.best_seller", "Best Seller")}
-                                         </span>
-                                     )}
-                                     {(product.is_new || product.status === "new") && (
-                                         <span className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-blue-400/40">
-                                             {t("product.detail.new_arrival", "New Arrival")}
-                                         </span>
-                                     )}
-                                 </div>
+                                    {(product.is_best_seller || product.status === "best-seller") && (
+                                        <span className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
+                                            <Flame
+                                                size={11}
+                                                className="fill-current animate-pulse"
+                                            />
+                                            {t("product.detail.best_seller", "Best Seller")}
+                                        </span>
+                                    )}
+                                    {(product.is_new || product.status === "new") && (
+                                        <span className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-blue-400/40 text-center justify-center">
+                                            {t("product.detail.new_arrival", "New Arrival")}
+                                        </span>
+                                    )}
+                                </div>
 
                                 {/* Image counter */}
                                 {allImages.length > 1 && (
@@ -416,7 +585,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                     }`}
                                             >
                                                 <img
-                                                    src={img}
+                                                    src={resolveProductImage(img)}
                                                     alt={variantColor ? `Varian ${variantColor}` : `Foto ${idx + 1}`}
                                                     className="object-cover w-full h-full"
                                                 />
@@ -505,68 +674,134 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             </div>
 
                             {/* Database Variant Selection */}
-                            {isDbProduct && product.variants && product.variants.length > 0 && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
-                                            {t(`product.detail.select_${variantType.toLowerCase()}`, `Pilih ${variantType}`)}
-                                        </h3>
-                                        {activeVariant && (
-                                            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                                                {activeVariant.name_translations?.[locale] || activeVariant.name}
-                                                {activeVariant.unit && ` (${activeVariant.unit.name || activeVariant.unit})`}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2.5">
-                                        {product.variants.map((variant) => {
-                                            const isSelected = selectedVariantId === variant.id;
-                                            const variantName = variant.name_translations?.[locale] || variant.name;
-                                            const isVariantOutOfStock = variant.stock === 0;
+                            {isDbProduct && groupedVariants && groupedVariants.length > 0 && (
+                                <div className="space-y-4">
+                                    {/* Row 1: Parent Variant */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
+                                                {(() => {
+                                                    const firstParent = groupedVariants[0];
+                                                    const rawPType = firstParent.type_translations?.[locale] || firstParent.type || 'Varian';
+                                                    const translatedPType = t("backoffice.product.form.preset_type." + rawPType.toLowerCase(), rawPType);
+                                                    const pTypeCapitalized = translatedPType.charAt(0).toUpperCase() + translatedPType.slice(1);
+                                                    const selectPrefix = locale === 'english' ? 'Select' : locale === 'arabic' ? 'اختر' : 'Pilih';
+                                                    return t(`product.detail.select_${pTypeCapitalized.toLowerCase()}`, `${selectPrefix} ${pTypeCapitalized}`);
+                                                })()}
+                                            </h3>
+                                            {(() => {
+                                                const activeParent = groupedVariants.find(p => p.key === selectedParentKey) || groupedVariants[0];
+                                                const parentName = activeParent ? (activeParent.name_translations?.[locale] || activeParent.name_translations?.indonesia || '') : '';
+                                                return parentName ? (
+                                                    <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                                        {parentName}
+                                                    </span>
+                                                ) : null;
+                                            })()}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {groupedVariants.map((parent) => {
+                                                const isSelected = selectedParentKey === parent.key;
+                                                const parentName = parent.name_translations?.[locale] || parent.name_translations?.indonesia || '';
+                                                const isParentOutOfStock = parent.stock === 0;
 
-                                            return (
-                                                <button
-                                                    key={variant.id}
-                                                    onClick={() => {
-                                                        setSelectedVariantId(variant.id);
-                                                        if (variant.image) {
-                                                            setActiveImage(variant.image);
-                                                        }
-                                                    }}
-                                                    disabled={isVariantOutOfStock}
-                                                    className={`flex items-center gap-2.5 pl-1.5 pr-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-300 ${
-                                                        isSelected
-                                                            ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200 scale-[1.03]"
+                                                return (
+                                                    <button
+                                                        key={parent.key}
+                                                        onClick={() => {
+                                                            setSelectedParentKey(parent.key);
+                                                            if (parent.has_sub_variants && parent.sub_variants.length > 0) {
+                                                                // Select the first sub-variant of this parent
+                                                                const firstSub = parent.sub_variants[0];
+                                                                setSelectedVariantId(firstSub.id);
+                                                                if (firstSub.image) {
+                                                                    setActiveImage(firstSub.image);
+                                                                } else if (parent.image) {
+                                                                    setActiveImage(parent.image);
+                                                                }
+                                                            } else {
+                                                                setSelectedVariantId(parent.id);
+                                                                if (parent.image) {
+                                                                    setActiveImage(parent.image);
+                                                                }
+                                                            }
+                                                        }}
+                                                        disabled={isParentOutOfStock}
+                                                        className={`flex min-w-24 items-center justify-center text-center gap-2.5 py-2 rounded-2xl border text-sm font-semibold transition-all duration-300 ${isSelected
+                                                            ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200"
                                                             : "bg-white border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
-                                                    } ${isVariantOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
-                                                >
-                                                    {variant.image ? (
-                                                        <span className={`w-8 h-8 rounded-lg overflow-hidden border flex-shrink-0 ${
-                                                            isSelected ? "border-white/40" : "border-zinc-200"
-                                                        }`}>
-                                                            <img
-                                                                src={variant.image}
-                                                                alt={variantName}
-                                                                className="object-cover w-full h-full"
-                                                            />
-                                                        </span>
-                                                    ) : (
-                                                        isSelected && <Check size={12} className="ml-1" />
-                                                    )}
-                                                    <div className="text-left">
-                                                        <span className="block leading-tight">{variantName}</span>
-                                                        {variant.price && variant.price !== product.price ? (
-                                                            <span className={`text-[10px] block ${
-                                                                isSelected ? "text-blue-100" : "text-slate-400"
-                                                            }`}>
-                                                                {formatPrice(variant.price)}
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
+                                                            } ${isParentOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                    >
+                                                        <div className="text-center px-3 w-full">
+                                                            <span className="block leading-tight">{parentName}</span>
+                                                            {/* {!parent.has_sub_variants && parent.price && parent.price !== product.price ? (
+                                                                <span className={`text-[10px] block ${isSelected ? "text-blue-100" : "text-slate-400"
+                                                                    }`}>
+                                                                    {formatPrice(parent.price)}
+                                                                </span>
+                                                            ) : null} */}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
+
+                                    {/* Row 2: Sub-Variant (shown if current parent has sub-variants) */}
+                                    {(() => {
+                                        const currentParent = groupedVariants.find(p => p.key === selectedParentKey);
+                                        if (!currentParent || !currentParent.has_sub_variants || currentParent.sub_variants.length === 0) return null;
+
+                                        const rawSubType = currentParent.sub_variants[0].type_translations?.[locale] || currentParent.sub_variants[0].type || 'Sub Varian';
+                                        const translatedSubType = t("backoffice.product.form.preset_type." + rawSubType.toLowerCase(), rawSubType);
+                                        const subTypeCapitalized = translatedSubType.charAt(0).toUpperCase() + translatedSubType.slice(1);
+                                        const selectPrefix = locale === 'english' ? 'Select' : locale === 'arabic' ? 'اختر' : 'Pilih';
+
+                                        return (
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
+                                                        {t(`product.detail.select_${subTypeCapitalized.toLowerCase()}`, `${selectPrefix} ${subTypeCapitalized}`)}
+                                                    </h3>
+                                                    {activeVariant && activeVariant.id !== currentParent.id && (
+                                                        <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                                            {activeVariant.name_translations?.[locale] || activeVariant.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2.5">
+                                                    {currentParent.sub_variants.map((subVar) => {
+                                                        const isSelected = selectedVariantId === subVar.id;
+                                                        const subVarName = subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || '';
+                                                        const isSubOutOfStock = subVar.stock === 0;
+
+                                                        return (
+                                                            <button
+                                                                key={subVar.id}
+                                                                onClick={() => {
+                                                                    setSelectedVariantId(subVar.id);
+                                                                    if (subVar.image) {
+                                                                        setActiveImage(subVar.image);
+                                                                    } else if (currentParent.image) {
+                                                                        setActiveImage(currentParent.image);
+                                                                    }
+                                                                }}
+                                                                disabled={isSubOutOfStock}
+                                                                className={`flex items-center justify-center gap-2.5 px-3 min-w-20 py-2 rounded-2xl border text-sm font-semibold transition-all duration-300 ${isSelected
+                                                                    ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200 scale-[1.03]"
+                                                                    : "bg-white border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
+                                                                    } ${isSubOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                            >
+                                                                <div className="text-center">
+                                                                    <span className="block leading-tight">{subVarName}</span>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
 
@@ -599,7 +834,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                     {variantImg ? (
                                                         <span className={`w-7 h-7 rounded-lg overflow-hidden border-2 flex-shrink-0 ${isSelected ? "border-white/40" : "border-zinc-200"}`}>
                                                             <img
-                                                                src={variantImg}
+                                                                src={resolveProductImage(variantImg)}
                                                                 alt={color}
                                                                 className="object-cover w-full h-full"
                                                             />
@@ -622,11 +857,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                         <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
                                             <Tag size={12} /> {t("product.detail.size_label", "Ukuran")}
                                         </h3>
-                                        {selectedSize && (
-                                            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                                                {selectedSize}
-                                            </span>
-                                        )}
                                     </div>
                                     <div className="flex flex-wrap gap-2.5">
                                         {uniqueSizes.map((size) => (

@@ -38,8 +38,9 @@ const NewProduct = ({ products = [] }) => {
                     {useSlider ? (
                         <SlickSlider>
                             {products.map((product) => (
-                                <div key={product.id} className="px-2">
+                                <div key={product.id} className="md:px-2 px-4">
                                     <ProductCard
+                                        slug={product.slug}
                                         title={product.name_translations?.[locale] || product.title}
                                         price={product.price}
                                         sold={product.sold}
@@ -57,6 +58,7 @@ const NewProduct = ({ products = [] }) => {
                             {products.map((product) => (
                                 <ProductCard
                                     key={product.id}
+                                    slug={product.slug}
                                     title={product.name_translations?.[locale] || product.title}
                                     price={product.price}
                                     sold={product.sold}

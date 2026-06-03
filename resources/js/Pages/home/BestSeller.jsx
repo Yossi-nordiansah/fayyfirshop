@@ -35,8 +35,8 @@ const BestSeller = ({ products = [] }) => {
                 <div className="flex items-center justify-center md:justify-start gap-4 px-8 mb-4 pt-2">
                     <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                         <Flame
-                             size={20}
-                             className="text-blue-500 fill-blue-500"
+                            size={20}
+                            className="text-blue-500 fill-blue-500"
                         />
                     </div>
 
@@ -51,8 +51,9 @@ const BestSeller = ({ products = [] }) => {
                     {useSlider ? (
                         <SlickSlider>
                             {products.map((product) => (
-                                <div key={product.id} className="px-2">
+                                <div key={product.id} className="md:px-2 px-4">
                                     <ProductCard
+                                        slug={product.slug}
                                         title={product.name_translations?.[locale] || product.title}
                                         price={product.price}
                                         sold={product.sold}
@@ -70,6 +71,7 @@ const BestSeller = ({ products = [] }) => {
                             {products.map((product) => (
                                 <ProductCard
                                     key={product.id}
+                                    slug={product.slug}
                                     title={product.name_translations?.[locale] || product.title}
                                     price={product.price}
                                     sold={product.sold}

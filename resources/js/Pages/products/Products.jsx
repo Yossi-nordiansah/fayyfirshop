@@ -6,7 +6,7 @@ import MainLayout from "@/Layouts/MainLayout";
 import CardProduct from "@/Components/product/CardProduct";
 import { CATEGORY_MAP } from "@/Components/product/FilterSidebar";
 import SidebarFilter from "./SidebarFilter";
-import productsData from "@/data-source/data_products_30.json";
+
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -118,9 +118,9 @@ export default function Products({ category = null, subCategory = null, products
         };
     }, [navCategories]);
 
-    // Fallback/Legacy productsData vs Database products prop
+    // Always use products from database — empty array = show empty state
     const productsList = useMemo(() => {
-        return products && products.length > 0 ? products : productsData;
+        return Array.isArray(products) ? products : [];
     }, [products]);
 
     // Helper function to extract product images dynamically (database structure vs mock data)
@@ -131,8 +131,8 @@ export default function Products({ category = null, subCategory = null, products
         if (prod.images && prod.images.length > 0) {
             return prod.images.map(img => {
                 if (!img.image_path) return '/images/logo-footer.png';
-                return img.image_path.startsWith('http') || img.image_path.startsWith('/') 
-                    ? img.image_path 
+                return img.image_path.startsWith('http') || img.image_path.startsWith('/')
+                    ? img.image_path
                     : `/storage/${img.image_path}`;
             });
         }
@@ -141,16 +141,16 @@ export default function Products({ category = null, subCategory = null, products
 
     const matchCategory = (prod, selectedCatSlug) => {
         if (!selectedCatSlug) return true;
-        
+
         // Database product category object
         if (prod.category && typeof prod.category === 'object') {
             return prod.category.slug === selectedCatSlug;
         }
-        
+
         // Legacy mock category string fallback
         const mappedCat = dynamicCategoryMap[selectedCatSlug];
         if (!mappedCat) return false;
-        
+
         const productCatKey = getProductCategoryKey(prod.category);
         const mappedCatKey = getProductCategoryKey(mappedCat.name);
         return productCatKey === mappedCatKey;
@@ -158,7 +158,7 @@ export default function Products({ category = null, subCategory = null, products
 
     const matchSubCategory = (prod, selectedSubVal, selectedCatSlug) => {
         if (!selectedSubVal) return true;
-        
+
         // Database product subcategory relation
         const sub = prod.sub_category || prod.subCategory;
         if (sub && typeof sub === 'object') {
@@ -166,14 +166,14 @@ export default function Products({ category = null, subCategory = null, products
             const subSlug = String(sub.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
             return subSlug === selectedSubVal;
         }
-        
+
         // Legacy mock subcategory string fallback
         const mappedCat = dynamicCategoryMap[selectedCatSlug];
         if (!mappedCat) return false;
-        
+
         const mappedSub = mappedCat.subCategories?.[selectedSubVal];
         if (!mappedSub) return false;
-        
+
         const productSubKey = getProductSubcategoryKey(prod.subCategory);
         const mappedSubKey = getProductSubcategoryKey(mappedSub.name);
         return productSubKey === mappedSubKey;
@@ -301,9 +301,9 @@ export default function Products({ category = null, subCategory = null, products
                 const descMatch = (product.description || "")
                     .toLowerCase()
                     .includes(query);
-                
-                const catName = typeof product.category === 'object' 
-                    ? (product.category?.name || "") 
+
+                const catName = typeof product.category === 'object'
+                    ? (product.category?.name || "")
                     : (product.category || "");
                 const subName = typeof product.subCategory === 'object' || typeof product.sub_category === 'object'
                     ? ((product.subCategory || product.sub_category)?.name || "")
@@ -348,14 +348,14 @@ export default function Products({ category = null, subCategory = null, products
     // Dynamic translation headings
     const bannerTitle = useMemo(() => {
         if (activeSubcategoryInfo) {
-            return activeSubcategoryInfo.name_translations?.[locale] || 
-                   activeSubcategoryInfo.name || 
-                   t(activeSubcategoryInfo.translationKey, activeSubcategoryInfo.name);
+            return activeSubcategoryInfo.name_translations?.[locale] ||
+                activeSubcategoryInfo.name ||
+                t(activeSubcategoryInfo.translationKey, activeSubcategoryInfo.name);
         }
         if (activeCategoryInfo) {
-            return activeCategoryInfo.name_translations?.[locale] || 
-                   activeCategoryInfo.name || 
-                   t(activeCategoryInfo.translationKey, activeCategoryInfo.name);
+            return activeCategoryInfo.name_translations?.[locale] ||
+                activeCategoryInfo.name ||
+                t(activeCategoryInfo.translationKey, activeCategoryInfo.name);
         }
         return t("nav.all", "Semua Produk");
     }, [activeCategoryInfo, activeSubcategoryInfo, locale, t]);
@@ -744,7 +744,7 @@ export default function Products({ category = null, subCategory = null, products
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0 }}
-                                        className="bg-zinc-100 backdrop-blur-md border border-white/10 rounded-3xl py-24 px-8 text-center max-w-xl mx-auto space-y-5 shadow-2xl"
+                                        className="bg-zinc-100 backdrop-blur-md border border-white/10 rounded-3xl py-24 md:mx-auto mx-4 md:px-8 px-4 text-center max-w-xl mx-auto space-y-5 shadow-2xl"
                                     >
                                         <div className="w-16 h-16 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-inner">
                                             <ShoppingBag size={24} />

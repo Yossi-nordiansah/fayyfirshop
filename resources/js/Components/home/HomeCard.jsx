@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "@inertiajs/react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
 
@@ -6,6 +7,7 @@ import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
  * ProductCard Component - Fayyfir Shop Premium Edition
  */
 const ProductCard = ({
+    slug,
     title,
     price = 0, // Prop baru untuk nominal harga (angka murni, misal: 150000)
     sold = 0,
@@ -43,124 +45,130 @@ const ProductCard = ({
     };
 
     return (
-        <div
-            className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1.5 mx-2 mt-4 my-7"
-        >
-            {/* Badges */}
-            {(showNew || showBestSeller) && (
-                <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
-                    {showBestSeller && (
-                        <span
-                            className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-500 to-blue-600 text-black text-white"
-                        >
-                            <Flame
-                                size={10}
-                                className="fill-current animate-pulse text-white"
-                            />
-                            {t("product.badge.best_seller", "BEST SELLER")}
-                        </span>
-                    )}
-                    {showNew && (
-                        <span
-                            className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                        >
-                            {t("product.badge.new", "NEW")}
-                        </span>
-                    )}
-                </div>
-            )}
-
-            {/* Product Image */}
-            <div className="relative overflow-hidden aspect-square bg-zinc-50">
-                <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            </div>
-
-            {/* Content */}
-            <div className="px-4 py-2 space-y-1.5 bg-slate-100">
-                {/* Title */}
-                <h3 className="text-sm font-semibold text-zinc-800 truncate group-hover:text-amber-600 transition-colors duration-300 tracking-wide">
-                    {title}
-                </h3>
-
-                {/* Price Tag (Premium Component) */}
-                <div className="">
-                    <span className="text-base font-bold text-zinc-900 tracking-tight font-sans">
-                        {formatPrice(price)}
-                    </span>
-                </div>
-
-                <div className="h-[14px] flex items-center">
-                    {rating > 0 && (
-                        <div
-                            className="flex items-center gap-0.5"
-                            title={`Rating: ${rating}`}
-                        >
-                            {[...Array(5)].map((_, index) => {
-                                const starValue = index + 1;
-                                const isFull = rating >= starValue;
-                                const isHalf =
-                                    !isFull && rating >= starValue - 0.5;
-
-                                return (
-                                    <div
-                                        key={index}
-                                        className="relative inline-block"
-                                    >
-                                        <Star
-                                            size={13}
-                                            className="text-zinc-200 fill-zinc-100"
-                                        />
-                                        {(isFull || isHalf) && (
-                                            <div
-                                                className="absolute top-0 left-0 overflow-hidden"
-                                                style={{
-                                                    width: isFull
-                                                        ? "100%"
-                                                        : "50%",
-                                                }}
-                                            >
-                                                <Star
-                                                    size={13}
-                                                    className="text-amber-400 fill-amber-400 max-w-none"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                            <span className="text-[10px] font-bold text-zinc-400 ml-1 mt-0.5">
-                                {rating}
+        <Link href={`/product/${slug}`} className="block">
+            <div
+                className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-100 shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1.5 mx-2 mt-4 my-7"
+            >
+                {/* Badges */}
+                {(showNew || showBestSeller) && (
+                    <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+                        {showBestSeller && (
+                            <span
+                                className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-500 to-blue-600 text-black text-white"
+                            >
+                                <Flame
+                                    size={10}
+                                    className="fill-current animate-pulse text-white"
+                                />
+                                {t("product.badge.best_seller", "BEST SELLER")}
                             </span>
-                        </div>
-                    )}
+                        )}
+                        {showNew && (
+                            <span
+                                className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
+                            >
+                                {t("product.badge.new", "NEW")}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Product Image */}
+                <div className="relative overflow-hidden aspect-square bg-zinc-50">
+                    <img
+                        src={image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </div>
 
-                {/* Bottom Row */}
-                <div className="flex items-center justify-between">
-                    {/* Sold Count */}
-                    <div className="flex items-center gap-1 text-zinc-500 text-xs">
-                        <ShoppingBag size={13} className="text-zinc-400" />
-                        <span className="text-zinc-600 font-medium text-[11px]">
-                            {renderSoldCount(sold)}
+                {/* Content */}
+                <div className="px-4 py-2 space-y-1.5 bg-slate-100">
+                    {/* Title */}
+                    <h3 className="text-sm font-semibold text-zinc-800 truncate group-hover:text-amber-600 transition-colors duration-300 tracking-wide">
+                        {title}
+                    </h3>
+
+                    {/* Price Tag (Premium Component) */}
+                    <div className="">
+                        <span className="text-base font-bold text-zinc-900 tracking-tight font-sans">
+                            {formatPrice(price)}
                         </span>
                     </div>
 
-                    {/* Premium Cart Button */}
-                    <button
-                        className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-300 shadow-sm active:scale-90"
-                        aria-label="Add to cart"
-                    >
-                        <ShoppingCart size={14} />
-                    </button>
+                    <div className="h-[14px] flex items-center">
+                        {rating > 0 && (
+                            <div
+                                className="flex items-center gap-0.5"
+                                title={`Rating: ${rating}`}
+                            >
+                                {[...Array(5)].map((_, index) => {
+                                    const starValue = index + 1;
+                                    const isFull = rating >= starValue;
+                                    const isHalf =
+                                        !isFull && rating >= starValue - 0.5;
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="relative inline-block"
+                                        >
+                                            <Star
+                                                size={13}
+                                                className="text-zinc-200 fill-zinc-100"
+                                            />
+                                            {(isFull || isHalf) && (
+                                                <div
+                                                    className="absolute top-0 left-0 overflow-hidden"
+                                                    style={{
+                                                        width: isFull
+                                                            ? "100%"
+                                                            : "50%",
+                                                    }}
+                                                >
+                                                    <Star
+                                                        size={13}
+                                                        className="text-amber-400 fill-amber-400 max-w-none"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                <span className="text-[10px] font-bold text-zinc-400 ml-1 mt-0.5">
+                                    {rating}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Bottom Row */}
+                    <div className="flex items-center justify-between">
+                        {/* Sold Count */}
+                        <div className="flex items-center gap-1 text-zinc-500 text-xs">
+                            <ShoppingBag size={13} className="text-zinc-400" />
+                            <span className="text-zinc-600 font-medium text-[11px]">
+                                {renderSoldCount(sold)}
+                            </span>
+                        </div>
+
+                        {/* Premium Cart Button */}
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-300 shadow-sm active:scale-90"
+                            aria-label="Add to cart"
+                        >
+                            <ShoppingCart size={14} />
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 };
 

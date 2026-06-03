@@ -469,6 +469,7 @@
   "backoffice.product.form.placeholder_size": "100ml / Large",
   "backoffice.product.form.placeholder_color": "Merah / Rouge",
   "backoffice.product.form.placeholder_value": "Contoh nilai...",
+  "backoffice.product.form.placeholder_ukuran": "Contoh: S, M, L, XL / 38, 39, 40 / 100ml...",
   "backoffice.product.form.variant_sku": "SKU Varian",
   "backoffice.product.form.variant_price": "Harga (IDR)",
   "backoffice.product.form.optional": "opsional",

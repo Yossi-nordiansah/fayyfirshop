@@ -471,6 +471,7 @@
   "backoffice.product.form.placeholder_size": "100 مل / كبير",
   "backoffice.product.form.placeholder_color": "أحمر / أزرق",
   "backoffice.product.form.placeholder_value": "مثال على القيمة...",
+  "backoffice.product.form.placeholder_ukuran": "مثال: S، M، L، XL / ٣٨، ٣٩، ٤٠ / ١٠٠ مل...",
   "backoffice.product.form.variant_sku": "رمز SKU للمتغير",
   "backoffice.product.form.variant_price": "السعر (IDR)",
   "backoffice.product.form.optional": "اختياري",

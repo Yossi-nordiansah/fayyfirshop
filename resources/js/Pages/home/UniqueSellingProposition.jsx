@@ -89,7 +89,7 @@ const UniqueSellingProposition = () => {
                     initial="hidden"
                     whileInView="show"
                     viewport={{ once: true, margin: "-100px" }}
-                    className="px-16 grid grid-cols-1 lg:grid-cols-2 gap-6 justify-center"
+                    className="md:px-16 px-4 grid grid-cols-1 lg:grid-cols-2 gap-6 justify-center"
                 >
                     {usps.map((usp, index) => {
                         const IconComponent = usp.icon;

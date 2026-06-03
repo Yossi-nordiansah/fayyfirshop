@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Slider from "react-slick";
 import ProductCard from "@/Components/home/HomeCard";
 
@@ -7,42 +7,91 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 /**
- * NewProduct Component
- * Displays a carousel of new arrivals using react-slick.
+ * Hook untuk mendapatkan jumlah slide yang harus ditampilkan
+ * berdasarkan lebar window yang sesungguhnya (window.innerWidth).
+ * Ini memaksa React re-render saat window di-resize,
+ * sehingga react-slick selalu mendapatkan ukuran yang tepat.
+ */
+function useSlidesToShow() {
+    const getSlides = () => {
+        if (typeof window === "undefined") return 4;
+        const w = window.innerWidth;
+        if (w <= 480) return 1;
+        if (w <= 768) return 1;
+        if (w <= 1024) return 2;
+        return 4;
+    };
+
+    const [slidesToShow, setSlidesToShow] = useState(getSlides);
+
+    useEffect(() => {
+        const handleResize = () => setSlidesToShow(getSlides());
+        window.addEventListener("resize", handleResize);
+        // Jalankan sekali saat mount untuk memastikan nilai awal benar
+        handleResize();
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    return slidesToShow;
+}
+
+/**
+ * SlickSlider Component
+ * Displays a carousel using react-slick.
  * Showcases 4 products at a time on desktop with infinite looping.
+ *
+ * Catatan: Menggunakan useSlidesToShow() karena react-slick mendeteksi
+ * breakpoint dari window.innerWidth, bukan dari CSS media query.
+ * Extension mobile simulator hanya men-scale CSS sehingga window.innerWidth
+ * tetap ukuran desktop. Hook ini memaksa re-render agar slider selalu benar.
  */
 const SlickSlider = ({ children }) => {
+    const slidesToShow = useSlidesToShow();
+
     const settings = {
         dots: true,
         infinite: true,
         speed: 600,
-        slidesToShow: 4, // Default for desktop (4 cards)
+        slidesToShow: slidesToShow,
         slidesToScroll: 1,
         autoplay: true,
         autoplaySpeed: 4000,
         pauseOnHover: true,
-        arrows: true,
+        // Sembunyikan arrow di mobile
+        arrows: slidesToShow > 1,
+        // Responsive tetap disertakan sebagai fallback
         responsive: [
             {
-                breakpoint: 1024, // Screens <= 1024px (Tablet)
+                breakpoint: 1024,
                 settings: {
-                    slidesToShow: 2, // 2 cards on tablet
+                    slidesToShow: 2,
                     slidesToScroll: 1,
+                    arrows: true,
                 },
             },
             {
-                breakpoint: 640, // Screens <= 640px (Mobile)
+                breakpoint: 768,
                 settings: {
-                    slidesToShow: 1, // 1 card on mobile
+                    slidesToShow: 1,
                     slidesToScroll: 1,
                     centerMode: false,
+                    arrows: false,
+                },
+            },
+            {
+                breakpoint: 480,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1,
+                    centerMode: false,
+                    arrows: false,
                 },
             },
         ],
     };
 
     return (
-        <section className="bg-transparent pb-2 px-8 lg:px-12">
+        <section className="bg-transparent pb-2 md:px-8 px-2 lg:px-12">
             {/* React Slick Slider */}
             <div className="product-slider">
                 <Slider {...settings}>{children}</Slider>

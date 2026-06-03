@@ -74,20 +74,20 @@ const CustomerRating = () => {
                     <span className="text-blue-600 text-xs font-bold uppercase font-['Cinzel'] block tracking-[0.4em]">
                         {t("rating.subtitle", "Customer Testimonials")}
                     </span>
-                    <h2 className="text-3xl md:text-4xl text-zinc-900 font-['Amiri'] font-bold tracking-wide">
+                    <h2 className="text-2xl md:text-4xl text-zinc-900 font-['Amiri'] font-bold tracking-wide">
                         {t("rating.title", "What They Say About Us")}
                     </h2>
                     <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mt-3" />
                 </div>
 
                 {/* Integration with SlickSlider */}
-                <div className="px-4">
+                <div className="md:px-4 px-2">
                     <SlickSlider>
                         {reviews.map((review) => (
                             <div key={review.id} className="px-3 py-4">
                                 <motion.div
                                     whileHover={{ y: -6, scale: 1.01 }}
-                                    className="bg-slate-100 rounded-2xl border border-zinc-100 p-6 shadow-lg relative flex flex-col justify-between h-[260px] group transition-all duration-300"
+                                    className="bg-slate-100 rounded-2xl border border-zinc-100 p-6 shadow-lg relative flex flex-col justify-between h-[260px] group transition-all duration-300 w-full"
                                 >
                                     {/* Quote Icon Background Accent */}
                                     <Quote className="absolute right-6 top-6 text-zinc-100 group-hover:text-amber-500/10 transition-colors duration-300 w-10 h-10 -scale-x-100" />
@@ -99,11 +99,10 @@ const CustomerRating = () => {
                                                 <Star
                                                     key={i}
                                                     size={16}
-                                                    className={`${
-                                                        i < review.rating
-                                                            ? "text-amber-400 fill-amber-400"
-                                                            : "text-zinc-200"
-                                                    }`}
+                                                    className={`${i < review.rating
+                                                        ? "text-amber-400 fill-amber-400"
+                                                        : "text-zinc-200"
+                                                        }`}
                                                 />
                                             ))}
                                         </div>

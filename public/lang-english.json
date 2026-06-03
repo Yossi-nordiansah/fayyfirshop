@@ -471,6 +471,7 @@
   "backoffice.product.form.placeholder_size": "100ml / Large",
   "backoffice.product.form.placeholder_color": "Red / Blue",
   "backoffice.product.form.placeholder_value": "Example value...",
+  "backoffice.product.form.placeholder_ukuran": "e.g. S, M, L, XL / 38, 39, 40 / 100ml...",
   "backoffice.product.form.variant_sku": "Variant SKU",
   "backoffice.product.form.variant_price": "Price (IDR)",
   "backoffice.product.form.optional": "optional",

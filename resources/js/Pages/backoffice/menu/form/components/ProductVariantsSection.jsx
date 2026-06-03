@@ -331,12 +331,17 @@ export default function ProductVariantsSection({
                                         )}
                                     </div>
 
-                                    {/* Variant fields grid */}
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {/* Variant fields */}
+                                    <div className="space-y-4">
                                         {/* Name (translated) */}
-                                        <div className="space-y-1">
+                                        <div className="space-y-1.5">
                                             <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500">
-                                                {t('backoffice.product.form.variant_value_label', 'Nilai {type}').replace('{type}', variant.type_translations?.indonesia || getTranslatedType(variant.type, t))}
+                                                {t('backoffice.product.form.variant_value_label', 'Nilai {type}').replace(
+                                                    '{type}',
+                                                    variant.type_translations?.[activeLang]
+                                                    || variant.type_translations?.indonesia
+                                                    || getTranslatedType(variant.type, t)
+                                                )}
                                             </label>
 
                                             {variant.type?.toLowerCase() === 'ukuran' ? (
@@ -352,7 +357,7 @@ export default function ProductVariantsSection({
                                                                 arabic: val
                                                             });
                                                         }}
-                                                        placeholder="Contoh: 100, 200"
+                                                        placeholder={t('backoffice.product.form.placeholder_ukuran', 'Contoh: S, M, L, XL / 38, 39, 40 / 100ml...')}
                                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-950"
                                                     />
                                                     {getVariantError(vIdx, null, 'name_translations.indonesia') && (
@@ -362,7 +367,7 @@ export default function ProductVariantsSection({
                                                     )}
                                                 </div>
                                             ) : (
-                                                <>
+                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                                     {/* Indonesia */}
                                                     <div className="space-y-1">
                                                         <div className="flex items-center justify-between">
@@ -432,75 +437,76 @@ export default function ProductVariantsSection({
                                                             </p>
                                                         )}
                                                     </div>
-                                                </>
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* SKU */}
+                                        {/* SKU, Price, and Unit Row */}
                                         {showSkuAndPrice && (
-                                            <div>
-                                                <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_sku', 'SKU Varian')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={variant.sku}
-                                                    onChange={e => updateVariantField(vIdx, 'sku', e.target.value)}
-                                                    placeholder="FYF-VAR-01"
-                                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-950"
-                                                />
-                                                {getVariantError(vIdx, null, 'sku') && (
-                                                    <p className="mt-1 text-[11px] font-semibold text-rose-500">
-                                                        {getVariantError(vIdx, null, 'sku')}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                                {/* SKU */}
+                                                <div>
+                                                    <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_sku', 'SKU Varian')}</label>
+                                                    <input
+                                                        type="text"
+                                                        value={variant.sku}
+                                                        onChange={e => updateVariantField(vIdx, 'sku', e.target.value)}
+                                                        placeholder="FYF-VAR-01"
+                                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-950"
+                                                    />
+                                                    {getVariantError(vIdx, null, 'sku') && (
+                                                        <p className="mt-1 text-[11px] font-semibold text-rose-500">
+                                                            {getVariantError(vIdx, null, 'sku')}
+                                                        </p>
+                                                    )}
+                                                </div>
 
-                                        {/* Price */}
-                                        {showSkuAndPrice && (
-                                            <div>
-                                                <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">
-                                                    {t('backoffice.product.form.variant_price', 'Harga (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formatPriceInput(variant.price)}
-                                                    onChange={e => updateVariantField(vIdx, 'price', parsePriceInput(e.target.value))}
-                                                    placeholder={t('backoffice.product.form.variant_price_placeholder', 'Kosong = ikut harga induk')}
-                                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-950"
-                                                />
-                                                {getVariantError(vIdx, null, 'price') && (
-                                                    <p className="mt-1 text-[11px] font-semibold text-rose-500">
-                                                        {getVariantError(vIdx, null, 'price')}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                                {/* Price */}
+                                                <div>
+                                                    <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">
+                                                        {t('backoffice.product.form.variant_price', 'Harga (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={formatPriceInput(variant.price)}
+                                                        onChange={e => updateVariantField(vIdx, 'price', parsePriceInput(e.target.value))}
+                                                        placeholder={t('backoffice.product.form.variant_price_placeholder', 'Kosong = ikut harga induk')}
+                                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-950"
+                                                    />
+                                                    {getVariantError(vIdx, null, 'price') && (
+                                                        <p className="mt-1 text-[11px] font-semibold text-rose-500">
+                                                            {getVariantError(vIdx, null, 'price')}
+                                                        </p>
+                                                    )}
+                                                </div>
 
-                                        {/* Unit */}
-                                        {showUnitSelector && (
-                                            <div>
-                                                <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
-                                                <select
-                                                    value={variant.unit_id}
-                                                    onChange={e => updateVariantField(vIdx, 'unit_id', e.target.value)}
-                                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-950"
-                                                >
-                                                    <option value="">{t('backoffice.product.form.select_unit', 'Pilih satuan...')}</option>
-                                                    {units.map(u => (
-                                                        <option key={u.id} value={u.id}>{u.name}</option>
-                                                    ))}
-                                                </select>
-                                                {getVariantError(vIdx, null, 'unit_id') && (
-                                                    <p className="mt-1 text-[11px] font-semibold text-rose-500">
-                                                        {getVariantError(vIdx, null, 'unit_id')}
-                                                    </p>
+                                                {/* Unit */}
+                                                {showUnitSelector && (
+                                                    <div>
+                                                        <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
+                                                        <select
+                                                            value={variant.unit_id}
+                                                            onChange={e => updateVariantField(vIdx, 'unit_id', e.target.value)}
+                                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-950"
+                                                        >
+                                                            <option value="">{t('backoffice.product.form.select_unit', 'Pilih satuan...')}</option>
+                                                            {units.map(u => (
+                                                                <option key={u.id} value={u.id}>{u.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        {getVariantError(vIdx, null, 'unit_id') && (
+                                                            <p className="mt-1 text-[11px] font-semibold text-rose-500">
+                                                                {getVariantError(vIdx, null, 'unit_id')}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
 
                                         {/* Variant Image (Only shown in Tanpa Sub-Varian mode) */}
                                         {!hasSubVariants && (
-                                            <div className="sm:col-span-2">
+                                            <div className="pt-1">
                                                 <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_image', 'Gambar Varian')}</label>
                                                 <div className="flex items-center gap-3">
                                                     {variant.imagePreview && (
@@ -572,7 +578,8 @@ export default function ProductVariantsSection({
                                                                 <Trash2 className="h-4 w-4" />
                                                             </button>
 
-                                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pr-8">
+                                                            {/* Sub-Variant Fields */}
+                                                            <div className="space-y-3 pr-8">
                                                                 {/* Sub-Variant Type Selector */}
                                                                 <div>
                                                                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_type', 'Tipe Sub-Varian')}</label>
@@ -612,7 +619,7 @@ export default function ProductVariantsSection({
                                                                                 />
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="space-y-1">
+                                                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                                                                 <div className="space-y-0.5">
                                                                                     <span className="text-[8px] font-bold text-slate-400">Indonesia</span>
                                                                                     <input
@@ -650,7 +657,7 @@ export default function ProductVariantsSection({
                                                                 </div>
 
                                                                 {/* Sub-Variant Value Input */}
-                                                                <div className="space-y-2">
+                                                                <div className="space-y-1.5">
                                                                     <label className="block text-[10px] font-bold uppercase text-slate-500">
                                                                         {t('backoffice.product.form.sub_variant_value', 'Nilai')}
                                                                     </label>
@@ -678,7 +685,7 @@ export default function ProductVariantsSection({
                                                                             )}
                                                                         </div>
                                                                     ) : (
-                                                                        <>
+                                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                                                             {/* Indonesia */}
                                                                             <div className="space-y-0.5">
                                                                                 <span className="text-[9px] font-bold text-slate-400">Indonesia</span>
@@ -718,10 +725,8 @@ export default function ProductVariantsSection({
                                                                                 <span className="text-[9px] font-bold text-slate-400">Arab (العربية)</span>
                                                                                 <input
                                                                                     type="text"
-                                                                                    dir="rtl"
-                                                                                    value={subVar.name_translations?.arabic ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', e.target.value)}
-                                                                                    placeholder="مثal: ٢٥٠ مل، فراولة"
+                                                                                                                                  onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', e.target.value)}
+                                                                                    placeholder="مثال: ٢٥٠ مل, فراولة"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
                                                                                 {getVariantError(vIdx, svIdx, 'name_translations.arabic') && (
@@ -730,77 +735,78 @@ export default function ProductVariantsSection({
                                                                                     </p>
                                                                                 )}
                                                                             </div>
-                                                                        </>
+                                                                        </div>
                                                                     )}
                                                                 </div>
 
-                                                                {/* Sub-Variant Unit Selector (Only if type is 'Ukuran') */}
-                                                                {subVar.type === 'Ukuran' ? (
+                                                                {/* Sub-Variant SKU, Price, and Unit Row */}
+                                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-2 border-t border-slate-100">
+                                                                    {/* SKU */}
                                                                     <div>
-                                                                        <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
-                                                                        <select
-                                                                            value={subVar.unit_id || ''}
-                                                                            onChange={e => updateSubVariantField(vIdx, svIdx, 'unit_id', e.target.value)}
+                                                                        <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={subVar.sku || ''}
+                                                                            onChange={e => updateSubVariantField(vIdx, svIdx, 'sku', e.target.value)}
+                                                                            placeholder="FYF-SVAR-01"
                                                                             className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
-                                                                        >
-                                                                            <option value="">{t('backoffice.product.form.select_unit', 'Pilih satuan...')}</option>
-                                                                            {units.map(u => (
-                                                                                <option key={u.id} value={u.id}>{u.name}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                        {getVariantError(vIdx, svIdx, 'unit_id') && (
+                                                                        />
+                                                                        {getVariantError(vIdx, svIdx, 'sku') && (
                                                                             <p className="mt-1 text-[10px] font-semibold text-rose-500">
-                                                                                {getVariantError(vIdx, svIdx, 'unit_id')}
+                                                                                {getVariantError(vIdx, svIdx, 'sku')}
                                                                             </p>
                                                                         )}
                                                                     </div>
-                                                                ) : (
-                                                                    <div className="flex items-end pb-1.5">
-                                                                        <span className="text-[10px] text-slate-400 italic">{t('backoffice.product.form.no_unit_needed', 'Tidak memerlukan satuan')}</span>
+
+                                                                    {/* Price */}
+                                                                    <div>
+                                                                        <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">
+                                                                            {t('backoffice.product.th_base_price', 'Harga Dasar (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
+                                                                        </label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={formatPriceInput(subVar.price)}
+                                                                            onChange={e => updateSubVariantField(vIdx, svIdx, 'price', parsePriceInput(e.target.value))}
+                                                                            placeholder={t('backoffice.product.form.variant_price_placeholder', 'Kosong = ikut harga induk')}
+                                                                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
+                                                                        />
+                                                                        {getVariantError(vIdx, svIdx, 'price') && (
+                                                                            <p className="mt-1 text-[10px] font-semibold text-rose-500">
+                                                                                {getVariantError(vIdx, svIdx, 'price')}
+                                                                            </p>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                            </div>
 
-                                                            {/* Sub-Variant SKU, Price, and Image */}
-                                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-2 border-t border-slate-100">
-                                                                {/* SKU */}
-                                                                <div>
-                                                                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</label>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={subVar.sku || ''}
-                                                                        onChange={e => updateSubVariantField(vIdx, svIdx, 'sku', e.target.value)}
-                                                                        placeholder="FYF-SVAR-01"
-                                                                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
-                                                                    />
-                                                                    {getVariantError(vIdx, svIdx, 'sku') && (
-                                                                        <p className="mt-1 text-[10px] font-semibold text-rose-500">
-                                                                            {getVariantError(vIdx, svIdx, 'sku')}
-                                                                        </p>
+                                                                    {/* Unit (Satuan) */}
+                                                                    {subVar.type === 'Ukuran' ? (
+                                                                        <div>
+                                                                            <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
+                                                                            <select
+                                                                                value={subVar.unit_id || ''}
+                                                                                onChange={e => updateSubVariantField(vIdx, svIdx, 'unit_id', e.target.value)}
+                                                                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
+                                                                            >
+                                                                                <option value="">{t('backoffice.product.form.select_unit', 'Pilih satuan...')}</option>
+                                                                                {units.map(u => (
+                                                                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                            {getVariantError(vIdx, svIdx, 'unit_id') && (
+                                                                                <p className="mt-1 text-[10px] font-semibold text-rose-500">
+                                                                                    {getVariantError(vIdx, svIdx, 'unit_id')}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex flex-col justify-end h-full pb-1.5">
+                                                                            <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500 opacity-0">Spacer</label>
+                                                                            <span className="text-[10px] text-slate-400 italic block">{t('backoffice.product.form.no_unit_needed', 'Tidak memerlukan satuan')}</span>
+                                                                        </div>
                                                                     )}
                                                                 </div>
 
-                                                                {/* Price */}
-                                                                <div>
-                                                                    <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">
-                                                                        {t('backoffice.product.th_base_price', 'Harga Dasar (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
-                                                                    </label>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={formatPriceInput(subVar.price)}
-                                                                        onChange={e => updateSubVariantField(vIdx, svIdx, 'price', parsePriceInput(e.target.value))}
-                                                                        placeholder={t('backoffice.product.form.variant_price_placeholder', 'Kosong = ikut harga induk')}
-                                                                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
-                                                                    />
-                                                                    {getVariantError(vIdx, svIdx, 'price') && (
-                                                                        <p className="mt-1 text-[10px] font-semibold text-rose-500">
-                                                                            {getVariantError(vIdx, svIdx, 'price')}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Image Upload */}
-                                                                <div>
+                                                                {/* Sub-Variant Image Upload (At the very bottom of fields) */}
+                                                                <div className="pt-2 border-t border-slate-100">
                                                                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_image', 'Gambar Sub-Varian')}</label>
                                                                     <div className="flex items-center gap-2">
                                                                         {subVar.imagePreview && (
