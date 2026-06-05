@@ -279,10 +279,10 @@ export default function CartPage() {
                                                 {formatPrice(subtotal)}
                                             </span>
                                         </div>
-                                        <button className="flex items-center justify-center w-full gap-2 px-5 py-4 mt-6 text-sm font-bold text-white transition-colors shadow-lg rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 shadow-blue-900/20 hover:from-blue-800 hover:to-blue-700">
+                                        <Link href="/checkout" className="flex items-center justify-center w-full gap-2 px-5 py-4 mt-6 text-sm font-bold text-white transition-colors shadow-lg rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 shadow-blue-900/20 hover:from-blue-800 hover:to-blue-700">
                                             <Check size={17} />
                                             {t("cart.checkout", "Checkout")}
-                                        </button>
+                                        </Link>
                                         <p className="mt-3 text-xs text-center text-zinc-400">
                                             {t("cart.checkout_note", "Checkout akan memakai item yang ada di keranjang ini.")}
                                         </p>

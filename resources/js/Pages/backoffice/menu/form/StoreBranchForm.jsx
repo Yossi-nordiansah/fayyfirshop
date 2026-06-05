@@ -1,8 +1,10 @@
+import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Plus, Store, X } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
+import axios from 'axios';
 
 export default function StoreBranchForm({ storeBranch = null, countries = [], status }) {
     const { t } = useLanguage();
@@ -206,6 +208,7 @@ export default function StoreBranchForm({ storeBranch = null, countries = [], st
                                         </p>
                                     )}
                                 </div>
+
 
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <FormField

@@ -31,15 +31,37 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
-        $request->session()->regenerate();
-
         $user = Auth::user();
-        if ($user && $user->role === 'customer') {
-            return redirect()->intended(url()->previous());
+
+        // 1. Jika login lewat Backoffice (backoffice.login.store)
+        if ($request->routeIs('backoffice.login.store')) {
+            if (!$user || !in_array($user->role, ['admin', 'super_admin'], true)) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'Halaman ini hanya untuk Administrator.',
+                ]);
+            }
+
+            $request->session()->regenerate();
+            return redirect()->intended(route('backoffice.dashboard', absolute: false));
         }
 
-        if ($request->routeIs('backoffice.login.store')) {
-            return redirect()->intended(route('backoffice.dashboard', absolute: false));
+        // 2. Jika login lewat customer frontend (route standar)
+        if ($user && in_array($user->role, ['admin', 'super_admin'], true)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Akun Administrator harus login melalui halaman Backoffice.',
+            ]);
+        }
+
+        $request->session()->regenerate();
+
+        if ($user && $user->role === 'customer') {
+            return redirect()->intended(url()->previous());
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

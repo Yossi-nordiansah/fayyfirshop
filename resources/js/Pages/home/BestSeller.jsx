@@ -3,6 +3,7 @@ import ProductCard from "@/Components/home/HomeCard";
 import SlickSlider from "@/Components/home/SlickSlider";
 import { Flame } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
+import { useIsMobile } from "@/Hooks/useIsMobile";
 
 // Import Slick Carousel CSS
 import "slick-carousel/slick/slick.css";
@@ -15,10 +16,11 @@ import "slick-carousel/slick/slick-theme.css";
  */
 const BestSeller = ({ products = [] }) => {
     const { t, locale } = useLanguage();
+    const isMobile = useIsMobile();
 
     if (products.length === 0) return null;
 
-    const useSlider = products.length > 4;
+    const useSlider = products.length > 4 || (isMobile && products.length > 1);
 
     return (
         <section className="bg-transparent mb-12 pt-3 pb-8 px-2 overflow-hidden">

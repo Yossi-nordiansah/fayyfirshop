@@ -14,8 +14,12 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use App\Traits\ResolvesBiteshipArea;
+
 class RegisteredUserController extends Controller
 {
+    use ResolvesBiteshipArea;
+
     public function create(): Response
     {
         return Inertia::render('register/Register');
@@ -50,6 +54,15 @@ class RegisteredUserController extends Controller
             $avatarPath = '/images/default-profile.png';
         }
 
+        // Auto resolve Biteship Area ID if country is Indonesia
+        $areaId = $this->resolveBiteshipAreaId(
+            $request->country,
+            $request->district,
+            $request->city,
+            $request->province,
+            $request->postal_code
+        );
+
         $user = User::create([
             'name' => $request->name,
             'avatar' => $avatarPath,
@@ -63,6 +76,7 @@ class RegisteredUserController extends Controller
             'receiver_name' => $request->receiver_name,
             'postal_code' => $request->postal_code,
             'password' => Hash::make($request->password),
+            'area_id' => $areaId,
         ]);
 
         event(new Registered($user));

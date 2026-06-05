@@ -169,7 +169,7 @@ export default function ProductForm({
                     has_sub_variants: hasSub,
                     sub_variants: [],
                     branch_stocks: hasSub ? [] : storeBranches.map(branch => {
-                        const existing = v.stocks?.find(s => s.store_branch_id === branch.id);
+                        const existing = v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                         return {
                             store_branch_id: branch.id,
                             branch_name: branch.name,
@@ -190,17 +190,14 @@ export default function ProductForm({
                 let subUnitId = '';
 
                 if (v.unit_id) {
+                    isUnitSize = true;
+                    subUnitId = String(v.unit_id);
                     const foundUnit = units.find(u => {
                         const name = u.name.toLowerCase();
                         return valIndo.toLowerCase().includes(name);
                     });
                     if (foundUnit) {
-                        isUnitSize = true;
-                        subUnitId = String(foundUnit.id);
                         parsedSize = valIndo.replace(new RegExp(foundUnit.name, 'i'), '').trim();
-                    } else if (/^\d+$/.test(valIndo.trim())) {
-                        isUnitSize = true;
-                        subUnitId = String(v.unit_id);
                     }
                 }
 
@@ -219,7 +216,7 @@ export default function ProductForm({
                     image: null,
                     imagePreview: v.image ? `/storage/${v.image}` : null,
                     branch_stocks: storeBranches.map(branch => {
-                        const existing = v.stocks?.find(s => s.store_branch_id === branch.id);
+                        const existing = v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                         return {
                             store_branch_id: branch.id,
                             branch_name: branch.name,
@@ -269,7 +266,7 @@ export default function ProductForm({
 
         // Standard stock (no-variant mode)
         branch_stocks: storeBranches.map(branch => {
-            const existing = initialStocks.find(s => s.store_branch_id === branch.id);
+            const existing = initialStocks.find(s => Number(s.store_branch_id) === Number(branch.id));
             return {
                 store_branch_id: branch.id,
                 branch_name: branch.name,
@@ -386,10 +383,10 @@ export default function ProductForm({
         const updated = [...form.data.variants];
         updated[vIdx] = {
             ...updated[vIdx],
-            type_translations: { 
-                indonesia: '', english: '', arabic: '', 
-                ...updated[vIdx].type_translations, 
-                [langKey]: value 
+            type_translations: {
+                indonesia: '', english: '', arabic: '',
+                ...updated[vIdx].type_translations,
+                [langKey]: value
             },
         };
         form.setData('variants', updated);
@@ -451,10 +448,10 @@ export default function ProductForm({
         updated[vIdx].sub_variants = updated[vIdx].sub_variants.map((sv, i) =>
             i === svIdx ? {
                 ...sv,
-                type_translations: { 
-                    indonesia: '', english: '', arabic: '', 
-                    ...sv.type_translations, 
-                    [langKey]: value 
+                type_translations: {
+                    indonesia: '', english: '', arabic: '',
+                    ...sv.type_translations,
+                    [langKey]: value
                 }
             } : sv
         );
@@ -660,31 +657,31 @@ export default function ProductForm({
 
             <div className="flex min-h-screen">
                 <Sidebar />
-                <main className="flex min-w-0 flex-1 flex-col">
+                <main className="flex flex-col flex-1 min-w-0">
                     <Navbar />
-                    <div className="flex-1 space-y-6 p-6 lg:p-8">
+                    <div className="flex-1 p-6 space-y-6 lg:p-8">
 
                         {/* ── Header ─────────────────────────────────────── */}
-                        <section className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
+                        <section className="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-slate-200">
                             <div>
-                                <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{t('backoffice.product.suite', 'Fayyfir Inventory Suite')}</span>
+                                <span className="text-xs font-bold tracking-widest uppercase text-amber-600">{t('backoffice.product.suite', 'Fayyfir Inventory Suite')}</span>
                                 <h1 className="mt-1 text-3xl font-black tracking-tight text-blue-950 lg:text-4xl">
                                     {isEditing ? t('backoffice.product.form.title_edit', 'Edit Produk') : t('backoffice.product.form.title_create', 'Tambah Produk')}
                                 </h1>
                             </div>
                             <Link
                                 href={route('backoffice.products.index')}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-blue-950 active:scale-95"
+                                className="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold transition bg-white border shadow-sm rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-950 active:scale-95"
                             >
-                                <ArrowLeft className="h-4 w-4" /> {t('backoffice.product.form.btn_back', 'Kembali')}
+                                <ArrowLeft className="w-4 h-4" /> {t('backoffice.product.form.btn_back', 'Kembali')}
                             </Link>
                         </section>
 
                         {/* ── Language Tabs ────────────────────────────── */}
-                        <div className="flex items-center justify-between rounded-2xl border border-blue-100 bg-blue-50/50 p-3 shadow-inner">
+                        <div className="flex items-center justify-between p-3 border border-blue-100 shadow-inner rounded-2xl bg-blue-50/50">
                             <div className="flex items-center gap-2 text-blue-950">
-                                <Globe className="h-4 w-4 text-amber-500" />
-                                <span className="text-xs font-bold uppercase tracking-wider">{t('backoffice.product.form.lang_title', 'Bahasa Konten')}</span>
+                                <Globe className="w-4 h-4 text-amber-500" />
+                                <span className="text-xs font-bold tracking-wider uppercase">{t('backoffice.product.form.lang_title', 'Bahasa Konten')}</span>
                             </div>
                             <div className="inline-flex gap-2 rounded-xl bg-white p-1.5 shadow-sm">
                                 {languageTabs.map(tab => {
@@ -706,7 +703,7 @@ export default function ProductForm({
                                             <span className="flex items-center gap-2">
                                                 {label}
                                                 {isLangMissing(tab.id) && (
-                                                    <span className="h-2 w-2 rounded-full bg-rose-500 ring-4 ring-rose-500/20" />
+                                                    <span className="w-2 h-2 rounded-full bg-rose-500 ring-4 ring-rose-500/20" />
                                                 )}
                                             </span>
                                         </button>
@@ -772,7 +769,7 @@ export default function ProductForm({
                             </div>
 
                             {/* RIGHT COLUMN (Sticky Sidebar Layout) */}
-                            <div className="space-y-3 lg:sticky lg:top-6 self-start">
+                            <div className="self-start space-y-3 lg:sticky lg:top-6">
                                 <ProductClassificationSection
                                     data={form.data}
                                     setData={form.setData}

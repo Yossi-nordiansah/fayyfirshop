@@ -6,6 +6,8 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreBranchController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -74,6 +76,9 @@ Route::prefix('backoffice')->group(function () {
 });
 
 Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
+    Route::get('/biteship/search-area', [StoreBranchController::class, 'searchArea'])
+        ->name('backoffice.biteship.search-area');
+
     Route::get('/dashboard', function () {
         return Inertia::render('backoffice/dashboard');
     })->name('backoffice.dashboard');
@@ -113,9 +118,9 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::delete('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'destroy'])
         ->name('backoffice.product-categories.destroy');
 
-    Route::get('/orders', function () {
-        return Inertia::render('backoffice/menu/Orders');
-    })->name('backoffice.orders');
+    Route::get('/orders', [OrderController::class, 'index'])->name('backoffice.orders');
+    Route::patch('/orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('backoffice.orders.update-status');
+    Route::post('/orders/{order}/biteship-shipment', [OrderController::class, 'createBiteshipShipment'])->name('backoffice.orders.biteship-shipment');
 
     Route::get('/review', function () {
         return Inertia::render('backoffice/menu/Reviews');
@@ -154,6 +159,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout/search-area', [StoreBranchController::class, 'searchArea'])->name('checkout.search-area');
+    Route::post('/checkout/check-stock', [CheckoutController::class, 'checkStock'])->name('checkout.check-stock');
+    Route::post('/checkout/rates', [CheckoutController::class, 'getRates'])->name('checkout.rates');
+    Route::post('/checkout/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.place-order');
+    Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');
 });
 
 require __DIR__ . '/auth.php';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     Star,
     ShoppingCart,
@@ -19,6 +19,7 @@ import Navbar from "@/Components/Navbar";
 import Footer from "@/Components/Footer";
 import products from "../../data-source/data_products_30.json";
 import { useLanguage } from "@/Contexts/LanguageContext"; // 1. Import LanguageContext Proyek
+import LoginModal from "@/Components/LoginModal";
 
 const resolveProductImage = (img) => {
     if (!img) return "/images/placeholder.jpg";
@@ -39,8 +40,24 @@ const resolveProductImage = (img) => {
     return `/storage/${img}`;
 };
 
+const formatFullVariantName = (v, lang) => {
+    if (!v) return '';
+    let name = v.name_translations?.[lang] || v.name_translations?.indonesia || v.name || '';
+    if (v.unit) {
+        const unitName = typeof v.unit === 'object' ? v.unit.name : v.unit;
+        if (unitName && !name.toLowerCase().includes(unitName.toLowerCase())) {
+            if (name.includes('(') && name.includes(')')) {
+                return name.replace(')', ` ${unitName})`);
+            }
+            return `${name} ${unitName}`;
+        }
+    }
+    return name;
+};
+
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
+    const { auth } = usePage().props;
 
     const product =
         initialProduct ||
@@ -95,6 +112,21 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         if (!isDbProduct || !product.variants || product.variants.length === 0) return [];
 
         const parentGroups = {};
+
+        const getVariantNameWithUnit = (name, unitObj, lang) => {
+            if (!name) return "";
+            if (!unitObj) return name;
+            let unitName = "";
+            if (typeof unitObj === "object") {
+                unitName = unitObj.name_translations?.[lang] || unitObj.name || "";
+            } else {
+                unitName = String(unitObj);
+            }
+            if (unitName && !name.toLowerCase().includes(unitName.toLowerCase())) {
+                return `${name} ${unitName}`;
+            }
+            return name;
+        };
 
         product.variants.forEach(v => {
             // Safely parse name_translations
@@ -178,9 +210,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                     image: v.image,
                     stock: hasSub ? 0 : (v.stock || 0),
                     name_translations: {
-                        indonesia: parentNameIndo,
-                        english: parentNameEng,
-                        arabic: parentNameAra,
+                        indonesia: getVariantNameWithUnit(parentNameIndo, v.unit, 'indonesia'),
+                        english: getVariantNameWithUnit(parentNameEng, v.unit, 'english'),
+                        arabic: getVariantNameWithUnit(parentNameAra, v.unit, 'arabic'),
                     },
                     has_sub_variants: hasSub,
                     sub_variants: [],
@@ -202,9 +234,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         arabic: subType || 'مخصص',
                     },
                     name_translations: {
-                        indonesia: valIndo,
-                        english: valEng,
-                        arabic: valAra,
+                        indonesia: getVariantNameWithUnit(valIndo, v.unit, 'indonesia'),
+                        english: getVariantNameWithUnit(valEng, v.unit, 'english'),
+                        arabic: getVariantNameWithUnit(valAra, v.unit, 'arabic'),
                     },
                     unit: v.unit,
                     sku: v.sku || '',
@@ -260,6 +292,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const [activeImage, setActiveImage] = useState(allImages[0] || null);
     const [quantity, setQuantity] = useState(1);
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [isPendingBuyNow, setIsPendingBuyNow] = useState(false);
+
 
     // Sinkronisasi state ketika produk / locale / image pool berubah
     useEffect(() => {
@@ -412,7 +447,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             variantId: activeVariant?.id || null,
             color: isDbProduct ? null : selectedColor,
             size: isDbProduct
-                ? (activeVariant?.name_translations?.[locale] || activeVariant?.name)
+                ? formatFullVariantName(activeVariant, locale)
                 : (selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null),
             price: currentPrice,
             stock: currentStock,
@@ -447,6 +482,59 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         setCartNotice(t("cart.added", "Produk ditambahkan ke keranjang"));
         setTimeout(() => setCartNotice(""), 2200);
     };
+
+    const handleBuyNow = () => {
+        if (!canBuy) return;
+
+        if (!auth?.user) {
+            setIsPendingBuyNow(true);
+            setIsLoginModalOpen(true);
+            return;
+        }
+
+
+        // Resolusi nama kategori & subkategori yang kompatibel
+        const categoryNameResolved = typeof product.category === 'object' && product.category !== null
+            ? (product.category.name_translations?.[locale] || product.category.name)
+            : product.category || 'Perfume';
+
+        const subCategoryNameResolved = typeof product.subCategory === 'object' && product.subCategory !== null
+            ? (product.subCategory.name_translations?.[locale] || product.subCategory.name)
+            : typeof product.sub_category === 'object' && product.sub_category !== null
+                ? (product.sub_category.name_translations?.[locale] || product.sub_category.name)
+                : product.subCategory || '';
+
+        const cartItem = {
+            id: product.id,
+            slug: product.slug,
+            title: displayName,
+            category: categoryNameResolved,
+            subCategory: subCategoryNameResolved,
+            image: resolveProductImage(activeImage || allImages[0] || ""),
+            variantId: activeVariant?.id || null,
+            color: isDbProduct ? null : selectedColor,
+            size: isDbProduct
+                ? formatFullVariantName(activeVariant, locale)
+                : (selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null),
+            price: currentPrice,
+            stock: currentStock,
+            quantity,
+            sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
+        };
+
+        // Simpan hanya item ini ke cart agar checkout hanya memproses produk ini saja
+        localStorage.setItem("fayyfir_cart", JSON.stringify([cartItem]));
+        window.dispatchEvent(new Event("fayyfir-cart-updated"));
+
+        router.visit('/checkout');
+    };
+
+    useEffect(() => {
+        if (auth?.user && isPendingBuyNow) {
+            setIsPendingBuyNow(false);
+            handleBuyNow();
+        }
+    }, [auth?.user, isPendingBuyNow]);
 
     // Helper resolusi teks kategori & subkategori reaktif
     const categoryName = React.useMemo(() => {
@@ -765,7 +853,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                     </h3>
                                                     {activeVariant && activeVariant.id !== currentParent.id && (
                                                         <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                                                            {activeVariant.name_translations?.[locale] || activeVariant.name}
+                                                            {formatFullVariantName(activeVariant, locale)}
                                                         </span>
                                                     )}
                                                 </div>
@@ -929,6 +1017,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
                                     disabled={!canBuy}
+                                    onClick={handleBuyNow}
                                     className="flex-[2] flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white font-bold text-sm transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <Check size={18} />
@@ -986,6 +1075,15 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             </div>
 
             <Footer />
+            <LoginModal
+                isOpen={isLoginModalOpen}
+                onClose={() => {
+                    setIsLoginModalOpen(false);
+                    setIsPendingBuyNow(false);
+                }}
+                t={t}
+            />
+
         </MainLayout>
     );
 }

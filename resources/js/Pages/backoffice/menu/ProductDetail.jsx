@@ -140,7 +140,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                     sub_variants: [],
                     _subTypeTranslations: subTypeTranslations,
                     branch_stocks: hasSub ? [] : storeBranches.map(branch => {
-                        const existing = v.branch_stocks?.find(s => s.store_branch_id === branch.id) || v.stocks?.find(s => s.store_branch_id === branch.id);
+                        const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                         return {
                             store_branch_id: branch.id,
                             branch_name: branch.name,
@@ -161,17 +161,14 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                 let subUnitId = '';
 
                 if (v.unit_id) {
+                    isUnitSize = true;
+                    subUnitId = String(v.unit_id);
                     const foundUnit = units.find(u => {
                         const name = u.name.toLowerCase();
                         return valIndo.toLowerCase().includes(name);
                     });
                     if (foundUnit) {
-                        isUnitSize = true;
-                        subUnitId = String(foundUnit.id);
                         parsedSize = valIndo.replace(new RegExp(foundUnit.name, 'i'), '').trim();
-                    } else if (/^\d+$/.test(valIndo.trim())) {
-                        isUnitSize = true;
-                        subUnitId = String(v.unit_id);
                     }
                 }
 
@@ -194,7 +191,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                     image: v.image,
                     imagePreview: v.image ? `/storage/${v.image}` : null,
                     branch_stocks: storeBranches.map(branch => {
-                        const existing = v.branch_stocks?.find(s => s.store_branch_id === branch.id) || v.stocks?.find(s => s.store_branch_id === branch.id);
+                        const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                         return {
                             store_branch_id: branch.id,
                             branch_name: branch.name,
@@ -236,17 +233,17 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-950 selection:text-white">
             <Head title={`${product.name_translations?.[activeLang] || product.title} — ${t('backoffice.product.title.detail', 'Detail Produk')}`} />
- 
+
             <div className="flex min-h-screen">
                 <Sidebar />
-                <main className="flex min-w-0 flex-1 flex-col">
+                <main className="flex flex-col flex-1 min-w-0">
                     <Navbar />
-                    <div className="flex-1 space-y-6 p-6 lg:p-8">
- 
+                    <div className="flex-1 p-6 space-y-6 lg:p-8">
+
                         {/* ── Header ─────────────────────────────────────── */}
-                        <section className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
+                        <section className="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-slate-200">
                             <div>
-                                <span className="text-xs font-bold uppercase tracking-widest text-amber-600">{t('backoffice.product.detail.catalog_hub', 'Fayyfir Catalog Hub')}</span>
+                                <span className="text-xs font-bold tracking-widest uppercase text-amber-600">{t('backoffice.product.detail.catalog_hub', 'Fayyfir Catalog Hub')}</span>
                                 <h1 className="mt-1 text-3xl font-black tracking-tight text-blue-950 lg:text-4xl">
                                     {t('backoffice.product.title.modal', 'Detail Informasi Produk')}
                                 </h1>
@@ -256,13 +253,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                     href={route('backoffice.products.index')}
                                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-blue-950 active:scale-95"
                                 >
-                                    <ArrowLeft className="h-4 w-4" /> {t('backoffice.product.form.btn_back', 'Kembali')}
+                                    <ArrowLeft className="w-4 h-4" /> {t('backoffice.product.form.btn_back', 'Kembali')}
                                 </Link>
                                 <Link
                                     href={route('backoffice.products.edit', product.slug)}
                                     className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-950 to-blue-900 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-950/10 transition hover:opacity-95 active:scale-95"
                                 >
-                                    <Edit3 className="h-4 w-4 text-amber-400" /> {t('backoffice.product.tooltip_edit', 'Edit Produk')}
+                                    <Edit3 className="w-4 h-4 text-amber-400" /> {t('backoffice.product.tooltip_edit', 'Edit Produk')}
                                 </Link>
                             </div>
                         </section>
@@ -273,13 +270,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                             {/* LEFT COLUMN: Gallery & Main Info */}
                             <div className="space-y-6 lg:col-span-1">
                                 {/* Image Viewer Card */}
-                                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                                    <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center">
+                                <div className="p-5 bg-white border shadow-sm rounded-2xl border-slate-100">
+                                    <div className="relative flex items-center justify-center overflow-hidden border aspect-square rounded-xl border-slate-100 bg-slate-50">
                                         {activeImageSrc ? (
                                             <img
                                                 src={activeImageSrc}
                                                 alt="product primary"
-                                                className="h-full w-full object-cover transition-all duration-300"
+                                                className="object-cover w-full h-full transition-all duration-300"
                                             />
                                         ) : (
                                             <div className="flex flex-col items-center gap-2 text-slate-400">
@@ -288,10 +285,10 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                             </div>
                                         )}
                                     </div>
- 
+
                                     {/* Thumbnails */}
                                     {galleryImages.length > 1 && (
-                                        <div className="mt-4 flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 mt-4">
                                             {galleryImages.map((img, idx) => (
                                                 <button
                                                     key={img.id}
@@ -305,21 +302,21 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                     <img
                                                         src={`/storage/${img.image_path}`}
                                                         alt="thumbnail"
-                                                        className="h-full w-full object-cover"
+                                                        className="object-cover w-full h-full"
                                                     />
                                                 </button>
                                             ))}
                                         </div>
                                     )}
                                 </div>
- 
+
                                 {/* Financials & SKU Badge */}
-                                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+                                <div className="p-5 space-y-4 bg-white border shadow-sm rounded-2xl border-slate-100">
                                     <div>
                                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.modal.centralized_price', 'Harga Basis Terpusat')}</span>
                                         <span className="text-2xl font-black text-blue-950">{formatIDR(product.price)}</span>
                                     </div>
-                                    <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                                         <div>
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.th_sku', 'SKU Induk')}</span>
                                             <span className="font-mono text-sm font-bold text-slate-700">{product.sku}</span>
@@ -337,9 +334,9 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                             {/* RIGHT COLUMN: Localization & Description & Variants */}
                             <div className="space-y-6 lg:col-span-2">
                                 {/* Localization Section */}
-                                <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-5">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                        <h3 className="text-sm font-black uppercase tracking-wider text-blue-950">{t('backoffice.product.form.lang_title', 'Bahasa Konten')}</h3>
+                                <div className="p-6 space-y-5 bg-white border shadow-sm rounded-2xl border-slate-100">
+                                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                        <h3 className="text-sm font-black tracking-wider uppercase text-blue-950">{t('backoffice.product.form.lang_title', 'Bahasa Konten')}</h3>
                                     </div>
 
                                     {/* Lang switcher buttons */}
@@ -368,8 +365,8 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                     {/* Name & Description translations */}
                                     <div className="space-y-4">
                                         {!product.name_translations?.[activeLang] && !product.description_translations?.[activeLang] ? (
-                                            <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4 text-xs font-semibold text-amber-700 flex items-center gap-2">
-                                                <ShieldAlert className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                            <div className="flex items-center gap-2 p-4 text-xs font-semibold border rounded-xl border-amber-100 bg-amber-50/50 text-amber-700">
+                                                <ShieldAlert className="flex-shrink-0 w-4 h-4 text-amber-500" />
                                                 <span>{t('backoffice.product.detail.no_lang_warn', '(belum ada bahasa {lang} di product ini)').replace('{lang}', activeLangLabel)}</span>
                                             </div>
                                         ) : (
@@ -378,17 +375,17 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('backoffice.product.name', 'Nama Produk')} ({activeLangLabel})</span>
                                                     <h2 className="text-xl font-extrabold text-blue-950" dir={activeLang === 'arabic' ? 'rtl' : 'ltr'}>
                                                         {product.name_translations?.[activeLang] || (
-                                                            <span className="text-slate-400 font-normal text-xs italic">
+                                                            <span className="text-xs italic font-normal text-slate-400">
                                                                 {t('backoffice.product.detail.no_lang_warn', '(belum ada bahasa {lang} di product ini)').replace('{lang}', activeLangLabel)}
                                                             </span>
                                                         )}
                                                     </h2>
                                                 </div>
-                                                <div className="border-t border-slate-100 pt-3">
+                                                <div className="pt-3 border-t border-slate-100">
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('backoffice.product.desc', 'Deskripsi Produk')} ({activeLangLabel})</span>
-                                                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line" dir={activeLang === 'arabic' ? 'rtl' : 'ltr'}>
+                                                    <p className="text-sm leading-relaxed whitespace-pre-line text-slate-600" dir={activeLang === 'arabic' ? 'rtl' : 'ltr'}>
                                                         {product.description_translations?.[activeLang] || (
-                                                            <span className="text-slate-400 text-xs italic">
+                                                            <span className="text-xs italic text-slate-400">
                                                                 {t('backoffice.product.detail.no_lang_warn', '(belum ada bahasa {lang} di product ini)').replace('{lang}', activeLangLabel)}
                                                             </span>
                                                         )}
@@ -400,228 +397,228 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                 </div>
 
                                 {/* Category Classification */}
-                                <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                                <div className="p-6 bg-white border shadow-sm rounded-2xl border-slate-100">
                                     <h3 className="text-sm font-black uppercase tracking-wider text-blue-950 mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                                        <Tag className="h-4 w-4 text-amber-500" /> {t('backoffice.product.detail.category_classification', 'Kategori & Klasifikasi')}
+                                        <Tag className="w-4 h-4 text-amber-500" /> {t('backoffice.product.detail.category_classification', 'Kategori & Klasifikasi')}
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                                        <div className="p-4 border rounded-xl border-slate-100 bg-slate-50/50">
                                             <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.main_category', 'Kategori Utama')}</span>
                                             <span className="text-sm font-bold text-blue-950">{getTranslation(product.category?.name_translations, activeLang, product.category?.name || t('backoffice.product.uncategorized', 'Tanpa Kategori'))}</span>
                                         </div>
-                                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                                        <div className="p-4 border rounded-xl border-slate-100 bg-slate-50/50">
                                             <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.sub_category', 'Sub Kategori')}</span>
                                             <span className="text-sm font-bold text-blue-950">{getTranslation(product.sub_category?.name_translations, activeLang, product.sub_category?.name || t('backoffice.product.modal.no_subcategory', 'Tanpa Sub Kategori'))}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                            <h3 className="text-base font-black text-blue-950 mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
-                                <Layers className="h-5 w-5 text-amber-500" />
-                                {t('backoffice.product.detail.variant_composition', 'Komposisi Varian & Alokasi Inventaris Cabang')}
-                            </h3>
- 
-                            {/* Option 1: No variants */}
-                            {groupedVariants.length === 0 ? (
-                                <div className="space-y-4">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                                        {t('backoffice.product.detail.single_mode_label', '💡 Produk Tunggal (Tanpa Varian)')}
-                                    </span>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                        {storeBranches.map(branch => {
-                                            const stockVal = product.branch_stocks?.find(s => s.store_branch_id === branch.id)?.stock ?? 0;
-                                            return (
-                                                <div key={branch.id} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-center">
-                                                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 block mb-1">
-                                                        {branch.country_code ? branch.country_code.toUpperCase() : branch.name}
-                                                    </span>
-                                                    <span className="text-lg font-extrabold text-blue-950">{stockVal} Pcs</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                /* Option 2: Has variants list */
-                                <div className="space-y-6">
-                                    {groupedVariants.map((variant, vIdx) => {
-                                        return (
-                                            <div
-                                                key={`${variant.type}-${vIdx}`}
-                                                className="rounded-2xl border border-slate-100 bg-slate-50/30 p-5 space-y-4"
-                                            >
-                                                {/* Variant Header Card */}
-                                                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-950 text-[10px] font-black text-white">
-                                                            #{vIdx + 1}
-                                                        </span>
-                                                        <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-950">
-                                                            {variant.type_translations?.[activeLang] || getTranslatedType(variant.type, t)}
-                                                        </span>
-                                                        <span className="text-sm font-bold text-blue-950">
-                                                            {variant.name_translations?.[activeLang] || '-'}
-                                                        </span>
-                                                    </div>
- 
-                                                    {/* Segmented Control Display */}
-                                                    <span className="rounded-lg bg-white border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                                        {variant.has_sub_variants ? t('backoffice.product.form.has_sub_variant', 'Dengan Sub-Varian') : t('backoffice.product.form.no_sub_variant', 'Tanpa Sub-Varian')}
-                                                    </span>
-                                                </div>
- 
-                                                {/* Variant layout rendering */}
-                                                {!variant.has_sub_variants ? (
-                                                    /* Layout A: Tanpa Sub Variant */
-                                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                                        {/* Image */}
-                                                        <div className="sm:col-span-1 flex items-center gap-3">
-                                                            <div
-                                                                className={`h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-white flex items-center justify-center flex-shrink-0 ${variant.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
-                                                                onClick={() => variant.imagePreview && setPreviewImage(variant.imagePreview)}
-                                                            >
-                                                                {variant.imagePreview ? (
-                                                                    <img src={variant.imagePreview} alt="variant" className="h-full w-full object-cover" />
-                                                                ) : (
-                                                                    <Archive className="h-6 w-6 text-slate-300 stroke-[1.5]" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.variant_sku', 'SKU Varian')}</span>
-                                                                <span className="font-mono text-xs font-bold text-slate-800">{variant.sku || '-'}</span>
-                                                            </div>
+                                <div className="p-6 bg-white border shadow-sm rounded-2xl border-slate-100">
+                                    <h3 className="flex items-center gap-2 pb-2 mb-4 text-base font-black border-b text-blue-950 border-slate-100">
+                                        <Layers className="w-5 h-5 text-amber-500" />
+                                        {t('backoffice.product.detail.variant_composition', 'Komposisi Varian & Alokasi Inventaris Cabang')}
+                                    </h3>
+
+                                    {/* Option 1: No variants */}
+                                    {groupedVariants.length === 0 ? (
+                                        <div className="space-y-4">
+                                            <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700">
+                                                {t('backoffice.product.detail.single_mode_label', '💡 Produk Tunggal (Tanpa Varian)')}
+                                            </span>
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                                {storeBranches.map(branch => {
+                                                    const stockVal = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id))?.stock ?? 0;
+                                                    return (
+                                                        <div key={branch.id} className="p-4 text-center border rounded-xl border-slate-100 bg-slate-50/50">
+                                                            <span className="block mb-1 text-xs font-black tracking-wider uppercase text-slate-500">
+                                                                {branch.country_code ? branch.country_code.toUpperCase() : branch.name}
+                                                            </span>
+                                                            <span className="text-lg font-extrabold text-blue-950">{stockVal} Pcs</span>
                                                         </div>
- 
-                                                        {/* Unit & Price */}
-                                                        <div className="sm:col-span-1 grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.detail.price_label', 'Harga')}</span>
-                                                                <span className="text-xs font-extrabold text-blue-950">
-                                                                    {variant.price ? formatIDR(variant.price) : formatIDR(product.price)}
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Option 2: Has variants list */
+                                        <div className="space-y-6">
+                                            {groupedVariants.map((variant, vIdx) => {
+                                                return (
+                                                    <div
+                                                        key={`${variant.type}-${vIdx}`}
+                                                        className="p-5 space-y-4 border rounded-2xl border-slate-100 bg-slate-50/30"
+                                                    >
+                                                        {/* Variant Header Card */}
+                                                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-950 text-[10px] font-black text-white">
+                                                                    #{vIdx + 1}
+                                                                </span>
+                                                                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-950">
+                                                                    {variant.type_translations?.[activeLang] || getTranslatedType(variant.type, t)}
+                                                                </span>
+                                                                <span className="text-sm font-bold text-blue-950">
+                                                                    {variant.name_translations?.[activeLang] || '-'}
                                                                 </span>
                                                             </div>
-                                                            <div>
-                                                                <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</span>
-                                                                <span className="text-xs font-bold text-slate-700">
-                                                                    {units.find(u => String(u.id) === String(variant.unit_id))?.name || '-'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
- 
-                                                        {/* Branch stock values */}
-                                                        <div className="sm:col-span-1">
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</span>
-                                                            <div className="grid grid-cols-3 gap-2">
-                                                                {variant.branch_stocks.map(bStock => (
-                                                                    <div key={bStock.store_branch_id} className="rounded-lg border border-slate-100 bg-white p-1 text-center">
-                                                                        <span className="text-[9px] font-black uppercase text-slate-400 block">
-                                                                            {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
-                                                                        </span>
-                                                                        <span className="text-xs font-extrabold text-blue-950">{bStock.stock}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    /* Layout B: Dengan Sub Variant */
-                                                    <div className="space-y-4">
-                                                        {/* Parent image detail */}
-                                                        <div className="flex items-center gap-3">
-                                                            <div
-                                                                className={`h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-white flex items-center justify-center flex-shrink-0 ${variant.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
-                                                                onClick={() => variant.imagePreview && setPreviewImage(variant.imagePreview)}
-                                                            >
-                                                                {variant.imagePreview ? (
-                                                                    <img src={variant.imagePreview} alt="parent variant" className="h-full w-full object-cover" />
-                                                                ) : (
-                                                                    <Archive className="h-5 w-5 text-slate-300 stroke-[1.5]" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] font-black uppercase text-slate-400 block">{t('backoffice.product.detail.parent_variant_image', 'Gambar Induk Varian')}</span>
-                                                                <span className="text-xs text-slate-500 italic">{t('backoffice.product.detail.parent_variant_image_hint', 'Sub-varian terkelompok di bawah warna/varian induk ini.')}</span>
-                                                            </div>
+
+                                                            {/* Segmented Control Display */}
+                                                            <span className="rounded-lg bg-white border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                                {variant.has_sub_variants ? t('backoffice.product.form.has_sub_variant', 'Dengan Sub-Varian') : t('backoffice.product.form.no_sub_variant', 'Tanpa Sub-Varian')}
+                                                            </span>
                                                         </div>
 
-                                                        {/* Sub-variant matrix tables */}
-                                                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
-                                                            <div className="overflow-x-auto">
-                                                                <table className="w-full border-collapse text-left text-xs text-slate-600">
-                                                                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                                                                        <tr>
-                                                                            <th className="px-4 py-2">{t('backoffice.product.detail.table.image', 'Gambar')}</th>
-                                                                            <th className="px-4 py-2">{t('backoffice.product.detail.table.type_value', 'Tipe / Nilai')}</th>
-                                                                            <th className="px-4 py-2">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</th>
-                                                                            <th className="px-4 py-2">{t('backoffice.product.form.variant_price', 'Harga (IDR)')}</th>
-                                                                            <th className="px-4 py-2">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</th>
-                                                                            <th className="px-4 py-2 text-center">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody className="divide-y divide-slate-100 font-medium">
-                                                                        {variant.sub_variants.map((sv, svIdx) => {
-                                                                            return (
-                                                                                <tr key={sv.id || svIdx} className="hover:bg-slate-50/50 transition">
-                                                                                    <td className="px-4 py-2.5">
-                                                                                        <div
-                                                                                            className={`h-8 w-8 overflow-hidden rounded border border-slate-100 bg-slate-50 flex items-center justify-center ${sv.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
-                                                                                            onClick={() => sv.imagePreview && setPreviewImage(sv.imagePreview)}
-                                                                                        >
-                                                                                            {sv.imagePreview ? (
-                                                                                                <img src={sv.imagePreview} alt="sub variant" className="h-full w-full object-cover" />
-                                                                                            ) : (
-                                                                                                <Package className="h-4 w-4 text-slate-300" />
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2.5">
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className="font-bold text-blue-950">{sv.name_translations?.[activeLang] || '-'}</span>
-                                                                                            <span className="text-[9px] text-slate-400">{sv.type_translations?.[activeLang] || getTranslatedType(sv.type, t)}</span>
-                                                                                        </div>
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2.5 font-mono font-bold text-slate-700">
-                                                                                        {sv.sku || '-'}
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2.5 font-bold text-slate-800">
-                                                                                        {sv.price ? formatIDR(sv.price) : formatIDR(product.price)}
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2.5 text-slate-600">
-                                                                                        {units.find(u => String(u.id) === String(sv.unit_id))?.name || '-'}
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2.5">
-                                                                                        <div className="flex justify-center gap-1.5">
-                                                                                            {sv.branch_stocks.map(bStock => (
-                                                                                                <div key={bStock.store_branch_id} className="rounded border border-slate-100 bg-slate-50/50 px-2 py-0.5 text-center min-w-[40px]">
-                                                                                                    <span className="text-[8px] font-black uppercase text-slate-400 block leading-none mb-0.5">
-                                                                                                        {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
-                                                                                                    </span>
-                                                                                                    <span className="text-[10px] font-black text-blue-950 leading-none">{bStock.stock}</span>
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    </td>
-                                                                                </tr>
-                                                                            );
-                                                                        })}
-                                                                    </tbody>
-                                                                </table>
+                                                        {/* Variant layout rendering */}
+                                                        {!variant.has_sub_variants ? (
+                                                            /* Layout A: Tanpa Sub Variant */
+                                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                                                {/* Image */}
+                                                                <div className="flex items-center gap-3 sm:col-span-1">
+                                                                    <div
+                                                                        className={`h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-white flex items-center justify-center flex-shrink-0 ${variant.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
+                                                                        onClick={() => variant.imagePreview && setPreviewImage(variant.imagePreview)}
+                                                                    >
+                                                                        {variant.imagePreview ? (
+                                                                            <img src={variant.imagePreview} alt="variant" className="object-cover w-full h-full" />
+                                                                        ) : (
+                                                                            <Archive className="h-6 w-6 text-slate-300 stroke-[1.5]" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.variant_sku', 'SKU Varian')}</span>
+                                                                        <span className="font-mono text-xs font-bold text-slate-800">{variant.sku || '-'}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Unit & Price */}
+                                                                <div className="grid grid-cols-2 gap-2 sm:col-span-1">
+                                                                    <div>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.detail.price_label', 'Harga')}</span>
+                                                                        <span className="text-xs font-extrabold text-blue-950">
+                                                                            {variant.price ? formatIDR(variant.price) : formatIDR(product.price)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</span>
+                                                                        <span className="text-xs font-bold text-slate-700">
+                                                                            {units.find(u => String(u.id) === String(variant.unit_id))?.name || '-'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Branch stock values */}
+                                                                <div className="sm:col-span-1">
+                                                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</span>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        {variant.branch_stocks.map(bStock => (
+                                                                            <div key={bStock.store_branch_id} className="p-1 text-center bg-white border rounded-lg border-slate-100">
+                                                                                <span className="text-[9px] font-black uppercase text-slate-400 block">
+                                                                                    {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                                </span>
+                                                                                <span className="text-xs font-extrabold text-blue-950">{bStock.stock}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        ) : (
+                                                            /* Layout B: Dengan Sub Variant */
+                                                            <div className="space-y-4">
+                                                                {/* Parent image detail */}
+                                                                <div className="flex items-center gap-3">
+                                                                    <div
+                                                                        className={`h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-white flex items-center justify-center flex-shrink-0 ${variant.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
+                                                                        onClick={() => variant.imagePreview && setPreviewImage(variant.imagePreview)}
+                                                                    >
+                                                                        {variant.imagePreview ? (
+                                                                            <img src={variant.imagePreview} alt="parent variant" className="object-cover w-full h-full" />
+                                                                        ) : (
+                                                                            <Archive className="h-5 w-5 text-slate-300 stroke-[1.5]" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-400 block">{t('backoffice.product.detail.parent_variant_image', 'Gambar Induk Varian')}</span>
+                                                                        <span className="text-xs italic text-slate-500">{t('backoffice.product.detail.parent_variant_image_hint', 'Sub-varian terkelompok di bawah warna/varian induk ini.')}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Sub-variant matrix tables */}
+                                                                <div className="overflow-hidden bg-white border shadow-inner rounded-xl border-slate-200">
+                                                                    <div className="overflow-x-auto">
+                                                                        <table className="w-full text-xs text-left border-collapse text-slate-600">
+                                                                            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                                                                                <tr>
+                                                                                    <th className="px-4 py-2">{t('backoffice.product.detail.table.image', 'Gambar')}</th>
+                                                                                    <th className="px-4 py-2">{t('backoffice.product.detail.table.type_value', 'Tipe / Nilai')}</th>
+                                                                                    <th className="px-4 py-2">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</th>
+                                                                                    <th className="px-4 py-2">{t('backoffice.product.form.variant_price', 'Harga (IDR)')}</th>
+                                                                                    <th className="px-4 py-2">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</th>
+                                                                                    <th className="px-4 py-2 text-center">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody className="font-medium divide-y divide-slate-100">
+                                                                                {variant.sub_variants.map((sv, svIdx) => {
+                                                                                    return (
+                                                                                        <tr key={sv.id || svIdx} className="transition hover:bg-slate-50/50">
+                                                                                            <td className="px-4 py-2.5">
+                                                                                                <div
+                                                                                                    className={`h-8 w-8 overflow-hidden rounded border border-slate-100 bg-slate-50 flex items-center justify-center ${sv.imagePreview ? 'cursor-pointer hover:opacity-90 hover:border-blue-950 transition' : ''}`}
+                                                                                                    onClick={() => sv.imagePreview && setPreviewImage(sv.imagePreview)}
+                                                                                                >
+                                                                                                    {sv.imagePreview ? (
+                                                                                                        <img src={sv.imagePreview} alt="sub variant" className="object-cover w-full h-full" />
+                                                                                                    ) : (
+                                                                                                        <Package className="w-4 h-4 text-slate-300" />
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2.5">
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className="font-bold text-blue-950">{sv.name_translations?.[activeLang] || '-'}</span>
+                                                                                                    <span className="text-[9px] text-slate-400">{sv.type_translations?.[activeLang] || getTranslatedType(sv.type, t)}</span>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2.5 font-mono font-bold text-slate-700">
+                                                                                                {sv.sku || '-'}
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2.5 font-bold text-slate-800">
+                                                                                                {sv.price ? formatIDR(sv.price) : formatIDR(product.price)}
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2.5 text-slate-600">
+                                                                                                {units.find(u => String(u.id) === String(sv.unit_id))?.name || '-'}
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2.5">
+                                                                                                <div className="flex justify-center gap-1.5">
+                                                                                                    {sv.branch_stocks.map(bStock => (
+                                                                                                        <div key={bStock.store_branch_id} className="rounded border border-slate-100 bg-slate-50/50 px-2 py-0.5 text-center min-w-[40px]">
+                                                                                                            <span className="text-[8px] font-black uppercase text-slate-400 block leading-none mb-0.5">
+                                                                                                                {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                                                            </span>
+                                                                                                            <span className="text-[10px] font-black text-blue-950 leading-none">{bStock.stock}</span>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                </main>
             </div>
-        </main>
-    </div>
 
             {/* Image Preview Modal Overlay */}
             <AnimatePresence>
@@ -632,22 +629,22 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setPreviewImage(null)}
-                            className="fixed inset-0 z-50 bg-blue-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-xs"
                         >
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-2"
+                                className="relative w-full max-w-2xl p-2 overflow-hidden bg-white shadow-2xl rounded-2xl"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <img src={previewImage} alt="preview" className="w-full h-auto max-h-[80vh] object-contain rounded-xl" />
                                 <button
                                     type="button"
                                     onClick={() => setPreviewImage(null)}
-                                    className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-blue-950/80 text-white shadow hover:bg-blue-950 transition"
+                                    className="absolute flex items-center justify-center w-8 h-8 text-white transition rounded-full shadow top-4 right-4 bg-blue-950/80 hover:bg-blue-950"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </motion.div>
                         </motion.div>
@@ -657,3 +654,4 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
         </div>
     );
 }
+

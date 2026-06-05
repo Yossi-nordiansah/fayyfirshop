@@ -80,6 +80,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
         password: "",
         country: initialCountry,
         phone: auth.user.phone || "",
+        receiver_name: auth.user.receiver_name || "",
         address: auth.user.address || "",
         province: auth.user.province || "",
         city: auth.user.city || "",
@@ -197,6 +198,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
         }
 
         if (!data.phone.trim()) errs.phone = currentTxt.phone_req;
+        if (!data.receiver_name.trim()) errs.receiver_name = t("validation.checkout.recipient_name_required", "Nama penerima wajib diisi");
         if (!data.country) errs.country = currentTxt.country_req;
         if (!data.address.trim()) errs.address = currentTxt.address_req;
         if (!data.province.trim()) errs.province = currentTxt.province_req;
@@ -375,15 +377,28 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                                     id="country"
                                                     value={data.country}
                                                     onChange={(e) => {
-                                                        setData((prev) => ({
-                                                            ...prev,
-                                                            country: e.target.value,
-                                                            province: "",
-                                                            city: "",
-                                                            district: "",
-                                                            address: "",
-                                                            postal_code: ""
-                                                        }));
+                                                        const selectedVal = e.target.value;
+                                                        if (selectedVal === initialCountry) {
+                                                            setData((prev) => ({
+                                                                ...prev,
+                                                                country: selectedVal,
+                                                                province: auth.user.province || "",
+                                                                city: auth.user.city || "",
+                                                                district: auth.user.district || "",
+                                                                address: auth.user.address || "",
+                                                                postal_code: auth.user.postal_code || ""
+                                                            }));
+                                                        } else {
+                                                            setData((prev) => ({
+                                                                ...prev,
+                                                                country: selectedVal,
+                                                                province: "",
+                                                                city: "",
+                                                                district: "",
+                                                                address: "",
+                                                                postal_code: ""
+                                                            }));
+                                                        }
                                                         setClientErrors({});
                                                     }}
                                                     className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border border-slate-200 hover:border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all duration-300`}
@@ -553,6 +568,18 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                             />
                                         </div>
                                     )}
+
+                                    <BaseRenderInput
+                                        label={t("register.receiver_name", "Nama Penerima")}
+                                        id="receiver_name"
+                                        placeholder={t("register.placeholder_receiver", "Masukkan nama penerima dari alamat anda")}
+                                        icon={User}
+                                        data={data}
+                                        setData={setData}
+                                        errors={errors}
+                                        clientErrors={clientErrors}
+                                        isRtl={isRtl}
+                                    />
 
                                     <BaseRenderTextArea
                                         label={data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan")}

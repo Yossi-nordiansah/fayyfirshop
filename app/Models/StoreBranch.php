@@ -27,6 +27,7 @@ class StoreBranch extends Model
         'detail_address',
         'is_default',
         'is_active',
+        'area_id',
     ];
 
     protected $casts = [

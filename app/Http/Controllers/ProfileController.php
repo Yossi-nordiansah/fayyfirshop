@@ -11,8 +11,12 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use App\Traits\ResolvesBiteshipArea;
+
 class ProfileController extends Controller
 {
+    use ResolvesBiteshipArea;
+
     /**
      * Display the user's profile form.
      */
@@ -43,6 +47,19 @@ class ProfileController extends Controller
             $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
         } else {
             unset($data['password']);
+        }
+
+        // Auto resolve Biteship Area ID if country is Indonesia
+        $country = $request->input('country', $user->country ?? 'ID');
+        $areaId = $this->resolveBiteshipAreaId(
+            $country,
+            $data['district'] ?? null,
+            $data['city'] ?? null,
+            $data['province'] ?? null,
+            $data['postal_code'] ?? null
+        );
+        if ($areaId) {
+            $data['area_id'] = $areaId;
         }
 
         $user->fill($data);

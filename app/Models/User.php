@@ -34,6 +34,7 @@ class User extends Authenticatable
         'password',
         'receiver_name',
         'assigned_branch_id',
+        'area_id',
     ];
 
     /**

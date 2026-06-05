@@ -20,6 +20,7 @@ class ProductBranchStock extends Model
     ];
 
     protected $casts = [
+        'store_branch_id' => 'integer',
         'stock' => 'integer',
         'reserved_stock' => 'integer',
         'low_stock_threshold' => 'integer',
