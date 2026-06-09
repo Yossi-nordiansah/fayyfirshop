@@ -49,11 +49,41 @@ class CheckoutController extends Controller
                 $stock = 0;
 
                 if ($variantId) {
-                    $stockRecord = ProductVariantBranchStock::where([
-                        'product_variant_id' => $variantId,
-                        'store_branch_id' => $branch->id
-                    ])->first();
-                    $stock = $stockRecord ? $stockRecord->stock : 0;
+                    $variant = ProductVariant::find($variantId);
+                    $product = Product::find($productId);
+
+                    if ($variant && $variant->parent_id) {
+                        $parentVariant = ProductVariant::find($variant->parent_id);
+                        if ($parentVariant && $parentVariant->stock_type === 'parent') {
+                            $stockRecord = ProductVariantBranchStock::where([
+                                'product_variant_id' => $parentVariant->id,
+                                'store_branch_id' => $branch->id
+                            ])->first();
+                            $parentStock = $stockRecord ? $stockRecord->stock : 0;
+                            $capacity = $this->parseCapacity($variant);
+                            $stock = $capacity > 0 ? (int) floor($parentStock / $capacity) : 0;
+                        } else {
+                            $stockRecord = ProductVariantBranchStock::where([
+                                'product_variant_id' => $variantId,
+                                'store_branch_id' => $branch->id
+                            ])->first();
+                            $stock = $stockRecord ? $stockRecord->stock : 0;
+                        }
+                    } else if ($product && $product->stock_type === 'parent') {
+                        $stockRecord = ProductBranchStock::where([
+                            'product_id' => $productId,
+                            'store_branch_id' => $branch->id
+                        ])->first();
+                        $parentStock = $stockRecord ? $stockRecord->stock : 0;
+                        $capacity = $this->parseCapacity($variant);
+                        $stock = $capacity > 0 ? (int) floor($parentStock / $capacity) : 0;
+                    } else {
+                        $stockRecord = ProductVariantBranchStock::where([
+                            'product_variant_id' => $variantId,
+                            'store_branch_id' => $branch->id
+                        ])->first();
+                        $stock = $stockRecord ? $stockRecord->stock : 0;
+                    }
                 } else {
                     $stockRecord = ProductBranchStock::where([
                         'product_id' => $productId,
@@ -157,7 +187,6 @@ class CheckoutController extends Controller
 
                 // If API failed, fallback to local default
                 return $this->getDomesticIDFallbackRates($totalWeight);
-
             } catch (\Exception $e) {
                 return $this->getDomesticIDFallbackRates($totalWeight);
             }
@@ -189,10 +218,87 @@ class CheckoutController extends Controller
         $items = $request->items;
 
         // 1. Stock Validation
+        // Aggregate capacity requirements for 'parent' stock products to prevent race/mixture issues
+        $parentStockRequired = [];
+        $parentVariantStockRequired = [];
         foreach ($items as $item) {
             $productId = $item['id'];
             $variantId = $item['variantId'] ?? null;
             $qty = $item['quantity'];
+
+            $product = Product::find($productId);
+            $variant = $variantId ? ProductVariant::find($variantId) : null;
+
+            if ($variant && $variant->parent_id) {
+                $parentVariant = ProductVariant::find($variant->parent_id);
+                if ($parentVariant && $parentVariant->stock_type === 'parent') {
+                    $capacity = $this->parseCapacity($variant);
+                    if (!isset($parentVariantStockRequired[$parentVariant->id])) {
+                        $parentVariantStockRequired[$parentVariant->id] = 0;
+                    }
+                    $parentVariantStockRequired[$parentVariant->id] += ($capacity * $qty);
+                }
+            } else if ($product && $product->stock_type === 'parent') {
+                $capacity = $this->parseCapacity($variant);
+
+                if (!isset($parentStockRequired[$productId])) {
+                    $parentStockRequired[$productId] = 0;
+                }
+                $parentStockRequired[$productId] += ($capacity * $qty);
+            }
+        }
+
+        // Validate aggregated parent stocks
+        foreach ($parentStockRequired as $productId => $totalRequired) {
+            $stockRecord = ProductBranchStock::where([
+                'product_id' => $productId,
+                'store_branch_id' => $branchId
+            ])->first();
+
+            $availableStock = $stockRecord ? $stockRecord->stock : 0;
+            if ($availableStock < $totalRequired) {
+                $product = Product::find($productId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stock for parent product "' . ($product ? $product->title : $productId) . '" is insufficient.'
+                ], 422);
+            }
+        }
+
+        // Validate aggregated parent variant stocks
+        foreach ($parentVariantStockRequired as $parentVariantId => $totalRequired) {
+            $stockRecord = ProductVariantBranchStock::where([
+                'product_variant_id' => $parentVariantId,
+                'store_branch_id' => $branchId
+            ])->first();
+
+            $availableStock = $stockRecord ? $stockRecord->stock : 0;
+            if ($availableStock < $totalRequired) {
+                $parentVariant = ProductVariant::find($parentVariantId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stock for parent variant "' . ($parentVariant ? $parentVariant->name : $parentVariantId) . '" is insufficient.'
+                ], 422);
+            }
+        }
+
+        // Validate standard product stocks
+        foreach ($items as $item) {
+            $productId = $item['id'];
+            $variantId = $item['variantId'] ?? null;
+            $qty = $item['quantity'];
+
+            $product = Product::find($productId);
+            $variant = $variantId ? ProductVariant::find($variantId) : null;
+
+            if ($variant && $variant->parent_id) {
+                $parentVariant = ProductVariant::find($variant->parent_id);
+                if ($parentVariant && $parentVariant->stock_type === 'parent') {
+                    continue; // already validated in parent variant check
+                }
+            } else if ($product && $product->stock_type === 'parent') {
+                continue; // already validated in parent check
+            }
 
             if ($variantId) {
                 $stockRecord = ProductVariantBranchStock::where([
@@ -201,7 +307,6 @@ class CheckoutController extends Controller
                 ])->first();
 
                 if (!$stockRecord || $stockRecord->stock < $qty) {
-                    $variant = ProductVariant::find($variantId);
                     return response()->json([
                         'success' => false,
                         'message' => 'Stock for variant "' . ($variant ? $variant->name : $variantId) . '" is insufficient.'
@@ -278,17 +383,47 @@ class CheckoutController extends Controller
                 foreach ($orderItemsData as $itemData) {
                     $order->items()->create($itemData);
 
-                    // Decrement branch stock
-                    if ($itemData['product_variant_id']) {
-                        ProductVariantBranchStock::where([
-                            'product_variant_id' => $itemData['product_variant_id'],
-                            'store_branch_id' => $branchId
-                        ])->decrement('stock', $itemData['quantity']);
-                    } else {
+                    $product = Product::find($itemData['product_id']);
+                    $variant = $itemData['product_variant_id'] ? ProductVariant::find($itemData['product_variant_id']) : null;
+
+                    if ($variant && $variant->parent_id) {
+                        $parentVariant = ProductVariant::find($variant->parent_id);
+                        if ($parentVariant && $parentVariant->stock_type === 'parent') {
+                            $capacity = $this->parseCapacity($variant);
+                            $deduction = $capacity * $itemData['quantity'];
+
+                            ProductVariantBranchStock::where([
+                                'product_variant_id' => $parentVariant->id,
+                                'store_branch_id' => $branchId
+                            ])->decrement('stock', $deduction);
+                        } else {
+                            ProductVariantBranchStock::where([
+                                'product_variant_id' => $itemData['product_variant_id'],
+                                'store_branch_id' => $branchId
+                            ])->decrement('stock', $itemData['quantity']);
+                        }
+                    } else if ($product && $product->stock_type === 'parent') {
+                        $variant = $itemData['product_variant_id'] ? ProductVariant::find($itemData['product_variant_id']) : null;
+                        $capacity = $this->parseCapacity($variant);
+                        $deduction = $capacity * $itemData['quantity'];
+
                         ProductBranchStock::where([
                             'product_id' => $itemData['product_id'],
                             'store_branch_id' => $branchId
-                        ])->decrement('stock', $itemData['quantity']);
+                        ])->decrement('stock', $deduction);
+                    } else {
+                        // Decrement branch stock standard
+                        if ($itemData['product_variant_id']) {
+                            ProductVariantBranchStock::where([
+                                'product_variant_id' => $itemData['product_variant_id'],
+                                'store_branch_id' => $branchId
+                            ])->decrement('stock', $itemData['quantity']);
+                        } else {
+                            ProductBranchStock::where([
+                                'product_id' => $itemData['product_id'],
+                                'store_branch_id' => $branchId
+                            ])->decrement('stock', $itemData['quantity']);
+                        }
                     }
                 }
 
@@ -299,7 +434,6 @@ class CheckoutController extends Controller
                 'success' => true,
                 'order' => $order
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -454,5 +588,23 @@ class CheckoutController extends Controller
                 ]
             ]
         ]);
+    }
+
+    private function parseCapacity($variant)
+    {
+        if (!$variant) {
+            return 1;
+        }
+
+        $textToParse = $variant->name; // e.g., "50 ml" or "Merah (50 ml)"
+
+        // Match a number in the string (possibly in parentheses, e.g. "Merah (50 ml)")
+        preg_match('/(\d+(?:\.\d+)?)/', $textToParse, $matches);
+
+        if (!empty($matches)) {
+            return (float) $matches[1];
+        }
+
+        return 1; // Default fallback to 1 to avoid division by zero
     }
 }

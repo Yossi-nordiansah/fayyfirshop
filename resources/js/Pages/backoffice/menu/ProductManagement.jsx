@@ -47,6 +47,27 @@ export default function ProductManagement({ products = [], status, statusAction 
         }).format(value);
     };
 
+    // Helper to determine lowest price if variants exist, otherwise use base price
+    const getDisplayPrice = (product) => {
+        const variants = product.variants;
+        const price = product.price;
+        if (variants && variants.length > 0) {
+            const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
+            const targetVariants = hasChildren
+                ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
+                : variants;
+
+            const prices = targetVariants
+                .map(v => v.price)
+                .filter(p => typeof p === 'number' && p > 0);
+
+            if (prices.length > 0) {
+                return Math.min(...prices);
+            }
+        }
+        return price;
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-950 selection:text-white">
             <Head title={t('backoffice.product.title.page', 'Product Management')} />
@@ -202,7 +223,7 @@ export default function ProductManagement({ products = [], status, statusAction 
                                                          </div>
                                                      </td>
                                                     <td className="px-6 py-4 text-right font-bold text-slate-900">
-                                                        {formatIDR(product.price)}
+                                                         {formatIDR(getDisplayPrice(product))}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {product.variants && product.variants.length > 0 ? (

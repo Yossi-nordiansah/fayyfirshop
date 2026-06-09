@@ -4,11 +4,37 @@ import { ChevronDown, Layers, Plus, Trash2, Upload, X } from 'lucide-react';
 
 const PRESET_TYPES = ['Ukuran', 'Warna', 'Rasa', 'Model', 'Bahan'];
 
+const getUnitValue = (unitObj, lang) => {
+    if (!unitObj) return '';
+    if (typeof unitObj === 'object') {
+        return unitObj[lang] || unitObj.indonesia || '';
+    }
+    return String(unitObj);
+};
+
 const getTranslatedType = (type, t) => {
     if (!type) return '';
+    if (type.includes(' | ')) {
+        return type.split(' | ').map(part => getTranslatedType(part.trim(), t)).join(' | ');
+    }
     const lower = type.toLowerCase();
-    if (['ukuran', 'warna', 'rasa', 'model', 'bahan'].includes(lower)) {
-        return t('backoffice.product.form.preset_type.' + lower, type);
+
+    // Normalize presets in English, Arabic, and Indonesian to the base Indonesian key
+    let key = lower;
+    if (lower === 'ukuran' || lower === 'size' || lower === 'المقاس') {
+        key = 'ukuran';
+    } else if (lower === 'warna' || lower === 'color' || lower === 'اللون') {
+        key = 'warna';
+    } else if (lower === 'rasa' || lower === 'flavor' || lower === 'النكهة') {
+        key = 'rasa';
+    } else if (lower === 'model' || lower === 'الموديل') {
+        key = 'model';
+    } else if (lower === 'bahan' || lower === 'material' || lower === 'المادة') {
+        key = 'bahan';
+    }
+
+    if (['ukuran', 'warna', 'rasa', 'model', 'bahan'].includes(key)) {
+        return t('backoffice.product.form.preset_type.' + key, type);
     }
     if (lower === 'custom') {
         return t('backoffice.product.form.sub_variant_type_custom', 'Kustom');
@@ -30,6 +56,35 @@ const parsePriceInput = (value) => {
     return clean ? parseInt(clean, 10) : '';
 };
 
+// Helper to format stock with thousands separator
+const formatStockInput = (value) => {
+    if (value === undefined || value === null || value === '') return '';
+    const clean = String(value).replace(/\D/g, '');
+    if (!clean) return '';
+    return new Intl.NumberFormat('id-ID').format(parseInt(clean, 10));
+};
+
+const parseStockInput = (value) => {
+    if (value === undefined || value === null || value === '') return '';
+    const clean = String(value).replace(/\D/g, '');
+    return clean ? parseInt(clean, 10) : '';
+};
+
+// Helper to format any numeric sequences inside a sub-variant value with a thousands separator
+const formatValueWithSeparator = (value) => {
+    if (value === undefined || value === null || value === '') return '';
+    const valStr = String(value);
+
+    return valStr.replace(/[\d\.]+/g, (match) => {
+        const cleanDigits = match.replace(/\./g, '');
+        if (!cleanDigits) return '';
+        if (cleanDigits.length < 4) {
+            return match; // Preserve decimals like 39.5 or 1.5
+        }
+        return new Intl.NumberFormat('id-ID').format(parseInt(cleanDigits, 10));
+    });
+};
+
 // ─── Component 3: Varian & Inventaris ─────────────────────────────────────────
 export default function ProductVariantsSection({
     data,
@@ -49,6 +104,8 @@ export default function ProductVariantsSection({
     addVariant,
     removeVariant,
     updateVariantField,
+    changeVariantStockType,
+    changeGlobalStockType,
     updateVariantLang,
     updateVariantTypeLang,
     updateVariantStock,
@@ -68,7 +125,25 @@ export default function ProductVariantsSection({
     else if (activeLang === 'arabic') activeLangLabel = t('backoffice.product.modal.lang_ar', 'Arab (العربية)');
     else if (activeLang === 'english') activeLangLabel = t('backoffice.product.modal.lang_en', 'Inggris');
 
+    const hasSizeVariant = (data.variants || []).some(v => v.type?.toLowerCase() === 'ukuran' && !v.has_sub_variants);
+
     const getVariantError = (vIdx, svIdx = null, field = 'sku') => {
+        if (svIdx !== null) {
+            const nestedKey = `variants.${vIdx}.sub_variants.${svIdx}.${field}`;
+            if (errors?.[nestedKey]) return errors[nestedKey];
+            if (field.startsWith('name_translations.')) {
+                const nestedNameKey = `variants.${vIdx}.sub_variants.${svIdx}.name`;
+                if (errors?.[nestedNameKey]) return errors[nestedNameKey];
+            }
+        } else {
+            const nestedKey = `variants.${vIdx}.${field}`;
+            if (errors?.[nestedKey]) return errors[nestedKey];
+            if (field.startsWith('name_translations.')) {
+                const nestedNameKey = `variants.${vIdx}.name`;
+                if (errors?.[nestedNameKey]) return errors[nestedNameKey];
+            }
+        }
+
         let flatIdx = 0;
         for (let i = 0; i < data.variants.length; i++) {
             const v = data.variants[i];
@@ -85,6 +160,17 @@ export default function ProductVariantsSection({
             flatIdx += hasSub ? v.sub_variants.length : 1;
         }
         return null;
+    };
+
+    const handleSubVariantTypeChange = (vIdx, svIdx, typeVal) => {
+        updateSubVariantField(vIdx, svIdx, 'type', typeVal);
+        const lowerVal = typeVal.trim().toLowerCase();
+        const defaultTranslations = {
+            indonesia: lowerVal === 'ukuran' ? 'Ukuran' : lowerVal === 'warna' ? 'Warna' : lowerVal === 'rasa' ? 'Rasa' : lowerVal === 'model' ? 'Model' : lowerVal === 'bahan' ? 'Bahan' : typeVal,
+            english: lowerVal === 'ukuran' ? 'Size' : lowerVal === 'warna' ? 'Color' : lowerVal === 'rasa' ? 'Flavor' : lowerVal === 'model' ? 'Model' : lowerVal === 'bahan' ? 'Material' : typeVal,
+            arabic: lowerVal === 'ukuran' ? 'المقاس' : lowerVal === 'warna' ? 'اللون' : lowerVal === 'rasa' ? 'النكهة' : lowerVal === 'model' ? 'الموديل' : lowerVal === 'bahan' ? 'المادة' : typeVal,
+        };
+        updateSubVariantField(vIdx, svIdx, 'type_translations', defaultTranslations);
     };
 
     return (
@@ -184,27 +270,106 @@ export default function ProductVariantsSection({
                 </AnimatePresence>
             </div>
 
-            {/* Standard stock (no variants) */}
-            {!data.has_variants && (
-                <div className="space-y-4">
+            {/* Stock Management Mode for Product (Only shown if has size variant directly) */}
+            {data.has_variants && hasSizeVariant && (
+                <div className="mb-5 space-y-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                        {t('backoffice.product.form.stock_type', 'Mode Manajemen Stok')}
+                    </label>
+                    <div className="flex flex-wrap gap-6 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                        <label className="flex items-center gap-2 cursor-pointer select-none group text-xs font-bold text-slate-700 hover:text-blue-950">
+                            <input
+                                type="radio"
+                                name="stock_type"
+                                value="variant"
+                                checked={data.stock_type === 'variant'}
+                                onChange={e => changeGlobalStockType(e.target.value)}
+                                className="h-4 w-4 border-slate-300 text-blue-950 focus:ring-blue-950/20"
+                            />
+                            <span>{t('backoffice.product.form.stock_type_variant', 'Stok per Varian')}</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none group text-xs font-bold text-slate-700 hover:text-blue-950">
+                            <input
+                                type="radio"
+                                name="stock_type"
+                                value="parent"
+                                checked={data.stock_type === 'parent'}
+                                onChange={e => changeGlobalStockType(e.target.value)}
+                                className="h-4 w-4 border-slate-300 text-blue-950 focus:ring-blue-950/20"
+                            />
+                            <span>{t('backoffice.product.form.stock_type_parent', 'Stok Induk (Terpusat)')}</span>
+                        </label>
+                    </div>
+                </div>
+            )}
+
+            {/* Standard/Parent stock view */}
+            {(!data.has_variants || (data.has_variants && hasSizeVariant && data.stock_type === 'parent')) && (
+                <div className="space-y-4 mb-6 rounded-xl border border-slate-100 bg-slate-50/50 p-5">
                     <span className="block rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-600">
-                        {t('backoffice.product.form.single_mode_hint', '💡 Mode Produk Tunggal — Kelola stok langsung per cabang gudang.')}
+                        {data.stock_type === 'parent' && data.has_variants
+                            ? t('backoffice.product.form.parent_mode_hint', '💡 Mode Stok Induk — Kelola stok terpusat per cabang gudang (dalam satuan {unit}).').replace('{unit}', data.unit || 'mili')
+                            : t('backoffice.product.form.single_mode_hint', '💡 Mode Produk Tunggal — Kelola stok langsung per cabang gudang.')
+                        }
                     </span>
+
+                    {/* Unit selector for Single Product or Parent Stock Product */}
+                    <div className="space-y-2 max-w-xs">
+                        <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                            {data.has_variants
+                                ? t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')
+                                : t('backoffice.product.form.variant_unit', 'Satuan (Unit)')
+                            } <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                            value={data.unit || ''}
+                            onChange={e => setData('unit', e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-950"
+                            required
+                        >
+                            <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
+                            {units.map(u => (
+                                <option key={u.id} value={u.name}>{u.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         {data.branch_stocks.map((bs, bIdx) => (
-                            <div key={bs.store_branch_id} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                            <div key={bs.store_branch_id} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
                                 <label className="mb-2 block truncate text-xs font-black uppercase text-slate-700">
                                     {bs.country_code ? bs.country_code.toUpperCase() : bs.branch_name}
                                 </label>
-                                <input
-                                    type="number" min="0"
-                                    value={bs.stock}
-                                    onChange={e => updateStandardStock(bIdx, e.target.value)}
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-sm font-semibold text-slate-800 outline-none focus:border-blue-950"
-                                />
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        value={formatStockInput(bs.stock)}
+                                        onChange={e => updateStandardStock(bIdx, parseStockInput(e.target.value))}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-3 pr-10 py-2 text-center text-sm font-semibold text-slate-800 outline-none focus:border-blue-950 focus:bg-white"
+                                    />
+                                    {data.unit && (
+                                        <span className="absolute right-3 text-xs font-bold text-slate-400">
+                                            {data.unit}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Quick Add Button */}
+            {data.has_variants && data.variants && data.variants.length > 0 && (
+                <div className="mb-4 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => addVariant(data.variants[0].type)}
+                        className="bg-blue-800 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-600 active:scale-95"
+                    >
+                        <Plus className="h-4 w-4 text-white" />
+                        {t('backoffice.product.form.btn_add_variant_simple', 'Tambah {type}').replace('{type}', getTranslatedType(data.variants[0].type, t))}
+                    </button>
                 </div>
             )}
 
@@ -214,7 +379,8 @@ export default function ProductVariantsSection({
                     <AnimatePresence initial={false}>
                         {data.variants.map((variant, vIdx) => {
                             const hasSubVariants = variant.has_sub_variants;
-                            const showUnitSelector = !hasSubVariants;
+                            const isSizeVariant = variant.type?.toLowerCase() === 'ukuran';
+                            const showUnitSelector = !hasSubVariants && !(isSizeVariant && data.stock_type === 'parent');
                             const showSkuAndPrice = !hasSubVariants;
                             const showSubVariantsSection = hasSubVariants;
 
@@ -233,7 +399,7 @@ export default function ProductVariantsSection({
                                                 #{vIdx + 1}
                                             </span>
                                             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-950">
-                                                {variant.type_translations?.indonesia || getTranslatedType(variant.type, t) || t('backoffice.product.th_variant', 'Varian')}
+                                                {getTranslatedType(variant.type_translations?.[activeLang] || variant.type_translations?.indonesia || variant.type, t) || t('backoffice.product.th_variant', 'Varian')}
                                             </span>
                                         </div>
                                         <button
@@ -338,9 +504,7 @@ export default function ProductVariantsSection({
                                             <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500">
                                                 {t('backoffice.product.form.variant_value_label', 'Nilai {type}').replace(
                                                     '{type}',
-                                                    variant.type_translations?.[activeLang]
-                                                    || variant.type_translations?.indonesia
-                                                    || getTranslatedType(variant.type, t)
+                                                    getTranslatedType(variant.type_translations?.[activeLang] || variant.type_translations?.indonesia || variant.type, t)
                                                 )}
                                             </label>
 
@@ -350,7 +514,7 @@ export default function ProductVariantsSection({
                                                         type="text"
                                                         value={variant.name_translations?.indonesia ?? ''}
                                                         onChange={e => {
-                                                            const val = e.target.value;
+                                                            const val = formatValueWithSeparator(e.target.value);
                                                             updateVariantField(vIdx, 'name_translations', {
                                                                 indonesia: val,
                                                                 english: val,
@@ -376,7 +540,7 @@ export default function ProductVariantsSection({
                                                         <input
                                                             type="text"
                                                             value={variant.name_translations?.indonesia ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'indonesia', e.target.value)}
+                                                            onChange={e => updateVariantLang(vIdx, 'indonesia', formatValueWithSeparator(e.target.value))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '100ml / Large'
                                                                     : variant.type === 'Warna' ? 'Merah / Rouge'
@@ -399,7 +563,7 @@ export default function ProductVariantsSection({
                                                         <input
                                                             type="text"
                                                             value={variant.name_translations?.english ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'english', e.target.value)}
+                                                            onChange={e => updateVariantLang(vIdx, 'english', formatValueWithSeparator(e.target.value))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '100ml / Large'
                                                                     : variant.type === 'Warna' ? 'Red / Blue'
@@ -423,7 +587,7 @@ export default function ProductVariantsSection({
                                                             type="text"
                                                             dir="rtl"
                                                             value={variant.name_translations?.arabic ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'arabic', e.target.value)}
+                                                            onChange={e => updateVariantLang(vIdx, 'arabic', formatValueWithSeparator(e.target.value))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '١٠٠ مل / كبير'
                                                                     : variant.type === 'Warna' ? 'أحمر / أزرق'
@@ -440,6 +604,93 @@ export default function ProductVariantsSection({
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Stock Management Mode for Variant (shown if sub-variant type is Ukuran) */}
+                                        {variant.has_sub_variants && variant.sub_variants?.some(sv => sv.type?.toLowerCase() === 'ukuran') && (
+                                            <div className="space-y-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                                                <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500">
+                                                    {t('backoffice.product.form.stock_type', 'Mode Manajemen Stok')}
+                                                </label>
+                                                <div className="flex flex-wrap gap-4 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                                    <label className="flex items-center gap-2 cursor-pointer select-none group text-xs font-bold text-slate-700 hover:text-blue-950">
+                                                        <input
+                                                            type="radio"
+                                                            name={`stock_type_${vIdx}`}
+                                                            value="variant"
+                                                            checked={(variant.stock_type || 'variant') === 'variant'}
+                                                            onChange={e => changeVariantStockType(vIdx, e.target.value)}
+                                                            className="h-3.5 w-3.5 border-slate-300 text-blue-950 focus:ring-blue-950/20"
+                                                        />
+                                                        <span>{t('backoffice.product.form.stock_type_variant', 'Stok per Varian')}</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 cursor-pointer select-none group text-xs font-bold text-slate-700 hover:text-blue-950">
+                                                        <input
+                                                            type="radio"
+                                                            name={`stock_type_${vIdx}`}
+                                                            value="parent"
+                                                            checked={variant.stock_type === 'parent'}
+                                                            onChange={e => changeVariantStockType(vIdx, e.target.value)}
+                                                            className="h-3.5 w-3.5 border-slate-300 text-blue-950 focus:ring-blue-950/20"
+                                                        />
+                                                        <span>{t('backoffice.product.form.stock_type_parent', 'Stok Induk (Terpusat)')}</span>
+                                                    </label>
+                                                </div>
+
+                                                {variant.stock_type === 'parent' && (
+                                                    <div className="space-y-3">
+                                                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                            {t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')} <span className="text-rose-500">*</span>
+                                                        </label>
+                                                        <div className="w-full sm:w-72">
+                                                            <select
+                                                                value={variant.unit || ''}
+                                                                onChange={e => updateVariantField(vIdx, 'unit', e.target.value)}
+                                                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
+                                                                required
+                                                            >
+                                                                <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
+                                                                {units.map(u => (
+                                                                    <option key={u.id} value={u.name}>{u.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {variant.stock_type === 'parent' && (
+                                                    <div className="pt-2 border-t border-dashed border-slate-200">
+                                                        <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                            {t('backoffice.product.form.branch_stock_allocation', 'Alokasi Stok Gudang Cabang')}
+                                                        </p>
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            {variant.branch_stocks.map((bStock, bIdx) => (
+                                                                <div
+                                                                    key={bStock.store_branch_id}
+                                                                    className="flex flex-col items-center gap-1 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                                                                >
+                                                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                                        {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                    </label>
+                                                                    <div className="relative flex items-center w-full">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={formatStockInput(bStock.stock)}
+                                                                            onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
+                                                                            className="w-full rounded bg-slate-50 border border-slate-200 pl-1.5 pr-8 py-1 text-center text-xs font-semibold outline-none focus:border-blue-950"
+                                                                        />
+                                                                        {variant.unit && (
+                                                                            <span className="absolute right-2 text-[10px] font-bold text-slate-400">
+                                                                                {variant.unit}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* SKU, Price, and Unit Row */}
                                         {showSkuAndPrice && (
@@ -481,7 +732,7 @@ export default function ProductVariantsSection({
                                                 </div>
 
                                                 {/* Unit */}
-                                                {showUnitSelector && (
+                                                {showUnitSelector ? (
                                                     <div>
                                                         <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
                                                         <select
@@ -500,6 +751,13 @@ export default function ProductVariantsSection({
                                                             </p>
                                                         )}
                                                     </div>
+                                                ) : (
+                                                    isSizeVariant && data.stock_type === 'parent' && (
+                                                        <div className="flex flex-col justify-end h-full pb-2">
+                                                            <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500 opacity-0">Spacer</label>
+                                                            <span className="text-xs text-slate-400 italic block">{t('backoffice.product.form.follows_parent_unit', 'Mengikuti satuan induk')}</span>
+                                                        </div>
+                                                    )
                                                 )}
                                             </div>
                                         )}
@@ -562,7 +820,10 @@ export default function ProductVariantsSection({
                                                     onClick={() => addSubVariant(vIdx)}
                                                     className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-950 transition hover:bg-blue-100 hover:text-blue-900 active:scale-95 shadow-sm"
                                                 >
-                                                    <Plus className="h-3.5 w-3.5" /> {t('backoffice.product.form.add_sub_variant', 'Tambah Sub-Varian')}
+                                                    <Plus className="h-3.5 w-3.5" /> {variant.sub_variants && variant.sub_variants.length > 0
+                                                        ? t('backoffice.product.form.add_sub_variant_type', 'Tambah {type}').replace('{type}', getTranslatedType(variant.sub_variants[0].type, t))
+                                                        : t('backoffice.product.form.add_sub_variant', 'Tambah Sub-Varian')
+                                                    }
                                                 </button>
                                             </div>
 
@@ -585,7 +846,7 @@ export default function ProductVariantsSection({
                                                                     <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_type', 'Tipe Sub-Varian')}</label>
                                                                     <select
                                                                         value={subVar.type}
-                                                                        onChange={e => updateSubVariantField(vIdx, svIdx, 'type', e.target.value)}
+                                                                        onChange={e => handleSubVariantTypeChange(vIdx, svIdx, e.target.value)}
                                                                         className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-950"
                                                                     >
                                                                         {PRESET_TYPES.map(type => (
@@ -595,65 +856,6 @@ export default function ProductVariantsSection({
                                                                         ))}
                                                                         <option value="Custom">{t('backoffice.product.form.sub_variant_type_custom', 'Custom')}</option>
                                                                     </select>
-
-                                                                    {/* Sub-Variant Type Name (3 languages or 1 if Ukuran) */}
-                                                                    <div className="mt-2 space-y-1.5 rounded-lg border border-amber-100 bg-amber-50/30 p-2">
-                                                                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-700">
-                                                                            {t('backoffice.product.form.sub_variant_type_name', 'Nama Tipe Sub-Varian')}
-                                                                        </span>
-                                                                        {subVar.type?.toLowerCase() === 'ukuran' ? (
-                                                                            <div className="space-y-0.5">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    value={subVar.type_translations?.indonesia ?? subVar.type ?? ''}
-                                                                                    onChange={e => {
-                                                                                        const val = e.target.value;
-                                                                                        updateSubVariantField(vIdx, svIdx, 'type_translations', {
-                                                                                            indonesia: val,
-                                                                                            english: val,
-                                                                                            arabic: val
-                                                                                        });
-                                                                                    }}
-                                                                                    placeholder="Ukuran..."
-                                                                                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
-                                                                                />
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                                                                <div className="space-y-0.5">
-                                                                                    <span className="text-[8px] font-bold text-slate-400">Indonesia</span>
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={subVar.type_translations?.indonesia ?? subVar.type ?? ''}
-                                                                                        onChange={e => updateSubVariantTypeLang(vIdx, svIdx, 'indonesia', e.target.value)}
-                                                                                        placeholder="Ukuran, Kepekatan..."
-                                                                                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <span className="text-[8px] font-bold text-slate-400">English</span>
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={subVar.type_translations?.english ?? ''}
-                                                                                        onChange={e => updateSubVariantTypeLang(vIdx, svIdx, 'english', e.target.value)}
-                                                                                        placeholder="Size, Intensity..."
-                                                                                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="space-y-0.5">
-                                                                                    <span className="text-[8px] font-bold text-slate-400">Arab (العربية)</span>
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        dir="rtl"
-                                                                                        value={subVar.type_translations?.arabic ?? ''}
-                                                                                        onChange={e => updateSubVariantTypeLang(vIdx, svIdx, 'arabic', e.target.value)}
-                                                                                        placeholder="المقاس، التركيز..."
-                                                                                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
-                                                                                    />
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
                                                                 </div>
 
                                                                 {/* Sub-Variant Value Input */}
@@ -668,14 +870,14 @@ export default function ProductVariantsSection({
                                                                                 type="text"
                                                                                 value={subVar.name_translations?.indonesia ?? ''}
                                                                                 onChange={e => {
-                                                                                    const val = e.target.value;
+                                                                                    const val = formatValueWithSeparator(e.target.value);
                                                                                     updateSubVariantField(vIdx, svIdx, 'name_translations', {
                                                                                         indonesia: val,
                                                                                         english: val,
                                                                                         arabic: val
                                                                                     });
                                                                                 }}
-                                                                                placeholder="Contoh: S, M, L, XL, 39, 40..."
+                                                                                placeholder={t('backoffice.product.form.placeholder_ukuran', 'Contoh: S, M, L, XL / 38, 39, 40 / 100ml...')}
                                                                                 className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                             />
                                                                             {getVariantError(vIdx, svIdx, 'name_translations.indonesia') && (
@@ -692,7 +894,7 @@ export default function ProductVariantsSection({
                                                                                 <input
                                                                                     type="text"
                                                                                     value={subVar.name_translations?.indonesia ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'indonesia', e.target.value)}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'indonesia', formatValueWithSeparator(e.target.value))}
                                                                                     placeholder="Contoh: 250ml, Stroberi"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
@@ -709,7 +911,7 @@ export default function ProductVariantsSection({
                                                                                 <input
                                                                                     type="text"
                                                                                     value={subVar.name_translations?.english ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'english', e.target.value)}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'english', formatValueWithSeparator(e.target.value))}
                                                                                     placeholder="e.g. 250ml, Strawberry"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
@@ -725,7 +927,8 @@ export default function ProductVariantsSection({
                                                                                 <span className="text-[9px] font-bold text-slate-400">Arab (العربية)</span>
                                                                                 <input
                                                                                     type="text"
-                                                                                                                                  onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', e.target.value)}
+                                                                                    value={subVar.name_translations?.arabic ?? ''}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', formatValueWithSeparator(e.target.value))}
                                                                                     placeholder="مثال: ٢٥٠ مل, فراولة"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
@@ -778,7 +981,7 @@ export default function ProductVariantsSection({
                                                                     </div>
 
                                                                     {/* Unit (Satuan) */}
-                                                                    {subVar.type === 'Ukuran' ? (
+                                                                    {subVar.type === 'Ukuran' && variant.stock_type !== 'parent' ? (
                                                                         <div>
                                                                             <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</label>
                                                                             <select
@@ -800,7 +1003,12 @@ export default function ProductVariantsSection({
                                                                     ) : (
                                                                         <div className="flex flex-col justify-end h-full pb-1.5">
                                                                             <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500 opacity-0">Spacer</label>
-                                                                            <span className="text-[10px] text-slate-400 italic block">{t('backoffice.product.form.no_unit_needed', 'Tidak memerlukan satuan')}</span>
+                                                                            <span className="text-[10px] text-slate-400 italic block">
+                                                                                {variant.stock_type === 'parent' && subVar.type === 'Ukuran'
+                                                                                    ? t('backoffice.product.form.follows_parent_unit', 'Mengikuti satuan induk')
+                                                                                    : t('backoffice.product.form.no_unit_needed', 'Tidak memerlukan satuan')
+                                                                                }
+                                                                            </span>
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -849,26 +1057,28 @@ export default function ProductVariantsSection({
                                                             </div>
 
                                                             {/* Sub-Variant Branch Stocks */}
-                                                            <div className="pt-2 border-t border-slate-100">
-                                                                <p className="mb-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
-                                                                    {t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}
-                                                                </p>
-                                                                <div className="grid grid-cols-3 gap-2">
-                                                                    {(subVar.branch_stocks || []).map((bStock, bIdx) => (
-                                                                        <div key={bStock.store_branch_id} className="flex flex-col items-center gap-1 rounded-lg border border-slate-100 bg-slate-50/50 p-2">
-                                                                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
-                                                                                {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
-                                                                            </label>
-                                                                            <input
-                                                                                type="number" min="0"
-                                                                                value={bStock.stock}
-                                                                                onChange={e => updateSubVariantStock(vIdx, svIdx, bIdx, e.target.value)}
-                                                                                className="w-full rounded bg-white border border-slate-200 px-1 py-0.5 text-center text-xs font-semibold outline-none focus:border-blue-950"
-                                                                            />
-                                                                        </div>
-                                                                    ))}
+                                                            {data.stock_type !== 'parent' && variant.stock_type !== 'parent' && (
+                                                                <div className="pt-2 border-t border-slate-100">
+                                                                    <p className="mb-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                                                        {t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}
+                                                                    </p>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        {(subVar.branch_stocks || []).map((bStock, bIdx) => (
+                                                                            <div key={bStock.store_branch_id} className="flex flex-col items-center gap-1 rounded-lg border border-slate-100 bg-slate-50/50 p-2">
+                                                                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                                                                    {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formatStockInput(bStock.stock)}
+                                                                                    onChange={e => updateSubVariantStock(vIdx, svIdx, bIdx, parseStockInput(e.target.value))}
+                                                                                    className="w-full rounded bg-white border border-slate-200 px-1 py-0.5 text-center text-xs font-semibold outline-none focus:border-blue-950"
+                                                                                />
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -879,7 +1089,7 @@ export default function ProductVariantsSection({
                                     )}
 
                                     {/* Branch stocks */}
-                                    {!hasSubVariants && (
+                                    {!hasSubVariants && data.stock_type !== 'parent' && (
                                         <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
                                             <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
                                                 {t('backoffice.product.form.branch_stock_allocation', 'Alokasi Stok Gudang Cabang')}
@@ -894,9 +1104,9 @@ export default function ProductVariantsSection({
                                                             {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
                                                         </label>
                                                         <input
-                                                            type="number" min="0"
-                                                            value={bStock.stock}
-                                                            onChange={e => updateVariantStock(vIdx, bIdx, e.target.value)}
+                                                            type="text"
+                                                            value={formatStockInput(bStock.stock)}
+                                                            onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
                                                             className="w-full rounded bg-slate-50 border border-slate-200 px-1.5 py-1 text-center text-xs font-semibold outline-none focus:border-blue-950"
                                                         />
                                                     </div>

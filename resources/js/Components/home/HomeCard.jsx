@@ -10,6 +10,7 @@ const ProductCard = ({
     slug,
     title,
     price = 0, // Prop baru untuk nominal harga (angka murni, misal: 150000)
+    variants = [], // Variant products array
     sold = 0,
     image,
     status,
@@ -18,6 +19,25 @@ const ProductCard = ({
     rating = 0,
 }) => {
     const { t, locale } = useLanguage();
+
+    // Determine lowest price if variants exist, otherwise use base price
+    const displayPrice = React.useMemo(() => {
+        if (variants && variants.length > 0) {
+            const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
+            const targetVariants = hasChildren
+                ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
+                : variants;
+
+            const prices = targetVariants
+                .map(v => v.price)
+                .filter(p => typeof p === 'number' && p > 0);
+
+            if (prices.length > 0) {
+                return Math.min(...prices);
+            }
+        }
+        return price;
+    }, [price, variants]);
 
     const showNew = is_new || status === "new";
     const showBestSeller = is_best_seller || status === "best-seller";
@@ -78,7 +98,7 @@ const ProductCard = ({
                     <img
                         src={image}
                         alt={title}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-102"
                         loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -94,7 +114,7 @@ const ProductCard = ({
                     {/* Price Tag (Premium Component) */}
                     <div className="">
                         <span className="text-base font-bold text-zinc-900 tracking-tight font-sans">
-                            {formatPrice(price)}
+                            {formatPrice(displayPrice)}
                         </span>
                     </div>
 

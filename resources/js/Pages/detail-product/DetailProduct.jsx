@@ -40,19 +40,111 @@ const resolveProductImage = (img) => {
     return `/storage/${img}`;
 };
 
+const getUnitLabel = (unit, lang) => {
+    if (!unit) return '';
+    if (typeof unit === 'object') {
+        return unit[lang] || unit.name_translations?.[lang] || unit.indonesia || unit.name || '';
+    }
+    try {
+        const parsed = JSON.parse(unit);
+        if (parsed && typeof parsed === 'object') {
+            return parsed[lang] || parsed.indonesia || '';
+        }
+    } catch (e) { }
+    return String(unit);
+};
+
 const formatFullVariantName = (v, lang) => {
     if (!v) return '';
     let name = v.name_translations?.[lang] || v.name_translations?.indonesia || v.name || '';
-    if (v.unit) {
-        const unitName = typeof v.unit === 'object' ? v.unit.name : v.unit;
-        if (unitName && !name.toLowerCase().includes(unitName.toLowerCase())) {
-            if (name.includes('(') && name.includes(')')) {
-                return name.replace(')', ` ${unitName})`);
+
+    // Check if it's actually of type "ukuran" (size)
+    const isUkuranType = (typeStr, transObj) => {
+        const t = String(typeStr || '').toLowerCase();
+        if (t === 'ukuran' || t === 'size' || t.includes('| ukuran') || t.includes('| size')) return true;
+        if (transObj) {
+            let trans = transObj;
+            if (typeof trans === 'string') {
+                try { trans = JSON.parse(trans); } catch (e) { trans = null; }
             }
-            return `${name} ${unitName}`;
+            if (trans && typeof trans === 'object') {
+                const indo = String(trans.indonesia || '').toLowerCase();
+                const eng = String(trans.english || '').toLowerCase();
+                if (indo === 'ukuran' || indo === 'size' || indo.includes('| ukuran') || indo.includes('| size')) return true;
+                if (eng === 'ukuran' || eng === 'size' || eng.includes('| ukuran') || eng.includes('| size')) return true;
+            }
         }
+        return false;
+    };
+
+    if (!isUkuranType(v.type, v.type_translations)) {
+        return name;
+    }
+
+    const unitName = getUnitLabel(v.unit, lang);
+    if (unitName && !name.toLowerCase().includes(unitName.toLowerCase())) {
+        if (name.includes('(') && name.includes(')')) {
+            return name.replace(')', ` ${unitName})`);
+        }
+        return `${name} ${unitName}`;
     }
     return name;
+};
+
+const parseCapacityJs = (variantName, parentUnit = null, activeVariant = null) => {
+    if (!variantName) return 1;
+
+    const pUnit = String(parentUnit ? (typeof parentUnit === 'object' ? (parentUnit.name || '') : parentUnit) : '').toLowerCase();
+
+    // If parent unit is piece-based, capacity relative to parent is 1
+    if (['pcs', 'box', 'pack', 'piece', 'pieces', 'botol', 'butir', 'tablet'].includes(pUnit)) {
+        return 1;
+    }
+
+    let textToParse = variantName;
+    const parenMatches = textToParse.match(/\(([^)]+)\)/);
+    if (parenMatches) {
+        textToParse = parenMatches[1];
+    }
+
+    // Match value and unit from variantName
+    const match = textToParse.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|liter|pcs|box|pack)?/i);
+    if (!match) return 1;
+
+    const capacityValue = parseFloat(match[1]);
+    let capacityUnit = match[2] ? match[2].toLowerCase() : '';
+
+    // Fallback to activeVariant unit if available
+    if (!capacityUnit && activeVariant && activeVariant.unit) {
+        const uLabel = typeof activeVariant.unit === 'object'
+            ? activeVariant.unit.name
+            : activeVariant.unit;
+        capacityUnit = String(uLabel || '').toLowerCase();
+    }
+
+    // Normalize parent stock unit to base multiplier
+    let parentMultiplier = 1;
+    if (['kg', 'kilogram'].includes(pUnit)) {
+        parentMultiplier = 1000;
+    } else if (['l', 'liter'].includes(pUnit)) {
+        parentMultiplier = 1000;
+    }
+
+    // Normalize variant capacity unit to base multiplier
+    let capacityMultiplier = 1;
+    if (['kg', 'kilogram'].includes(capacityUnit)) {
+        capacityMultiplier = 1000;
+    } else if (['l', 'liter'].includes(capacityUnit)) {
+        capacityMultiplier = 1000;
+    }
+
+    const parentBase = parentMultiplier;
+    const capacityBase = capacityValue * Math.max(1, capacityMultiplier);
+
+    if (parentBase <= 0) return 1;
+
+    // Capacity relative to parent unit
+    return capacityBase / parentBase;
 };
 
 export default function DetailProduct({ product: initialProduct, slug }) {
@@ -116,140 +208,238 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         const getVariantNameWithUnit = (name, unitObj, lang) => {
             if (!name) return "";
             if (!unitObj) return name;
-            let unitName = "";
-            if (typeof unitObj === "object") {
-                unitName = unitObj.name_translations?.[lang] || unitObj.name || "";
-            } else {
-                unitName = String(unitObj);
-            }
+            const unitName = getUnitLabel(unitObj, lang);
             if (unitName && !name.toLowerCase().includes(unitName.toLowerCase())) {
                 return `${name} ${unitName}`;
             }
             return name;
         };
 
-        product.variants.forEach(v => {
-            // Safely parse name_translations
-            let nameTrans = {};
-            if (v.name_translations) {
-                if (typeof v.name_translations === 'string') {
-                    try {
-                        nameTrans = JSON.parse(v.name_translations);
-                    } catch (e) {
-                        nameTrans = {};
-                    }
-                } else if (typeof v.name_translations === 'object') {
-                    nameTrans = v.name_translations;
+        const isUkuranType = (typeStr, trans) => {
+            const t = String(typeStr || '').toLowerCase();
+            if (t === 'ukuran' || t === 'size') return true;
+            if (trans) {
+                let transObj = trans;
+                if (typeof trans === 'string') {
+                    try { transObj = JSON.parse(trans); } catch (e) { transObj = null; }
+                }
+                if (transObj && typeof transObj === 'object') {
+                    const indo = String(transObj.indonesia || '').toLowerCase();
+                    const eng = String(transObj.english || '').toLowerCase();
+                    if (indo === 'ukuran' || indo === 'size') return true;
+                    if (eng === 'ukuran' || eng === 'size') return true;
                 }
             }
+            return false;
+        };
 
-            const indonesiaName = String(nameTrans?.indonesia || v.name || '');
-            const englishName = String(nameTrans?.english || '');
-            const arabicName = String(nameTrans?.arabic || '');
+        const hasParentRelations = product.variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
 
-            // Extract suffixes in parentheses at the end of the string
-            const regex = /\(([^)]+)\)/g;
-            const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
-            const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
-            const matchesAra = [...arabicName.matchAll(regex)].map(m => m[1]);
-
-            const cleanName = (str) => String(str || '').replace(/\s*\([^)]+\)/g, '').trim();
-            const parentNameIndo = cleanName(indonesiaName);
-            const parentNameEng = cleanName(englishName);
-            const parentNameAra = cleanName(arabicName);
-
-            // If type contains '|', split it
-            let parentType = String(v.type || '');
-            let subType = null;
-            if (parentType.includes(' | ')) {
-                const parts = parentType.split(' | ');
-                parentType = parts[0].trim();
-                subType = parts[1].trim();
-            }
-
-            const parentKey = `${parentType}_${parentNameIndo}`;
-            const hasSub = matchesIndo.length > 0;
-
-            if (!parentGroups[parentKey]) {
-                // Extract type_translations safely
-                let parentTypeTranslations = { indonesia: parentType, english: parentType, arabic: parentType };
-                let subTypeTranslations = null;
-                if (v.type_translations) {
-                    let tObj = {};
-                    if (typeof v.type_translations === 'string') {
-                        try {
-                            tObj = JSON.parse(v.type_translations);
-                        } catch (e) {
-                            tObj = {};
-                        }
-                    } else if (typeof v.type_translations === 'object') {
-                        tObj = v.type_translations;
-                    }
-
-                    const splitT = (str) => {
-                        const sStr = String(str || '');
-                        return sStr && sStr.includes(' | ') ? sStr.split(' | ').map(s => s.trim()) : [sStr.trim() || '', null];
+        if (hasParentRelations) {
+            product.variants.forEach(v => {
+                if (!v.parent_id) {
+                    const parentKey = `${v.type}_${v.name_translations?.indonesia || v.name}`;
+                    const pTrans = v.type_translations || { indonesia: v.type, english: v.type, arabic: v.type };
+                    const isParentUkuran = isUkuranType(v.type, pTrans);
+                    parentGroups[v.id] = {
+                        key: parentKey,
+                        id: v.id,
+                        type: v.type,
+                        type_translations: pTrans,
+                        sku: v.sku,
+                        price: v.price,
+                        unit: v.unit || product.unit,
+                        image: v.image,
+                        stock: v.stock || 0,
+                        stock_type: v.stock_type || 'variant',
+                        name_translations: {
+                            indonesia: isParentUkuran ? getVariantNameWithUnit(v.name_translations?.indonesia || v.name, v.unit || product.unit, 'indonesia') : (v.name_translations?.indonesia || v.name || ""),
+                            english: isParentUkuran ? getVariantNameWithUnit(v.name_translations?.english || v.name, v.unit || product.unit, 'english') : (v.name_translations?.english || v.name || ""),
+                            arabic: isParentUkuran ? getVariantNameWithUnit(v.name_translations?.arabic || v.name, v.unit || product.unit, 'arabic') : (v.name_translations?.arabic || v.name || ""),
+                        },
+                        has_sub_variants: false,
+                        sub_variants: [],
                     };
-                    const [pI, sI] = splitT(tObj?.indonesia || '');
-                    const [pE, sE] = splitT(tObj?.english || '');
-                    const [pA, sA] = splitT(tObj?.arabic || '');
-                    parentTypeTranslations = { indonesia: pI || parentType, english: pE || pI || parentType, arabic: pA || pI || parentType };
-                    if (sI || sE || sA) {
-                        subTypeTranslations = { indonesia: sI || '', english: sE || sI || '', arabic: sA || sI || '' };
+                }
+            });
+
+            product.variants.forEach(v => {
+                if (v.parent_id && parentGroups[v.parent_id]) {
+                    const parent = parentGroups[v.parent_id];
+                    parent.has_sub_variants = true;
+
+                    const fullnameIndo = v.name_translations?.indonesia || v.name || '';
+                    const fullnameEng = v.name_translations?.english || '';
+                    const fullnameAra = v.name_translations?.arabic || '';
+
+                    const regex = /\(([^)]+)\)/;
+                    const matchIndo = fullnameIndo.match(regex);
+                    const matchEng = fullnameEng.match(regex);
+                    const matchAra = fullnameAra.match(regex);
+
+                    const valIndo = matchIndo ? matchIndo[1] : fullnameIndo;
+                    const valEng = matchEng ? matchEng[1] : fullnameEng;
+                    const valAra = matchAra ? matchAra[1] : fullnameAra;
+
+                    let subType = 'Ukuran';
+                    if (v.type && v.type.includes(' | ')) {
+                        subType = v.type.split(' | ')[1].trim();
+                    }
+                    let subTypeTranslations = { indonesia: 'Ukuran', english: 'Size', arabic: 'المقاس' };
+                    if (parent.type_translations) {
+                        const getSubT = (str) => str && str.includes(' | ') ? str.split(' | ')[1].trim() : null;
+                        const sI = getSubT(v.type_translations?.indonesia);
+                        const sE = getSubT(v.type_translations?.english);
+                        const sA = getSubT(v.type_translations?.arabic);
+                        if (sI || sE || sA) {
+                            subTypeTranslations = { indonesia: sI || 'Ukuran', english: sE || sI || 'Size', arabic: sA || sI || 'المقاس' };
+                        }
+                    }
+
+                    const parentUnit = parent?.unit;
+                    const isSubUkuran = isUkuranType(subType, subTypeTranslations);
+
+                    parent.sub_variants.push({
+                        id: v.id,
+                        parent_id: v.parent_id,
+                        type: subType,
+                        type_translations: subTypeTranslations,
+                        name_translations: {
+                            indonesia: isSubUkuran ? getVariantNameWithUnit(valIndo, v.unit || parentUnit || product.unit, 'indonesia') : valIndo,
+                            english: isSubUkuran ? getVariantNameWithUnit(valEng, v.unit || parentUnit || product.unit, 'english') : valEng,
+                            arabic: isSubUkuran ? getVariantNameWithUnit(valAra, v.unit || parentUnit || product.unit, 'arabic') : valAra,
+                        },
+                        unit: v.unit || parentUnit || product.unit,
+                        sku: v.sku || '',
+                        price: v.price || '',
+                        image: v.image,
+                        stock: v.stock || 0,
+                    });
+                    parent.stock += (v.stock || 0);
+                }
+            });
+
+            return Object.values(parentGroups);
+        } else {
+            product.variants.forEach(v => {
+                let nameTrans = {};
+                if (v.name_translations) {
+                    if (typeof v.name_translations === 'string') {
+                        try { nameTrans = JSON.parse(v.name_translations); } catch (e) { nameTrans = {}; }
+                    } else if (typeof v.name_translations === 'object') {
+                        nameTrans = v.name_translations;
                     }
                 }
 
-                parentGroups[parentKey] = {
-                    key: parentKey,
-                    id: hasSub ? null : v.id,
-                    type: parentType,
-                    type_translations: parentTypeTranslations,
-                    sku: hasSub ? '' : v.sku,
-                    price: hasSub ? '' : v.price,
-                    unit: v.unit,
-                    image: v.image,
-                    stock: hasSub ? 0 : (v.stock || 0),
-                    name_translations: {
-                        indonesia: getVariantNameWithUnit(parentNameIndo, v.unit, 'indonesia'),
-                        english: getVariantNameWithUnit(parentNameEng, v.unit, 'english'),
-                        arabic: getVariantNameWithUnit(parentNameAra, v.unit, 'arabic'),
-                    },
-                    has_sub_variants: hasSub,
-                    sub_variants: [],
-                    _subTypeTranslations: subTypeTranslations,
-                };
-            }
+                const indonesiaName = String(nameTrans?.indonesia || v.name || '');
+                const englishName = String(nameTrans?.english || '');
+                const arabicName = String(nameTrans?.arabic || '');
 
-            if (hasSub) {
-                const valIndo = matchesIndo[0] || '';
-                const valEng = matchesEng[0] || '';
-                const valAra = matchesAra[0] || '';
+                const regex = /\(([^)]+)\)/g;
+                const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
+                const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
+                const matchesAra = [...arabicName.matchAll(regex)].map(m => m[1]);
 
-                parentGroups[parentKey].sub_variants.push({
-                    id: v.id,
-                    type: subType || 'Custom',
-                    type_translations: parentGroups[parentKey]._subTypeTranslations || {
+                const cleanName = (str) => String(str || '').replace(/\s*\([^)]+\)/g, '').trim();
+                const parentNameIndo = cleanName(indonesiaName);
+                const parentNameEng = cleanName(englishName);
+                const parentNameAra = cleanName(arabicName);
+
+                let parentType = String(v.type || '');
+                let subType = null;
+                if (parentType.includes(' | ')) {
+                    const parts = parentType.split(' | ');
+                    parentType = parts[0].trim();
+                    subType = parts[1].trim();
+                }
+
+                const parentKey = `${parentType}_${parentNameIndo}`;
+                const hasSub = matchesIndo.length > 0;
+
+                if (!parentGroups[parentKey]) {
+                    let parentTypeTranslations = { indonesia: parentType, english: parentType, arabic: parentType };
+                    let subTypeTranslations = null;
+                    if (v.type_translations) {
+                        let tObj = {};
+                        if (typeof v.type_translations === 'string') {
+                            try { tObj = JSON.parse(v.type_translations); } catch (e) { tObj = {}; }
+                        } else if (typeof v.type_translations === 'object') {
+                            tObj = v.type_translations;
+                        }
+
+                        const splitT = (str) => {
+                            const sStr = String(str || '');
+                            return sStr && sStr.includes(' | ') ? sStr.split(' | ').map(s => s.trim()) : [sStr.trim() || '', null];
+                        };
+                        const [pI, sI] = splitT(tObj?.indonesia || '');
+                        const [pE, sE] = splitT(tObj?.english || '');
+                        const [pA, sA] = splitT(tObj?.arabic || '');
+                        parentTypeTranslations = { indonesia: pI || parentType, english: pE || pI || parentType, arabic: pA || pI || parentType };
+                        if (sI || sE || sA) {
+                            subTypeTranslations = { indonesia: sI || '', english: sE || sI || '', arabic: sA || sI || '' };
+                        }
+                    }
+
+                    const isParentUkuran = isUkuranType(parentType, parentTypeTranslations);
+
+                    parentGroups[parentKey] = {
+                        key: parentKey,
+                        id: hasSub ? null : v.id,
+                        type: parentType,
+                        type_translations: parentTypeTranslations,
+                        sku: hasSub ? '' : v.sku,
+                        price: hasSub ? '' : v.price,
+                        unit: v.unit || product.unit,
+                        image: v.image,
+                        stock: hasSub ? 0 : (v.stock || 0),
+                        name_translations: {
+                            indonesia: isParentUkuran ? getVariantNameWithUnit(parentNameIndo, v.unit || product.unit, 'indonesia') : parentNameIndo,
+                            english: isParentUkuran ? getVariantNameWithUnit(parentNameEng, v.unit || product.unit, 'english') : parentNameEng,
+                            arabic: isParentUkuran ? getVariantNameWithUnit(parentNameAra, v.unit || product.unit, 'arabic') : parentNameAra,
+                        },
+                        has_sub_variants: hasSub,
+                        sub_variants: [],
+                        _subTypeTranslations: subTypeTranslations,
+                    };
+                }
+
+                if (hasSub) {
+                    const valIndo = matchesIndo[0] || '';
+                    const valEng = matchesEng[0] || '';
+                    const valAra = matchesAra[0] || '';
+
+                    const isSubUkuran = isUkuranType(subType || 'Custom', parentGroups[parentKey]._subTypeTranslations || {
                         indonesia: subType || 'Custom',
                         english: subType || 'Custom',
                         arabic: subType || 'مخصص',
-                    },
-                    name_translations: {
-                        indonesia: getVariantNameWithUnit(valIndo, v.unit, 'indonesia'),
-                        english: getVariantNameWithUnit(valEng, v.unit, 'english'),
-                        arabic: getVariantNameWithUnit(valAra, v.unit, 'arabic'),
-                    },
-                    unit: v.unit,
-                    sku: v.sku || '',
-                    price: v.price || '',
-                    image: v.image,
-                    stock: v.stock || 0,
-                });
-                // Accumulate stock
-                parentGroups[parentKey].stock += (v.stock || 0);
-            }
-        });
+                    });
 
-        return Object.values(parentGroups);
+                    parentGroups[parentKey].sub_variants.push({
+                        id: v.id,
+                        type: subType || 'Custom',
+                        type_translations: parentGroups[parentKey]._subTypeTranslations || {
+                            indonesia: subType || 'Custom',
+                            english: subType || 'Custom',
+                            arabic: subType || 'مخصص',
+                        },
+                        name_translations: {
+                            indonesia: isSubUkuran ? getVariantNameWithUnit(valIndo, v.unit || parentGroups[parentKey].unit || product.unit, 'indonesia') : valIndo,
+                            english: isSubUkuran ? getVariantNameWithUnit(valEng, v.unit || parentGroups[parentKey].unit || product.unit, 'english') : valEng,
+                            arabic: isSubUkuran ? getVariantNameWithUnit(valAra, v.unit || parentGroups[parentKey].unit || product.unit, 'arabic') : valAra,
+                        },
+                        unit: v.unit || parentGroups[parentKey].unit || product.unit,
+                        sku: v.sku || '',
+                        price: v.price || '',
+                        image: v.image,
+                        stock: v.stock || 0,
+                    });
+                    parentGroups[parentKey].stock += (v.stock || 0);
+                    parentGroups[parentKey].has_sub_variants = true;
+                }
+            });
+
+            return Object.values(parentGroups);
+        }
     }, [product.variants, isDbProduct, locale]);
 
     // Resolusi combined gallery: gambar produk (Eloquent / static JSON) + gambar varian
@@ -374,11 +564,131 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     }, [activeVariant, product.variants, product.price]);
 
     const currentStock = React.useMemo(() => {
+        if (product.stock_type === 'parent') {
+            const parentStock = product.stock || 0;
+            const variantName = activeVariant ? (activeVariant.name_translations?.[locale] || activeVariant.name_translations?.indonesia || activeVariant.name || '') : '';
+            const capacity = parseCapacityJs(variantName, product.unit, activeVariant);
+            return Math.floor(parentStock / capacity);
+        }
         if (activeVariant) {
+            if (activeVariant.parent_id) {
+                const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
+                if (parentVar && parentVar.stock_type === 'parent') {
+                    const parentStock = parentVar.stock || 0;
+                    const variantName = activeVariant.name_translations?.[locale] || activeVariant.name_translations?.indonesia || activeVariant.name || '';
+                    const capacity = parseCapacityJs(variantName, parentVar.unit, activeVariant);
+                    return Math.floor(parentStock / capacity);
+                }
+            }
             return activeVariant.stock;
         }
         return product.stock || 0;
-    }, [activeVariant, product.stock]);
+    }, [activeVariant, product.stock, product.stock_type, product.variants, locale]);
+
+    // Resolve the active variant from groupedVariants (has inherited units)
+    const activeGroupedSubVariant = React.useMemo(() => {
+        if (!isDbProduct || !selectedVariantId || !groupedVariants.length) return null;
+        for (const parent of groupedVariants) {
+            if (parent.has_sub_variants) {
+                const found = parent.sub_variants.find(sv => sv.id === selectedVariantId);
+                if (found) return { subVariant: found, parent };
+            }
+        }
+        return null;
+    }, [isDbProduct, selectedVariantId, groupedVariants]);
+
+    const currentUnit = React.useMemo(() => {
+        // 1. Try unit from grouped sub-variant (has inherited parent unit)
+        if (activeGroupedSubVariant?.subVariant?.unit) {
+            return getUnitLabel(activeGroupedSubVariant.subVariant.unit, locale);
+        }
+        // 2. Try unit from grouped parent variant
+        if (activeGroupedSubVariant?.parent?.unit) {
+            return getUnitLabel(activeGroupedSubVariant.parent.unit, locale);
+        }
+        // 3. Try raw activeVariant unit
+        if (activeVariant?.unit) {
+            return getUnitLabel(activeVariant.unit, locale);
+        }
+        // 4. Try parent via raw parent_id lookup
+        if (activeVariant?.parent_id) {
+            const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
+            if (parentVar?.unit) {
+                return getUnitLabel(parentVar.unit, locale);
+            }
+        }
+        // 5. Try unit from any parent group (single variant type, no sub-variant selected)
+        if (isDbProduct && groupedVariants.length > 0) {
+            const activeParent = groupedVariants.find(p => p.key === selectedParentKey);
+            if (activeParent?.unit) {
+                return getUnitLabel(activeParent.unit, locale);
+            }
+            const anyParentWithUnit = groupedVariants.find(p => p.unit);
+            if (anyParentWithUnit?.unit) {
+                return getUnitLabel(anyParentWithUnit.unit, locale);
+            }
+        }
+        // 6. Product-level unit
+        if (product.unit) {
+            return getUnitLabel(product.unit, locale);
+        }
+        return t("product.detail.pcs", "Pcs");
+    }, [activeGroupedSubVariant, activeVariant, product.unit, product.variants, groupedVariants, selectedParentKey, isDbProduct, locale, t]);
+
+    const displayStock = React.useMemo(() => {
+        if (product.stock_type === 'parent') {
+            return product.stock || 0;
+        }
+        if (activeVariant) {
+            if (activeVariant.parent_id) {
+                const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
+                if (parentVar && parentVar.stock_type === 'parent') {
+                    return parentVar.stock || 0;
+                }
+            }
+            return activeVariant.stock || 0;
+        }
+        return product.stock || 0;
+    }, [activeVariant, product.stock, product.stock_type, product.variants]);
+
+    const isParentStockMode = React.useMemo(() => {
+        if (product.stock_type === 'parent') return true;
+        if (activeVariant) {
+            if (activeVariant.parent_id) {
+                const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
+                if (parentVar && parentVar.stock_type === 'parent') return true;
+            }
+        }
+        return false;
+    }, [activeVariant, product.stock_type, product.variants]);
+
+    // Resolves the PARENT's unit (not the sub-variant's unit) for raw stock display.
+    // displayStock returns the parent's raw stock value, so the unit label must match the parent's unit.
+    const parentStockUnit = React.useMemo(() => {
+        if (product.stock_type === 'parent') {
+            return product.unit ? getUnitLabel(product.unit, locale) : null;
+        }
+        if (activeVariant?.parent_id) {
+            const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
+            if (parentVar?.stock_type === 'parent') {
+                return parentVar.unit ? getUnitLabel(parentVar.unit, locale) : null;
+            }
+        }
+        return null;
+    }, [activeVariant, product.stock_type, product.unit, product.variants, locale]);
+
+    const stockStatusText = React.useMemo(() => {
+        let text = t("product.detail.stock_qty_available", "Stok: {qty} {unit} tersedia");
+        if (!text.includes("{unit}")) {
+            text = text.replace("{qty}", "{qty} {unit}");
+        }
+        // In parent stock mode, displayStock is the raw parent stock value, so use
+        // parentStockUnit (parent's unit, e.g. "gr") — NOT currentUnit (sub-variant's unit).
+        const unitStr = isParentStockMode
+            ? (parentStockUnit || currentUnit || t("product.detail.pcs", "Pcs"))
+            : t("product.detail.pcs", "Pcs");
+        return text.replace("{qty}", displayStock).replace("{unit}", unitStr).trim().replace(/\s+/g, ' ');
+    }, [displayStock, currentUnit, parentStockUnit, isParentStockMode, locale, t]);
 
     const handleQuantityChange = (type) => {
         if (type === "minus" && quantity > 1) setQuantity(quantity - 1);
@@ -630,7 +940,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
                                 {/* Status Badge */}
-                                <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+                                <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
                                     {(product.is_best_seller || product.status === "best-seller") && (
                                         <span className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
                                             <Flame
@@ -779,7 +1089,20 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                             </h3>
                                             {(() => {
                                                 const activeParent = groupedVariants.find(p => p.key === selectedParentKey) || groupedVariants[0];
-                                                const parentName = activeParent ? (activeParent.name_translations?.[locale] || activeParent.name_translations?.indonesia || '') : '';
+                                                if (!activeParent) return null;
+                                                const rawName = activeParent.name_translations?.[locale] || activeParent.name_translations?.indonesia || '';
+                                                const isUkuranType = activeParent.type?.toLowerCase() === 'ukuran' || activeParent.type?.toLowerCase() === 'size'
+                                                    || activeParent.type_translations?.[locale]?.toLowerCase() === 'ukuran'
+                                                    || activeParent.type_translations?.[locale]?.toLowerCase() === 'size';
+                                                let parentName = rawName;
+                                                if (isUkuranType) {
+                                                    const parentUnitStr = activeParent.unit
+                                                        ? getUnitLabel(activeParent.unit, locale)
+                                                        : currentUnit !== t('product.detail.pcs', 'Pcs') ? currentUnit : '';
+                                                    if (parentUnitStr && !rawName.toLowerCase().includes(parentUnitStr.toLowerCase())) {
+                                                        parentName = `${rawName} ${parentUnitStr}`;
+                                                    }
+                                                }
                                                 return parentName ? (
                                                     <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                                                         {parentName}
@@ -791,7 +1114,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                             {groupedVariants.map((parent) => {
                                                 const isSelected = selectedParentKey === parent.key;
                                                 const parentName = parent.name_translations?.[locale] || parent.name_translations?.indonesia || '';
-                                                const isParentOutOfStock = parent.stock === 0;
+                                                const isParentOutOfStock = product.stock_type === 'parent'
+                                                    ? (product.stock || 0) < parseCapacityJs(parent.name_translations?.[locale] || parent.name_translations?.indonesia || parent.name || '', product.unit, parent)
+                                                    : parent.stock === 0;
 
                                                 return (
                                                     <button
@@ -822,12 +1147,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                     >
                                                         <div className="text-center px-3 w-full">
                                                             <span className="block leading-tight">{parentName}</span>
-                                                            {/* {!parent.has_sub_variants && parent.price && parent.price !== product.price ? (
-                                                                <span className={`text-[10px] block ${isSelected ? "text-blue-100" : "text-slate-400"
-                                                                    }`}>
-                                                                    {formatPrice(parent.price)}
-                                                                </span>
-                                                            ) : null} */}
                                                         </div>
                                                     </button>
                                                 );
@@ -851,17 +1170,51 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                     <h3 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
                                                         {t(`product.detail.select_${subTypeCapitalized.toLowerCase()}`, `${selectPrefix} ${subTypeCapitalized}`)}
                                                     </h3>
-                                                    {activeVariant && activeVariant.id !== currentParent.id && (
-                                                        <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                                                            {formatFullVariantName(activeVariant, locale)}
-                                                        </span>
-                                                    )}
+                                                    {selectedVariantId && (() => {
+                                                        const resolvedSv = currentParent.sub_variants.find(sv => sv.id === selectedVariantId);
+                                                        if (!resolvedSv) return null;
+                                                        const svName = resolvedSv.name_translations?.[locale] || resolvedSv.name_translations?.indonesia || '';
+                                                        const isUkuranSub = resolvedSv.type?.toLowerCase() === 'ukuran' || resolvedSv.type?.toLowerCase() === 'size'
+                                                            || resolvedSv.type_translations?.[locale]?.toLowerCase() === 'ukuran'
+                                                            || resolvedSv.type_translations?.[locale]?.toLowerCase() === 'size';
+                                                        let displayName = svName;
+                                                        if (isUkuranSub) {
+                                                            const svUnitStr = resolvedSv.unit
+                                                                ? getUnitLabel(resolvedSv.unit, locale)
+                                                                : currentUnit !== t('product.detail.pcs', 'Pcs') ? currentUnit : '';
+                                                            if (svUnitStr && !svName.toLowerCase().includes(svUnitStr.toLowerCase())) {
+                                                                displayName = `${svName} ${svUnitStr}`;
+                                                            }
+                                                        }
+                                                        return displayName ? (
+                                                            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                                                                {displayName}
+                                                            </span>
+                                                        ) : null;
+                                                    })()}
                                                 </div>
                                                 <div className="flex flex-wrap gap-2.5">
                                                     {currentParent.sub_variants.map((subVar) => {
                                                         const isSelected = selectedVariantId === subVar.id;
-                                                        const subVarName = subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || '';
-                                                        const isSubOutOfStock = subVar.stock === 0;
+                                                        const subVarRawName = subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || '';
+                                                        const isUkuranSubBtn = subVar.type?.toLowerCase() === 'ukuran' || subVar.type?.toLowerCase() === 'size'
+                                                            || subVar.type_translations?.[locale]?.toLowerCase() === 'ukuran'
+                                                            || subVar.type_translations?.[locale]?.toLowerCase() === 'size';
+                                                        let subVarDisplayName = subVarRawName;
+                                                        if (isUkuranSubBtn) {
+                                                            const subVarUnitStr = subVar.unit
+                                                                ? getUnitLabel(subVar.unit, locale)
+                                                                : currentUnit !== t('product.detail.pcs', 'Pcs') ? currentUnit : '';
+                                                            if (subVarUnitStr && !subVarRawName.toLowerCase().includes(subVarUnitStr.toLowerCase())) {
+                                                                subVarDisplayName = `${subVarRawName} ${subVarUnitStr}`;
+                                                            }
+                                                        }
+                                                        const parentVarOfSub = subVar.parent_id ? product.variants?.find(v => v.id === subVar.parent_id) : null;
+                                                        const isSubOutOfStock = product.stock_type === 'parent'
+                                                            ? (product.stock || 0) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', product.unit, subVar)
+                                                            : (parentVarOfSub && parentVarOfSub.stock_type === 'parent')
+                                                                ? (parentVarOfSub.stock || 0) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', parentVarOfSub.unit, subVar)
+                                                                : subVar.stock === 0;
 
                                                         return (
                                                             <button
@@ -881,7 +1234,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                                     } ${isSubOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
                                                             >
                                                                 <div className="text-center">
-                                                                    <span className="block leading-tight">{subVarName}</span>
+                                                                    <span className="block leading-tight">{subVarDisplayName}</span>
                                                                 </div>
                                                             </button>
                                                         );
@@ -997,7 +1350,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     ) : (
                                         <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5">
                                             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                                            {t("product.detail.stock_qty_available", "Stok: {qty} tersedia").replace("{qty}", currentStock)}
+                                            {stockStatusText}
                                         </span>
                                     )}
                                 </div>

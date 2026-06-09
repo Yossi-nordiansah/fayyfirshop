@@ -30,6 +30,8 @@ class Product extends Model
         'product_sub_category_id',
         'name_translations',
         'description_translations',
+        'stock_type',
+        'unit',
     ];
 
     protected $casts = [
@@ -137,3 +139,4 @@ class Product extends Model
         return $slug;
     }
 }
+

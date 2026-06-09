@@ -77,145 +77,259 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
         if (!product.variants || product.variants.length === 0) return [];
 
         const parentGroups = {};
+        const hasParentRelations = product.variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
 
-        product.variants.forEach(v => {
-            const indonesiaName = v.name_translations?.indonesia || v.name || '';
-            const englishName = v.name_translations?.english || '';
-            const arabicName = v.name_translations?.arabic || '';
-
-            // Extract suffixes in parentheses at the end of the string
-            const regex = /\(([^)]+)\)/g;
-            const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
-            const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
-            const matchesAra = [...arabicName.matchAll(regex)].map(m => m[1]);
-
-            const cleanName = (str) => str.replace(/\s*\([^)]+\)/g, '').trim();
-            const parentNameIndo = cleanName(indonesiaName);
-            const parentNameEng = cleanName(englishName);
-            const parentNameAra = cleanName(arabicName);
-
-            // If type contains '|', split it
-            let parentType = v.type || '';
-            let subType = null;
-            if (parentType.includes(' | ')) {
-                const parts = parentType.split(' | ');
-                parentType = parts[0].trim();
-                subType = parts[1].trim();
-            }
-
-            const parentKey = `${parentType}_${parentNameIndo}`;
-            const hasSub = matchesIndo.length > 0;
-
-            if (!parentGroups[parentKey]) {
-                // Extract type_translations
-                let parentTypeTranslations = { indonesia: parentType, english: parentType, arabic: parentType };
-                let subTypeTranslations = null;
-                if (v.type_translations) {
-                    const tObj = typeof v.type_translations === 'string' ? JSON.parse(v.type_translations) : v.type_translations;
-                    const splitT = (str) => str && str.includes(' | ') ? str.split(' | ').map(s => s.trim()) : [str?.trim() || '', null];
-                    const [pI, sI] = splitT(tObj?.indonesia || '');
-                    const [pE, sE] = splitT(tObj?.english || '');
-                    const [pA, sA] = splitT(tObj?.arabic || '');
-                    parentTypeTranslations = { indonesia: pI || parentType, english: pE || pI || parentType, arabic: pA || pI || parentType };
-                    if (sI || sE || sA) {
-                        subTypeTranslations = { indonesia: sI || '', english: sE || sI || '', arabic: sA || sI || '' };
-                    }
+        if (hasParentRelations) {
+            // First pass: parent variants
+            product.variants.forEach(v => {
+                if (!v.parent_id) {
+                    const pTrans = v.type_translations || { indonesia: v.type, english: v.type, arabic: v.type };
+                    parentGroups[v.id] = {
+                        id: v.id,
+                        type: v.type,
+                        type_translations: pTrans,
+                        sku: v.sku,
+                        price: v.price,
+                        unit_id: v.unit_id,
+                        stock_type: v.stock_type || 'variant',
+                        image: v.image,
+                        imagePreview: v.image ? `/storage/${v.image}` : null,
+                        name_translations: {
+                            indonesia: v.name_translations?.indonesia || v.name || "",
+                            english: v.name_translations?.english || v.name || "",
+                            arabic: v.name_translations?.arabic || v.name || "",
+                        },
+                        has_sub_variants: false,
+                        sub_variants: [],
+                        branch_stocks: storeBranches.map(branch => {
+                            const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                            return {
+                                store_branch_id: branch.id,
+                                branch_name: branch.name,
+                                country_code: branch.country_code,
+                                stock: existing?.stock ?? 0
+                            };
+                        }),
+                    };
                 }
+            });
 
-                parentGroups[parentKey] = {
-                    id: hasSub ? null : v.id,
-                    type: parentType,
-                    type_translations: parentTypeTranslations,
-                    sku: hasSub ? '' : v.sku,
-                    price: hasSub ? '' : v.price,
-                    unit_id: hasSub ? '' : v.unit_id,
-                    image: v.image,
-                    imagePreview: hasSub ? null : (v.image ? `/storage/${v.image}` : null),
-                    name_translations: {
-                        indonesia: parentNameIndo,
-                        english: parentNameEng,
-                        arabic: parentNameAra,
-                    },
-                    has_sub_variants: hasSub,
-                    sub_variants: [],
-                    _subTypeTranslations: subTypeTranslations,
-                    branch_stocks: hasSub ? [] : storeBranches.map(branch => {
-                        const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
-                        return {
-                            store_branch_id: branch.id,
-                            branch_name: branch.name,
-                            country_code: branch.country_code,
-                            stock: existing?.stock ?? 0
-                        };
-                    }),
-                };
-            }
+            // Second pass: child variants
+            product.variants.forEach(v => {
+                if (v.parent_id && parentGroups[v.parent_id]) {
+                    const parent = parentGroups[v.parent_id];
+                    parent.has_sub_variants = true;
 
-            if (hasSub) {
-                const valIndo = matchesIndo[0] || '';
-                const valEng = matchesEng[0] || '';
-                const valAra = matchesAra[0] || '';
+                    const fullnameIndo = v.name_translations?.indonesia || v.name || '';
+                    const fullnameEng = v.name_translations?.english || '';
+                    const fullnameAra = v.name_translations?.arabic || '';
 
-                let isUnitSize = false;
-                let parsedSize = valIndo;
-                let subUnitId = '';
+                    const regex = /\(([^)]+)\)/;
+                    const matchIndo = fullnameIndo.match(regex);
+                    const matchEng = fullnameEng.match(regex);
+                    const matchAra = fullnameAra.match(regex);
 
-                if (v.unit_id) {
-                    isUnitSize = true;
-                    subUnitId = String(v.unit_id);
-                    const foundUnit = units.find(u => {
-                        const name = u.name.toLowerCase();
-                        return valIndo.toLowerCase().includes(name);
+                    const valIndo = matchIndo ? matchIndo[1] : fullnameIndo;
+                    const valEng = matchEng ? matchEng[1] : fullnameEng;
+                    const valAra = matchAra ? matchAra[1] : fullnameAra;
+
+                    let subType = 'Ukuran';
+                    if (v.type && v.type.includes(' | ')) {
+                        subType = v.type.split(' | ')[1].trim();
+                    }
+                    let subTypeTranslations = { indonesia: 'Ukuran', english: 'Size', arabic: 'المقاس' };
+                    if (parent.type_translations) {
+                        const getSubT = (str) => str && str.includes(' | ') ? str.split(' | ')[1].trim() : null;
+                        const sI = getSubT(v.type_translations?.indonesia);
+                        const sE = getSubT(v.type_translations?.english);
+                        const sA = getSubT(v.type_translations?.arabic);
+                        if (sI || sE || sA) {
+                            subTypeTranslations = { indonesia: sI || 'Ukuran', english: sE || sI || 'Size', arabic: sA || sI || 'المقاس' };
+                        }
+                    }
+
+                    parent.sub_variants.push({
+                        id: v.id,
+                        parent_id: v.parent_id,
+                        type: subType,
+                        type_translations: subTypeTranslations,
+                        name_translations: {
+                            indonesia: valIndo,
+                            english: valEng,
+                            arabic: valAra,
+                        },
+                        unit_id: v.unit_id || '',
+                        sku: v.sku || '',
+                        price: v.price || '',
+                        image: v.image,
+                        imagePreview: v.image ? `/storage/${v.image}` : null,
+                        branch_stocks: storeBranches.map(branch => {
+                            const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                            return {
+                                store_branch_id: branch.id,
+                                branch_name: branch.name,
+                                country_code: branch.country_code,
+                                stock: existing?.stock ?? 0
+                            };
+                        }),
                     });
-                    if (foundUnit) {
-                        parsedSize = valIndo.replace(new RegExp(foundUnit.name, 'i'), '').trim();
+                }
+            });
+
+            // Set parent virtual preview image if it has sub-variants but no parent image
+            Object.values(parentGroups).forEach(group => {
+                if (group.has_sub_variants && !group.imagePreview) {
+                    const firstWithImage = group.sub_variants.find(sv => sv.image);
+                    if (firstWithImage) {
+                        group.imagePreview = `/storage/${firstWithImage.image}`;
+                    } else if (group.image) {
+                        group.imagePreview = `/storage/${group.image}`;
                     }
                 }
+            });
 
-                parentGroups[parentKey].sub_variants.push({
-                    id: v.id,
-                    type: subType || (isUnitSize ? 'Ukuran' : 'Custom'),
-                    type_translations: parentGroups[parentKey]._subTypeTranslations || {
-                        indonesia: subType || (isUnitSize ? 'Ukuran' : 'Custom'),
-                        english: subType || (isUnitSize ? 'Size' : 'Custom'),
-                        arabic: subType || (isUnitSize ? 'المقاس' : 'مخصص'),
-                    },
-                    name_translations: {
-                        indonesia: parsedSize,
-                        english: isUnitSize && subUnitId ? valEng.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() : valEng,
-                        arabic: isUnitSize && subUnitId ? valAra.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() : valAra,
-                    },
-                    unit_id: subUnitId || '',
-                    sku: v.sku || '',
-                    price: v.price || '',
-                    image: v.image,
-                    imagePreview: v.image ? `/storage/${v.image}` : null,
-                    branch_stocks: storeBranches.map(branch => {
-                        const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
-                        return {
-                            store_branch_id: branch.id,
-                            branch_name: branch.name,
-                            country_code: branch.country_code,
-                            stock: existing?.stock ?? 0
-                        };
-                    }),
-                });
-            }
-        });
+            return Object.values(parentGroups);
+        } else {
+            // Fallback to old regex-based grouping
+            product.variants.forEach(v => {
+                const indonesiaName = v.name_translations?.indonesia || v.name || '';
+                const englishName = v.name_translations?.english || '';
+                const arabicName = v.name_translations?.arabic || '';
 
-        // Set parent virtual preview image if it has sub-variants but no parent image
-        Object.values(parentGroups).forEach(group => {
-            if (group.has_sub_variants && !group.imagePreview) {
-                const firstWithImage = group.sub_variants.find(sv => sv.image);
-                if (firstWithImage) {
-                    group.imagePreview = `/storage/${firstWithImage.image}`;
-                } else if (group.image) {
-                    group.imagePreview = `/storage/${group.image}`;
+                const regex = /\(([^)]+)\)/g;
+                const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
+                const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
+                const matchesAra = [...arabicName.matchAll(regex)].map(m => m[1]);
+
+                const cleanName = (str) => str.replace(/\s*\([^)]+\)/g, '').trim();
+                const parentNameIndo = cleanName(indonesiaName);
+                const parentNameEng = cleanName(englishName);
+                const parentNameAra = cleanName(arabicName);
+
+                let parentType = v.type || '';
+                let subType = null;
+                if (parentType.includes(' | ')) {
+                    const parts = parentType.split(' | ');
+                    parentType = parts[0].trim();
+                    subType = parts[1].trim();
                 }
-            }
-        });
 
-        return Object.values(parentGroups);
+                const parentKey = `${parentType}_${parentNameIndo}`;
+                const hasSub = matchesIndo.length > 0;
+
+                if (!parentGroups[parentKey]) {
+                    // Extract type_translations
+                    let parentTypeTranslations = { indonesia: parentType, english: parentType, arabic: parentType };
+                    let subTypeTranslations = null;
+                    if (v.type_translations) {
+                        const tObj = typeof v.type_translations === 'string' ? JSON.parse(v.type_translations) : v.type_translations;
+                        const splitT = (str) => str && str.includes(' | ') ? str.split(' | ').map(s => s.trim()) : [str?.trim() || '', null];
+                        const [pI, sI] = splitT(tObj?.indonesia || '');
+                        const [pE, sE] = splitT(tObj?.english || '');
+                        const [pA, sA] = splitT(tObj?.arabic || '');
+                        parentTypeTranslations = { indonesia: pI || parentType, english: pE || pI || parentType, arabic: pA || pI || parentType };
+                        if (sI || sE || sA) {
+                            subTypeTranslations = { indonesia: sI || '', english: sE || sI || '', arabic: sA || sI || '' };
+                        }
+                    }
+
+                    parentGroups[parentKey] = {
+                        id: hasSub ? null : v.id,
+                        type: parentType,
+                        type_translations: parentTypeTranslations,
+                        sku: hasSub ? '' : v.sku,
+                        price: hasSub ? '' : v.price,
+                        unit_id: hasSub ? '' : v.unit_id,
+                        stock_type: v.stock_type || 'variant',
+                        image: v.image,
+                        imagePreview: hasSub ? null : (v.image ? `/storage/${v.image}` : null),
+                        name_translations: {
+                            indonesia: parentNameIndo,
+                            english: parentNameEng,
+                            arabic: parentNameAra,
+                        },
+                        has_sub_variants: hasSub,
+                        sub_variants: [],
+                        _subTypeTranslations: subTypeTranslations,
+                        branch_stocks: storeBranches.map(branch => {
+                            const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                            return {
+                                store_branch_id: branch.id,
+                                branch_name: branch.name,
+                                country_code: branch.country_code,
+                                stock: existing?.stock ?? 0
+                            };
+                        }),
+                    };
+                }
+
+                if (hasSub) {
+                    const valIndo = matchesIndo[0] || '';
+                    const valEng = matchesEng[0] || '';
+                    const valAra = matchesAra[0] || '';
+
+                    let isUnitSize = false;
+                    let parsedSize = valIndo;
+                    let subUnitId = '';
+
+                    if (v.unit_id) {
+                        isUnitSize = true;
+                        subUnitId = String(v.unit_id);
+                        const foundUnit = units.find(u => {
+                            const name = u.name.toLowerCase();
+                            return valIndo.toLowerCase().includes(name);
+                        });
+                        if (foundUnit) {
+                            parsedSize = valIndo.replace(new RegExp(foundUnit.name, 'i'), '').trim();
+                        }
+                    }
+
+                    parentGroups[parentKey].has_sub_variants = true;
+                    parentGroups[parentKey].sub_variants.push({
+                        id: v.id,
+                        type: subType || (isUnitSize ? 'Ukuran' : 'Custom'),
+                        type_translations: parentGroups[parentKey]._subTypeTranslations || {
+                            indonesia: subType || (isUnitSize ? 'Ukuran' : 'Custom'),
+                            english: subType || (isUnitSize ? 'Size' : 'Custom'),
+                            arabic: subType || (isUnitSize ? 'المقاس' : 'مخصص'),
+                        },
+                        name_translations: {
+                            indonesia: parsedSize,
+                            english: isUnitSize && subUnitId ? valEng.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() : valEng,
+                            arabic: isUnitSize && subUnitId ? valAra.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() : valAra,
+                        },
+                        unit_id: subUnitId || '',
+                        sku: v.sku || '',
+                        price: v.price || '',
+                        image: v.image,
+                        imagePreview: v.image ? `/storage/${v.image}` : null,
+                        branch_stocks: storeBranches.map(branch => {
+                            const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                            return {
+                                store_branch_id: branch.id,
+                                branch_name: branch.name,
+                                country_code: branch.country_code,
+                                stock: existing?.stock ?? 0
+                            };
+                        }),
+                    });
+                }
+            });
+
+            // Set parent virtual preview image if it has sub-variants but no parent image
+            Object.values(parentGroups).forEach(group => {
+                if (group.has_sub_variants && !group.imagePreview) {
+                    const firstWithImage = group.sub_variants.find(sv => sv.image);
+                    if (firstWithImage) {
+                        group.imagePreview = `/storage/${firstWithImage.image}`;
+                    } else if (group.image) {
+                        group.imagePreview = `/storage/${group.image}`;
+                    }
+                }
+            });
+
+            return Object.values(parentGroups);
+        }
     }, [product.variants, storeBranches, units]);
 
     // Product gallery images list
@@ -326,6 +440,22 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                             <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-950">
                                                 {product.stock ?? 0} Pcs
                                             </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                                        <div>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.form.stock_type', 'Mode Manajemen Stok')}</span>
+                                            {product.stock_type === 'parent' ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+                                                    {t('backoffice.product.form.stock_type_parent', 'Stok Induk (Terpusat)')}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-700">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
+                                                    {t('backoffice.product.form.stock_type_variant', 'Stok per Varian')}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -463,9 +593,24 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                             </div>
 
                                                             {/* Segmented Control Display */}
-                                                            <span className="rounded-lg bg-white border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                                                {variant.has_sub_variants ? t('backoffice.product.form.has_sub_variant', 'Dengan Sub-Varian') : t('backoffice.product.form.no_sub_variant', 'Tanpa Sub-Varian')}
-                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="rounded-lg bg-white border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                                    {variant.has_sub_variants ? t('backoffice.product.form.has_sub_variant', 'Dengan Sub-Varian') : t('backoffice.product.form.no_sub_variant', 'Tanpa Sub-Varian')}
+                                                                </span>
+                                                                {variant.has_sub_variants && (
+                                                                    variant.stock_type === 'parent' ? (
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+                                                                            {t('backoffice.product.form.stock_type_parent', 'Stok Induk (Terpusat)')}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span>
+                                                                            {t('backoffice.product.form.stock_type_variant', 'Stok per Varian')}
+                                                                        </span>
+                                                                    )
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         {/* Variant layout rendering */}
@@ -542,6 +687,33 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                                     </div>
                                                                 </div>
 
+                                                                {/* Centralized parent variant branch stocks */}
+                                                                {product.stock_type !== 'parent' && variant.stock_type === 'parent' && (
+                                                                    <div className="p-4 border border-blue-100 bg-blue-50/30 rounded-xl space-y-2">
+                                                                        <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
+                                                                            <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                                                                                <Layers className="w-3.5 h-3.5 text-blue-800" />
+                                                                                {t('backoffice.product.detail.centralized_parent_stock_active', 'Stok Induk Terpusat (Varian)')}
+                                                                            </span>
+                                                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-950 px-2 py-0.5 rounded">
+                                                                                {t('backoffice.product.detail.total_parent_stock', 'Total Stok Induk')}: {variant.branch_stocks?.reduce((acc, curr) => acc + curr.stock, 0) ?? 0} {units.find(u => String(u.id) === String(variant.unit_id))?.name || 'Pcs'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                                            {variant.branch_stocks?.map(bStock => (
+                                                                                <div key={bStock.store_branch_id} className="p-2 text-center bg-white border border-slate-100 rounded-lg shadow-sm">
+                                                                                    <span className="text-[9px] font-black uppercase text-slate-400 block">
+                                                                                        {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                                    </span>
+                                                                                    <span className="text-xs font-extrabold text-blue-950">
+                                                                                        {bStock.stock} {units.find(u => String(u.id) === String(variant.unit_id))?.name || ''}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
                                                                 {/* Sub-variant matrix tables */}
                                                                 <div className="overflow-hidden bg-white border shadow-inner rounded-xl border-slate-200">
                                                                     <div className="overflow-x-auto">
@@ -553,7 +725,9 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                                                     <th className="px-4 py-2">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</th>
                                                                                     <th className="px-4 py-2">{t('backoffice.product.form.variant_price', 'Harga (IDR)')}</th>
                                                                                     <th className="px-4 py-2">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</th>
-                                                                                    <th className="px-4 py-2 text-center">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</th>
+                                                                                    {product.stock_type !== 'parent' && variant.stock_type !== 'parent' && (
+                                                                                        <th className="px-4 py-2 text-center">{t('backoffice.product.form.branch_stock', 'Stok Cabang Gudang')}</th>
+                                                                                    )}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="font-medium divide-y divide-slate-100">
@@ -585,20 +759,22 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                                                                 {sv.price ? formatIDR(sv.price) : formatIDR(product.price)}
                                                                                             </td>
                                                                                             <td className="px-4 py-2.5 text-slate-600">
-                                                                                                {units.find(u => String(u.id) === String(sv.unit_id))?.name || '-'}
+                                                                                                {units.find(u => String(u.id) === String(sv.unit_id))?.name || (variant.stock_type === 'parent' ? variant.unit : '-')}
                                                                                             </td>
-                                                                                            <td className="px-4 py-2.5">
-                                                                                                <div className="flex justify-center gap-1.5">
-                                                                                                    {sv.branch_stocks.map(bStock => (
-                                                                                                        <div key={bStock.store_branch_id} className="rounded border border-slate-100 bg-slate-50/50 px-2 py-0.5 text-center min-w-[40px]">
-                                                                                                            <span className="text-[8px] font-black uppercase text-slate-400 block leading-none mb-0.5">
-                                                                                                                {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
-                                                                                                            </span>
-                                                                                                            <span className="text-[10px] font-black text-blue-950 leading-none">{bStock.stock}</span>
-                                                                                                        </div>
-                                                                                                    ))}
-                                                                                                </div>
-                                                                                            </td>
+                                                                                            {product.stock_type !== 'parent' && variant.stock_type !== 'parent' && (
+                                                                                                <td className="px-4 py-2.5">
+                                                                                                    <div className="flex justify-center gap-1.5">
+                                                                                                        {sv.branch_stocks.map(bStock => (
+                                                                                                            <div key={bStock.store_branch_id} className="rounded border border-slate-100 bg-slate-50/50 px-2 py-0.5 text-center min-w-[40px]">
+                                                                                                                <span className="text-[8px] font-black uppercase text-slate-400 block leading-none mb-0.5">
+                                                                                                                    {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
+                                                                                                                </span>
+                                                                                                                <span className="text-[10px] font-black text-blue-950 leading-none">{bStock.stock}</span>
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            )}
                                                                                         </tr>
                                                                                     );
                                                                                 })}

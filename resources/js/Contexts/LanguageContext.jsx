@@ -11,7 +11,7 @@ export const LanguageProvider = ({ children }) => {
         const loadTranslations = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`/lang-${locale}.json`);
+                const response = await fetch(`/lang-${locale}.json?v=${new Date().getTime()}`);
                 const data = await response.json();
                 setTranslations(data);
                 localStorage.setItem('locale', locale);

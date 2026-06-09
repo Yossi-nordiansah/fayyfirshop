@@ -23,6 +23,10 @@ const menuItems = [
         fallback: 'Product Management',
         href: '/backoffice/product-management',
         icon: Boxes,
+        checkActive: (path) =>
+            path === '/backoffice/product-management' ||
+            path.startsWith('/backoffice/products') ||
+            path.startsWith('/backoffice/product-categories'),
     },
     {
         labelKey: 'backoffice.sidebar.orders',
@@ -80,7 +84,10 @@ export default function Sidebar() {
             <nav className="flex flex-col flex-1 gap-1">
                 {menuItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = currentPath === item.href;
+                    const isActive = item.checkActive
+                        ? item.checkActive(currentPath)
+                        : currentPath === item.href ||
+                          currentPath.startsWith(item.href + '/');
 
                     return (
                         <Link

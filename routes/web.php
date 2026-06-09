@@ -43,12 +43,49 @@ Route::get('/products/{category?}', function ($category = null) {
 });
 
 Route::get('/product/{slug}', function ($slug) {
-    $product = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+    $product = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'variants.branchStocks', 'images'])
         ->where('slug', $slug)
         ->first();
 
+    if (!$product) {
+        abort(404);
+    }
+
+    // Mapping variant eksplisit agar unit selalu konsisten (tidak konflik antara kolom unit teks dan relasi unit)
+    $mappedVariants = $product->variants->map(function ($v) {
+        // Resolusi unit: prioritaskan kolom teks unit (misal "ml"), lalu relasi Unit object
+        $unitResolved = null;
+        if (!empty($v->getAttributes()['unit'])) {
+            // Kolom teks unit ada (misal "ml" dari stok induk terpusat)
+            $unitResolved = $v->getAttributes()['unit'];
+        } elseif ($v->unit_id && $v->relationLoaded('unit') && $v->getRelation('unit')) {
+            // Relasi Unit object ada (dari unit_id)
+            $unitResolved = $v->getRelation('unit');
+        }
+
+        return [
+            'id'               => $v->id,
+            'parent_id'        => $v->parent_id,
+            'type'             => $v->type,
+            'type_translations'=> $v->type_translations,
+            'name'             => $v->name,
+            'name_translations'=> $v->name_translations,
+            'sku'              => $v->sku,
+            'price'            => $v->price,
+            'stock'            => $v->stock,
+            'stock_type'       => $v->stock_type,
+            'unit_id'          => $v->unit_id,
+            'unit'             => $unitResolved,
+            'image'            => $v->image,
+            'branch_stocks'    => $v->branchStocks ?? [],
+        ];
+    });
+
+    $productData = $product->toArray();
+    $productData['variants'] = $mappedVariants;
+
     return Inertia::render('detail-product/DetailProduct', [
-        'product' => $product,
+        'product' => $productData,
         'slug' => $slug
     ]);
 });
@@ -92,6 +129,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
 
     Route::get('/products/create', [ProductController::class, 'create'])
         ->name('backoffice.products.create');
+    Route::post('/products/check-sku', [ProductController::class, 'checkSku'])
+        ->name('backoffice.products.check-sku');
     Route::post('/products', [ProductController::class, 'store'])
         ->name('backoffice.products.store');
     Route::get('/products/{product:slug}', [ProductController::class, 'show'])

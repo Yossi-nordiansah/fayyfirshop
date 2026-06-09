@@ -6,6 +6,8 @@ import Sidebar from '../../components/Sidebar';
 import ConfirmModal from '../../components/ConfirmModal';
 import SuccessModal from '../../components/SuccessModal';
 import { useLanguage } from '@/Contexts/LanguageContext';
+import axios from 'axios';
+
 
 // Import modular components
 import ProductInfoSection from './components/ProductInfoSection';
@@ -45,6 +47,7 @@ export default function ProductForm({
     const [showSuccessModal, setShowSuccessModal] = useState(
         (statusAction === 'created' || statusAction === 'updated') && Boolean(status),
     );
+    const [skuAlert, setSkuAlert] = useState({ show: false, message: '' });
 
     // Image previews (existing first, then new uploads)
     const [imagePreviews, setImagePreviews] = useState(() =>
@@ -71,6 +74,136 @@ export default function ProductForm({
 
     // Helper to group flat variants from DB into parent and sub-variants
     const groupVariantsFromDB = (productVariants, storeBranches, units) => {
+        // If there's any variant with a non-null parent_id, group by parent_id
+        const hasParentRelations = productVariants.some(v => v.parent_id !== null && v.parent_id !== undefined);
+
+        if (hasParentRelations) {
+            const parents = productVariants.filter(v => v.parent_id === null || v.parent_id === undefined);
+            const children = productVariants.filter(v => v.parent_id !== null && v.parent_id !== undefined);
+
+            return parents.map(p => {
+                const pChildren = children.filter(c => Number(c.parent_id) === Number(p.id));
+                const hasSub = pChildren.length > 0;
+
+                const parseChildName = (fullValue, parentValue) => {
+                    if (!fullValue) return '';
+                    let clean = fullValue;
+                    if (parentValue && fullValue.startsWith(parentValue)) {
+                        clean = fullValue.slice(parentValue.length).trim();
+                    }
+                    const match = clean.match(/\(([^)]+)\)/);
+                    if (match) {
+                        return match[1].trim();
+                    }
+                    return clean;
+                };
+
+                return {
+                    id: p.id,
+                    type: p.type,
+                    type_translations: p.type_translations,
+                    sku: hasSub ? '' : (p.sku || ''),
+                    price: hasSub ? '' : (p.price || ''),
+                    unit_id: hasSub ? '' : (p.unit_id || ''),
+                    image: null,
+                    imagePreview: hasSub ? null : (p.image ? `/storage/${p.image}` : null),
+                    name_translations: p.name_translations,
+                    has_sub_variants: hasSub,
+                    stock_type: p.stock_type || 'variant',
+                    unit: (p.unit && typeof p.unit === 'object') ? (p.unit.name || '') : (p.unit || ''),
+                    branch_stocks: storeBranches.map(branch => {
+                        const existing = p.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                        return {
+                            store_branch_id: branch.id,
+                            branch_name: branch.name,
+                            country_code: branch.country_code,
+                            stock: existing?.stock ?? 0
+                        };
+                    }),
+                    sub_variants: pChildren.map(c => {
+                        let subType = c.type;
+                        if (c.type && c.type.includes(' | ')) {
+                            subType = c.type.split(' | ')[1].trim();
+                        }
+
+                        let subTypeTranslations = { indonesia: 'Ukuran', english: 'Size', arabic: 'المقاس' };
+                        if (c.type_translations) {
+                            const splitTranslation = (str) => {
+                                if (str && str.includes(' | ')) {
+                                    return str.split(' | ')[1].trim();
+                                }
+                                return null;
+                            };
+                            const sIndo = splitTranslation(c.type_translations.indonesia);
+                            const sEng = splitTranslation(c.type_translations.english);
+                            const sAra = splitTranslation(c.type_translations.arabic);
+                            if (sIndo || sEng || sAra) {
+                                subTypeTranslations = {
+                                    indonesia: sIndo || 'Ukuran',
+                                    english: sEng || sIndo || 'Size',
+                                    arabic: sAra || sIndo || 'المقاس',
+                                };
+                            }
+                        }
+
+                        const cleanIndo = parseChildName(c.name_translations?.indonesia, p.name_translations?.indonesia);
+                        const cleanEng = parseChildName(c.name_translations?.english, p.name_translations?.english);
+                        const cleanAra = parseChildName(c.name_translations?.arabic, p.name_translations?.arabic);
+
+                        const parentUnitName = (p.unit && typeof p.unit === 'object') ? (p.unit.name || '') : (p.unit || '');
+
+                        let parsedSize = cleanIndo;
+                        let subUnitId = c.unit_id ? String(c.unit_id) : '';
+
+                        if (c.unit_id) {
+                            const foundUnit = units.find(u => {
+                                const name = u.name.toLowerCase();
+                                return cleanIndo.toLowerCase().includes(name);
+                            });
+                            if (foundUnit) {
+                                parsedSize = cleanIndo.replace(new RegExp(foundUnit.name, 'i'), '').trim();
+                            }
+                        } else if (p.stock_type === 'parent' && parentUnitName) {
+                            parsedSize = cleanIndo.replace(new RegExp(parentUnitName, 'i'), '').trim();
+                        }
+
+                        return {
+                            id: c.id,
+                            type: subType,
+                            type_translations: subTypeTranslations,
+                            name_translations: {
+                                indonesia: parsedSize,
+                                english: (c.unit_id && subUnitId) 
+                                    ? cleanEng.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() 
+                                    : (p.stock_type === 'parent' && parentUnitName) 
+                                        ? cleanEng.replace(new RegExp(parentUnitName, 'i'), '').trim() 
+                                        : cleanEng,
+                                arabic: (c.unit_id && subUnitId) 
+                                    ? cleanAra.replace(new RegExp(units.find(u => u.id === Number(subUnitId))?.name || '', 'i'), '').trim() 
+                                    : (p.stock_type === 'parent' && parentUnitName) 
+                                        ? cleanAra.replace(new RegExp(parentUnitName, 'i'), '').trim() 
+                                        : cleanAra,
+                            },
+                            unit_id: subUnitId,
+                            sku: c.sku || '',
+                            price: c.price || '',
+                            image: null,
+                            imagePreview: c.image ? `/storage/${c.image}` : null,
+                            branch_stocks: storeBranches.map(branch => {
+                                const existing = c.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
+                                return {
+                                    store_branch_id: branch.id,
+                                    branch_name: branch.name,
+                                    country_code: branch.country_code,
+                                    stock: existing?.stock ?? 0
+                                };
+                            }),
+                        };
+                    })
+                };
+            });
+        }
+
         const parentGroups = {};
 
         productVariants.forEach(v => {
@@ -78,7 +211,6 @@ export default function ProductForm({
             const englishName = v.name_translations?.english || '';
             const arabicName = v.name_translations?.arabic || '';
 
-            // Extract suffixes in parentheses at the end of the string
             const regex = /\(([^)]+)\)/g;
             const matchesIndo = [...indonesiaName.matchAll(regex)].map(m => m[1]);
             const matchesEng = [...englishName.matchAll(regex)].map(m => m[1]);
@@ -89,7 +221,6 @@ export default function ProductForm({
             const parentNameEng = cleanName(englishName);
             const parentNameAra = cleanName(arabicName);
 
-            // If type contains '|', split it
             let parentType = v.type || '';
             let subType = null;
             if (parentType.includes(' | ')) {
@@ -147,8 +278,6 @@ export default function ProductForm({
             }
 
             const parentKey = `${parentType}_${parentNameIndo}`;
-
-            // Determine if there is actually a sub-variant
             const hasSub = matchesIndo.length > 0;
 
             if (!parentGroups[parentKey]) {
@@ -167,6 +296,8 @@ export default function ProductForm({
                         arabic: parentNameAra,
                     },
                     has_sub_variants: hasSub,
+                    stock_type: v.stock_type || 'variant',
+                    unit: (v.unit && typeof v.unit === 'object') ? (v.unit.name || '') : (v.unit || ''),
                     sub_variants: [],
                     branch_stocks: hasSub ? [] : storeBranches.map(branch => {
                         const existing = v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
@@ -256,6 +387,8 @@ export default function ProductForm({
         has_variants: productVariants.length > 0,
         is_new: product?.is_new ?? false,
         is_best_seller: product?.is_best_seller ?? false,
+        stock_type: product?.stock_type ?? 'variant',
+        unit: product?.unit ?? '',
 
         // Gallery images
         images: [],   // new File uploads
@@ -328,10 +461,13 @@ export default function ProductForm({
 
     const addVariant = (type) => {
         if (!type.trim()) return;
+        const trimmedType = type.trim();
+        const lowerType = trimmedType.toLowerCase();
+
         const defaultTranslations = {
-            indonesia: type.trim(),
-            english: type.trim() === 'Ukuran' ? 'Size' : type.trim() === 'Warna' ? 'Color' : type.trim() === 'Rasa' ? 'Flavor' : type.trim() === 'Model' ? 'Model' : type.trim() === 'Bahan' ? 'Material' : type.trim(),
-            arabic: type.trim() === 'Ukuran' ? 'المقاس' : type.trim() === 'Warna' ? 'اللون' : type.trim() === 'Rasa' ? 'النكهة' : type.trim() === 'Model' ? 'الموديل' : type.trim() === 'Bahan' ? 'المادة' : type.trim(),
+            indonesia: lowerType === 'ukuran' ? 'Ukuran' : lowerType === 'warna' ? 'Warna' : lowerType === 'rasa' ? 'Rasa' : lowerType === 'model' ? 'Model' : lowerType === 'bahan' ? 'Bahan' : trimmedType,
+            english: lowerType === 'ukuran' ? 'Size' : lowerType === 'warna' ? 'Color' : lowerType === 'rasa' ? 'Flavor' : lowerType === 'model' ? 'Model' : lowerType === 'bahan' ? 'Material' : trimmedType,
+            arabic: lowerType === 'ukuran' ? 'المقاس' : lowerType === 'warna' ? 'اللون' : lowerType === 'rasa' ? 'النكهة' : lowerType === 'model' ? 'الموديل' : lowerType === 'bahan' ? 'المادة' : trimmedType,
         };
 
         form.setData(data => ({
@@ -346,6 +482,8 @@ export default function ProductForm({
                     image: null, imagePreview: null,
                     name_translations: { indonesia: '', arabic: '', english: '' },
                     has_sub_variants: false,
+                    stock_type: 'variant',
+                    unit: '',
                     sub_variants: [],
                     branch_stocks: storeBranches.map(b => ({
                         store_branch_id: b.id,
@@ -369,6 +507,49 @@ export default function ProductForm({
         updated[idx] = { ...updated[idx], [field]: value };
         form.setData('variants', updated);
     };
+
+    /**
+     * Mengganti stock_type varian dengan sanitasi otomatis:
+     * - Ganti ke 'parent'  → hapus unit_id di semua sub-varian (ikut satuan induk varian)
+     * - Ganti ke 'variant' → hapus unit induk varian (tiap sub-varian pilih satuannya sendiri)
+     */
+    const changeVariantStockType = (vIdx, newStockType) => {
+        const updated = [...form.data.variants];
+        const v = { ...updated[vIdx] };
+        v.stock_type = newStockType;
+        if (newStockType === 'parent') {
+            // Sub-varian tidak boleh punya unit_id sendiri — akan ikut unit induk varian
+            v.sub_variants = (v.sub_variants || []).map(sv => ({ ...sv, unit_id: '' }));
+        } else {
+            // Mode per-varian: hapus unit teks pada induk (tiap sub-varian pilih unit_id sendiri)
+            v.unit = '';
+        }
+        updated[vIdx] = v;
+        form.setData('variants', updated);
+    };
+
+    /**
+     * Mengganti stock_type level produk (global) dengan sanitasi otomatis:
+     * - Ganti ke 'parent'  → hapus unit_id pada sub-varian Ukuran di semua varian
+     * - Ganti ke 'variant' → hapus data.unit produk
+     */
+    const changeGlobalStockType = (newStockType) => {
+        if (newStockType === 'parent') {
+            const updatedVariants = form.data.variants.map(v => ({
+                ...v,
+                sub_variants: (v.sub_variants || []).map(sv => ({
+                    ...sv,
+                    unit_id: sv.type?.toLowerCase() === 'ukuran' ? '' : sv.unit_id,
+                })),
+            }));
+            form.setData(prev => ({ ...prev, stock_type: newStockType, variants: updatedVariants }));
+        } else {
+            // Mode stok per varian: hapus unit produk yang sebelumnya dipilih
+            form.setData(prev => ({ ...prev, stock_type: newStockType, unit: '' }));
+        }
+    };
+
+
 
     const updateVariantLang = (vIdx, langKey, value) => {
         const updated = [...form.data.variants];
@@ -522,9 +703,173 @@ export default function ProductForm({
         form.setData(data => ({ ...data, product_category_id: value, product_sub_category_id: '' }));
     };
 
+    // Clear main SKU error when its value changes
+    useEffect(() => {
+        if (form.errors.sku) {
+            form.clearErrors('sku');
+        }
+    }, [form.data.sku]);
+
+    // Clear variant SKU errors when variants data changes
+    useEffect(() => {
+        Object.keys(form.errors).forEach(key => {
+            if (key.startsWith('variants.') && key.endsWith('.sku')) {
+                form.clearErrors(key);
+            }
+        });
+    }, [form.data.variants]);
+
+    const validateSkus = (data) => {
+        const skuErrors = {};
+        const skuMap = new Map();
+
+        const addSku = (path, val, label) => {
+            if (!val || !val.trim()) return;
+            const cleaned = val.trim().toLowerCase();
+            if (!skuMap.has(cleaned)) {
+                skuMap.set(cleaned, []);
+            }
+            skuMap.get(cleaned).push({ path, original: val.trim(), label });
+        };
+
+        // 1. Main product SKU
+        addSku('sku', data.sku, t('backoffice.product.th_sku', 'SKU Induk'));
+
+        // 2. Variants and Sub-variants SKUs
+        if (data.has_variants && data.variants) {
+            data.variants.forEach((v, vIdx) => {
+                const label = `${t('backoffice.product.th_variant', 'Varian')} #${vIdx + 1}`;
+                if (v.has_sub_variants && v.sub_variants && v.sub_variants.length > 0) {
+                    v.sub_variants.forEach((sv, svIdx) => {
+                        const subLabel = `${t('backoffice.product.form.sub_variant', 'Sub-Varian')} #${vIdx + 1}.${svIdx + 1}`;
+                        addSku(`variants.${vIdx}.sub_variants.${svIdx}.sku`, sv.sku, subLabel);
+                    });
+                } else {
+                    addSku(`variants.${vIdx}.sku`, v.sku, label);
+                }
+            });
+        }
+
+        let hasDuplicates = false;
+        let duplicateMessage = '';
+        skuMap.forEach((occurrences, cleaned) => {
+            if (occurrences.length > 1) {
+                hasDuplicates = true;
+                const labels = occurrences.map(o => o.label).join(', ');
+                const originalVal = occurrences[0].original;
+                duplicateMessage += `• SKU "${originalVal}" (${labels})\n`;
+
+                occurrences.forEach(o => {
+                    skuErrors[o.path] = t('backoffice.product.form.validation.sku_duplicate_form', 'SKU ini duplikat di dalam form.');
+                });
+            }
+        });
+
+        return { hasDuplicates, skuErrors, duplicateMessage };
+    };
+
+    const getAllSkusInForm = (data) => {
+        const skus = [];
+        if (data.sku && data.sku.trim()) {
+            skus.push(data.sku.trim());
+        }
+        if (data.has_variants && data.variants) {
+            data.variants.forEach(v => {
+                if (v.has_sub_variants && v.sub_variants) {
+                    v.sub_variants.forEach(sv => {
+                        if (sv.sku && sv.sku.trim()) {
+                            skus.push(sv.sku.trim());
+                        }
+                    });
+                } else {
+                    if (v.sku && v.sku.trim()) {
+                        skus.push(v.sku.trim());
+                    }
+                }
+            });
+        }
+        return skus;
+    };
+
     // ── submit ────────────────────────────────────────────────────────────────
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
+
+        // ─── Perform SKU frontend validation first ───
+        const { hasDuplicates, skuErrors, duplicateMessage } = validateSkus(form.data);
+        if (hasDuplicates) {
+            form.clearErrors('sku');
+            Object.keys(form.errors).forEach(key => {
+                if (key.startsWith('variants.') && key.endsWith('.sku')) {
+                    form.clearErrors(key);
+                }
+            });
+            form.setError(skuErrors);
+            setSkuAlert({
+                show: true,
+                message: `${t('backoffice.product.form.validation.sku_duplicate_alert_msg', 'Terdapat duplikasi SKU di dalam form! Silakan perbaiki SKU yang sama berikut:')}\n\n${duplicateMessage}`
+            });
+            return;
+        }
+
+        // ─── Perform database SKU validation ───
+        try {
+            const skusToCheck = getAllSkusInForm(form.data);
+            if (skusToCheck.length > 0) {
+                const checkResponse = await axios.post(route('backoffice.products.check-sku'), {
+                    product_id: product?.id || null,
+                    skus: skusToCheck
+                });
+
+                const duplicates = checkResponse.data.duplicates || [];
+                if (duplicates.length > 0) {
+                    const dbSkuErrors = {};
+                    let dbDuplicateMessage = '';
+
+                    duplicates.forEach(dup => {
+                        const matchingSku = dup.sku.toLowerCase();
+                        dbDuplicateMessage += `• SKU "${dup.sku}" ${t('backoffice.product.form.validation.sku_used_by', 'sudah digunakan produk lain:')} "${dup.product_name}"\n`;
+
+                        // Find where this SKU is in our form to show error inline
+                        if (form.data.sku && form.data.sku.trim().toLowerCase() === matchingSku) {
+                            dbSkuErrors['sku'] = `${t('backoffice.product.form.validation.sku_used_by', 'SKU sudah digunakan produk lain:')} "${dup.product_name}"`;
+                        }
+                        if (form.data.has_variants && form.data.variants) {
+                            form.data.variants.forEach((v, vIdx) => {
+                                if (v.has_sub_variants && v.sub_variants) {
+                                    v.sub_variants.forEach((sv, svIdx) => {
+                                        if (sv.sku && sv.sku.trim().toLowerCase() === matchingSku) {
+                                            dbSkuErrors[`variants.${vIdx}.sub_variants.${svIdx}.sku`] = `${t('backoffice.product.form.validation.sku_used_by', 'SKU sudah digunakan produk lain:')} "${dup.product_name}"`;
+                                        }
+                                    });
+                                } else {
+                                    if (v.sku && v.sku.trim().toLowerCase() === matchingSku) {
+                                        dbSkuErrors[`variants.${vIdx}.sku`] = `${t('backoffice.product.form.validation.sku_used_by', 'SKU sudah digunakan produk lain:')} "${dup.product_name}"`;
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    // Clear previous errors first
+                    form.clearErrors('sku');
+                    Object.keys(form.errors).forEach(key => {
+                        if ((key.startsWith('variants.') && key.endsWith('.sku')) || (key.includes('.sub_variants.') && key.endsWith('.sku'))) {
+                            form.clearErrors(key);
+                        }
+                    });
+
+                    form.setError(dbSkuErrors);
+                    setSkuAlert({
+                        show: true,
+                        message: `${t('backoffice.product.form.validation.sku_db_duplicate_msg', 'Terdapat SKU yang sudah terdaftar di database! Silakan gunakan SKU lain:')}\n\n${dbDuplicateMessage}`
+                    });
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Error checking SKU uniqueness:', error);
+        }
 
         // Transform data before sending
         form.transform((data) => {
@@ -537,16 +882,25 @@ export default function ProductForm({
 
             data.variants.forEach((v) => {
                 if (v.has_sub_variants && v.sub_variants && v.sub_variants.length > 0) {
-                    v.sub_variants.forEach((sv) => {
-                        let nameTranslations = { ...v.name_translations };
+                    const cleanedParentStocks = (v.branch_stocks || []).map(bs => ({
+                        ...bs,
+                        stock: bs.stock === '' ? 0 : bs.stock
+                    }));
+
+                    const cleanedSubVariants = v.sub_variants.map((sv) => {
+                        let nameTranslations = {};
 
                         const getSuffix = (subVar, lang) => {
                             const val = subVar.name_translations?.[lang] || '';
                             if (!val) return '';
-                            if (subVar.type === 'Ukuran' && subVar.unit_id) {
-                                const unitObj = units.find(u => Number(u.id) === Number(subVar.unit_id));
-                                const unitName = unitObj ? unitObj.name : '';
-                                return ` (${val} ${unitName})`.trim();
+                            if (subVar.type === 'Ukuran') {
+                                if (v.stock_type === 'parent' && v.unit) {
+                                    return ` (${val} ${v.unit})`.trim();
+                                } else if (subVar.unit_id) {
+                                    const unitObj = units.find(u => Number(u.id) === Number(subVar.unit_id));
+                                    const unitName = unitObj ? unitObj.name : '';
+                                    return ` (${val} ${unitName})`.trim();
+                                }
                             }
                             return ` (${val})`.trim();
                         };
@@ -576,19 +930,37 @@ export default function ProductForm({
                             arabic: `${v.type_translations?.arabic || v.type} | ${sv.type_translations?.arabic || sv.type}`,
                         };
 
-                        transformedVariants.push({
+                        return {
                             id: sv.id ?? null,
                             type: `${v.type} | ${sv.type}`,
                             type_translations: typeTranslations,
                             sku: sv.sku ?? '',
                             price: sv.price ?? '',
-                            unit_id: sv.unit_id || null,
+                            unit_id: (v.stock_type === 'parent') ? null : (sv.unit_id || null),
                             image: sv.image,
                             image_deleted: sv.image_deleted || false,
                             name: nameTranslations.indonesia || nameTranslations.english || nameTranslations.arabic || '',
                             name_translations: nameTranslations,
                             branch_stocks: cleanedVariantStocks
-                        });
+                        };
+                    });
+
+                    transformedVariants.push({
+                        id: v.id ?? null,
+                        type: v.type ?? '',
+                        type_translations: v.type_translations,
+                        sku: v.sku ?? '',
+                        price: v.price ?? '',
+                        unit_id: null,
+                        image: v.image,
+                        image_deleted: v.image_deleted || false,
+                        name: v.name_translations?.indonesia || '',
+                        name_translations: v.name_translations,
+                        stock_type: v.stock_type || 'variant',
+                        unit: v.unit || '',
+                        branch_stocks: cleanedParentStocks,
+                        has_sub_variants: true,
+                        sub_variants: cleanedSubVariants
                     });
                 } else {
                     const cleanedVariantStocks = v.branch_stocks.map(bs => ({
@@ -607,7 +979,11 @@ export default function ProductForm({
                         image_deleted: v.image_deleted || false,
                         name: v.name_translations?.indonesia || v.name_translations?.english || v.name_translations?.arabic || '',
                         name_translations: v.name_translations,
-                        branch_stocks: cleanedVariantStocks
+                        branch_stocks: cleanedVariantStocks,
+                        stock_type: v.stock_type || 'variant',
+                        unit: v.unit || '',
+                        has_sub_variants: false,
+                        sub_variants: []
                     });
                 }
             });
@@ -653,6 +1029,16 @@ export default function ProductForm({
                 message={status ?? ''}
                 btnLabel={t('backoffice.product.success.btn_ok', 'Selesai')}
                 onClose={() => setShowSuccessModal(false)}
+            />
+            <ConfirmModal
+                show={skuAlert.show}
+                title={t('backoffice.product.form.validation.sku_duplicate_title', 'Duplikasi SKU Terdeteksi')}
+                message={skuAlert.message}
+                confirmLabel={t('backoffice.product.btn_ok', 'Mengerti')}
+                cancelLabel={false}
+                variant="warning"
+                onConfirm={() => setSkuAlert({ show: false, message: '' })}
+                onCancel={() => setSkuAlert({ show: false, message: '' })}
             />
 
             <div className="flex min-h-screen">
@@ -752,6 +1138,8 @@ export default function ProductForm({
                                     addVariant={addVariant}
                                     removeVariant={removeVariant}
                                     updateVariantField={updateVariantField}
+                                    changeVariantStockType={changeVariantStockType}
+                                    changeGlobalStockType={changeGlobalStockType}
                                     updateVariantLang={updateVariantLang}
                                     updateVariantTypeLang={updateVariantTypeLang}
                                     updateVariantStock={updateVariantStock}
@@ -794,4 +1182,4 @@ export default function ProductForm({
             </div>
         </div>
     );
-}
+}   

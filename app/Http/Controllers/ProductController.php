@@ -61,8 +61,8 @@ class ProductController extends Controller
 
         $nameTranslations = $request->input('name_translations', []);
         $hasName = !empty(trim($nameTranslations['indonesia'] ?? '')) ||
-                   !empty(trim($nameTranslations['english'] ?? '')) ||
-                   !empty(trim($nameTranslations['arabic'] ?? ''));
+            !empty(trim($nameTranslations['english'] ?? '')) ||
+            !empty(trim($nameTranslations['arabic'] ?? ''));
 
         if (!$hasName) {
             return back()->withErrors([
@@ -70,7 +70,7 @@ class ProductController extends Controller
             ])->withInput();
         }
 
-        $request->validate([
+        $rules = [
             'name_translations.indonesia' => 'nullable|string|max:255',
             'name_translations.english'   => 'nullable|string|max:255',
             'name_translations.arabic'    => 'nullable|string|max:255',
@@ -81,16 +81,43 @@ class ProductController extends Controller
             'is_new'                      => 'nullable|boolean',
             'is_best_seller'              => 'nullable|boolean',
             'images.*'                    => 'nullable|image|max:5120',
-            'variants.*.sku'              => 'nullable|string|max:255|distinct|unique:products,sku|unique:product_variants,sku',
-            'variants.*.name'             => 'required|string|max:255',
-            'variants.*.image'            => 'nullable|image|max:5120',
-        ], [
+            'stock_type'                  => 'nullable|in:variant,parent',
+            'unit'                        => 'nullable|string|max:50',
+        ];
+
+        if ($request->has('variants')) {
+            foreach ($request->input('variants') as $i => $varData) {
+                $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                if (!$hasSub) {
+                    $rules["variants.{$i}.sku"] = 'nullable|string|max:255|distinct|unique:products,sku|unique:product_variants,sku';
+                    $rules["variants.{$i}.name"] = 'required|string|max:255';
+                    $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                } else {
+                    $rules["variants.{$i}.name"] = 'required|string|max:255';
+                    $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                    if (isset($varData['sub_variants'])) {
+                        foreach ($varData['sub_variants'] as $j => $subVarData) {
+                            $rules["variants.{$i}.sub_variants.{$j}.sku"] = 'nullable|string|max:255|distinct|unique:products,sku|unique:product_variants,sku';
+                            $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
+                            $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
+                        }
+                    }
+                }
+            }
+        }
+
+        $request->validate($rules, [
             'sku.unique'                  => 'SKU produk sudah digunakan.',
             'variants.*.sku.unique'       => 'SKU varian sudah digunakan.',
             'variants.*.sku.distinct'     => 'SKU varian tidak boleh sama dengan varian lainnya.',
-            'variants.*.name.required'    => 'Nama varian/sub-varian wajib diisi.',
+            'variants.*.name.required'    => 'Nama varian wajib diisi.',
             'variants.*.image.image'      => 'Berkas harus berupa gambar.',
             'variants.*.image.max'        => 'Ukuran gambar varian tidak boleh lebih dari 5MB.',
+            'variants.*.sub_variants.*.sku.unique'   => 'SKU sub-varian sudah digunakan.',
+            'variants.*.sub_variants.*.sku.distinct' => 'SKU sub-varian tidak boleh sama.',
+            'variants.*.sub_variants.*.name.required' => 'Nama sub-varian wajib diisi.',
+            'variants.*.sub_variants.*.image.image'   => 'Berkas harus berupa gambar.',
+            'variants.*.sub_variants.*.image.max'     => 'Ukuran gambar sub-varian tidak boleh lebih dari 5MB.',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -99,11 +126,11 @@ class ProductController extends Controller
 
             $primaryTitle = trim($nameTranslations['indonesia'] ?? '')
                 ?: (trim($nameTranslations['english'] ?? '')
-                ?: trim($nameTranslations['arabic'] ?? ''));
+                    ?: trim($nameTranslations['arabic'] ?? ''));
 
             $primaryDescription = trim($descTranslations['indonesia'] ?? '')
                 ?: (trim($descTranslations['english'] ?? '')
-                ?: trim($descTranslations['arabic'] ?? ''));
+                    ?: trim($descTranslations['arabic'] ?? ''));
 
             $hasVariants = $request->boolean('has_variants');
             $price = $request->price;
@@ -111,11 +138,24 @@ class ProductController extends Controller
             if ($hasVariants && ($price === null || $price === '')) {
                 $minPrice = null;
                 foreach ((array) $request->variants as $varData) {
-                    $vPrice = $varData['price'];
-                    if ($vPrice !== null && $vPrice !== '') {
-                        $vPriceVal = (float) $vPrice;
-                        if ($minPrice === null || $vPriceVal < $minPrice) {
-                            $minPrice = $vPriceVal;
+                    $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    if ($hasSub && isset($varData['sub_variants'])) {
+                        foreach ((array) $varData['sub_variants'] as $subVarData) {
+                            $subPrice = $subVarData['price'];
+                            if ($subPrice !== null && $subPrice !== '') {
+                                $subPriceVal = (float) $subPrice;
+                                if ($minPrice === null || $subPriceVal < $minPrice) {
+                                    $minPrice = $subPriceVal;
+                                }
+                            }
+                        }
+                    } else {
+                        $vPrice = $varData['price'];
+                        if ($vPrice !== null && $vPrice !== '') {
+                            $vPriceVal = (float) $vPrice;
+                            if ($minPrice === null || $vPriceVal < $minPrice) {
+                                $minPrice = $vPriceVal;
+                            }
                         }
                     }
                 }
@@ -127,7 +167,7 @@ class ProductController extends Controller
                 'title'                   => $primaryTitle,
                 'name_translations'       => $request->name_translations,
                 'description'             => $primaryDescription,
-                'description_translations'=> $request->description_translations,
+                'description_translations' => $request->description_translations,
                 'sku'                     => trim($request->sku),
                 'price'                   => $price,
                 'stock'                   => 0,
@@ -135,6 +175,8 @@ class ProductController extends Controller
                 'product_sub_category_id' => $request->product_sub_category_id ?: null,
                 'is_new'                  => $request->boolean('is_new'),
                 'is_best_seller'          => $request->boolean('is_best_seller'),
+                'stock_type'              => $request->input('stock_type', 'variant'),
+                'unit'                    => $request->input('unit'),
             ]);
 
             // 2. Upload product gallery images
@@ -151,7 +193,8 @@ class ProductController extends Controller
             }
 
             // 3. Handle stocks / variants
-            if (!$hasVariants) {
+            $productStockType = $request->input('stock_type', 'variant');
+            if ($productStockType === 'parent' || !$hasVariants) {
                 $totalStock = 0;
                 foreach ((array) $request->branch_stocks as $bStock) {
                     $stockVal    = (int) ($bStock['stock'] ?? 0);
@@ -164,13 +207,19 @@ class ProductController extends Controller
                     ]);
                 }
                 $product->update(['stock' => $totalStock]);
-            } else {
+            }
+
+            if ($hasVariants) {
                 $totalStock = 0;
                 $usedSkus = [];
+
                 foreach ((array) $request->variants as $i => $varData) {
+                    $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
                     $varName = trim($varData['name_translations']['indonesia'] ?? '')
                         ?: (trim($varData['name_translations']['english'] ?? '')
-                        ?: trim($varData['name_translations']['arabic'] ?? ''));
+                            ?: trim($varData['name_translations']['arabic'] ?? ''));
+
                     $varImagePath = null;
                     $varImgFile   = $request->file("variants.{$i}.image");
                     if ($varImgFile) {
@@ -180,7 +229,8 @@ class ProductController extends Controller
                     $varSku = trim($varData['sku'] ?? '');
                     if (!$varSku) {
                         do {
-                            $varSku = $product->sku . '-' . strtoupper(str()->random(4));
+                            $suffix = $hasSub ? 'PARENT-' . strtoupper(str()->random(4)) : strtoupper(str()->random(4));
+                            $varSku = $product->sku . '-' . $suffix;
                         } while (
                             in_array($varSku, $usedSkus) ||
                             \App\Models\Product::where('sku', $varSku)->exists() ||
@@ -189,33 +239,140 @@ class ProductController extends Controller
                     }
                     $usedSkus[] = $varSku;
 
-                    $variant = $product->variants()->create([
+                    $varPrice = ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'];
+                    $varStockType = $varData['stock_type'] ?? 'variant';
+                    $varUnit = $varData['unit'] ?? null;
+                    if (is_array($varUnit)) {
+                        $varUnit = $varUnit['name'] ?? ($varUnit['indonesia'] ?? null);
+                    }
+                    $varUnitId = $varData['unit_id'] ?: null;
+
+                    // Sanitization based on stock_type mode
+                    if ($productStockType === 'parent') {
+                        $varStockType = 'variant';
+                        $varUnit = null;
+                        if ($hasSub) {
+                            $varUnitId = null;
+                        }
+                    } else {
+                        if ($hasSub) {
+                            $varUnitId = null;
+                            if ($varStockType !== 'parent') {
+                                $varUnit = null;
+                            }
+                        }
+                    }
+
+                    $parentVariant = $product->variants()->create([
+                        'parent_id'        => null,
                         'type'             => $varData['type'] ?? null,
-                        'type_translations'=> $varData['type_translations'] ?? null,
+                        'type_translations' => $varData['type_translations'] ?? null,
                         'name'             => $varName,
-                        'name_translations'=> $varData['name_translations'],
+                        'name_translations' => $varData['name_translations'],
                         'sku'              => $varSku,
-                        'price'            => ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'],
+                        'price'            => $varPrice,
                         'stock'            => 0,
                         'image'            => $varImagePath,
-                        'unit_id'          => $varData['unit_id'] ?: null,
+                        'unit_id'          => $varUnitId,
+                        'stock_type'       => $varStockType,
+                        'unit'             => $varUnit,
                     ]);
 
-                    $varTotal = 0;
-                    foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
-                        $stockVal   = (int) ($bStock['stock'] ?? 0);
-                        $varTotal  += $stockVal;
-                        $variant->branchStocks()->create([
-                            'store_branch_id' => $bStock['store_branch_id'],
-                            'stock'           => $stockVal,
-                            'reserved_stock'  => 0,
-                            'is_available'    => $stockVal > 0,
-                        ]);
+                    if ($hasSub && isset($varData['sub_variants'])) {
+                        $parentVarStockTotal = 0;
+                        if ($productStockType !== 'parent' && $varStockType === 'parent') {
+                            foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
+                                $stockVal = (int) ($bStock['stock'] ?? 0);
+                                $parentVarStockTotal += $stockVal;
+                                $parentVariant->branchStocks()->create([
+                                    'store_branch_id' => $bStock['store_branch_id'],
+                                    'stock'           => $stockVal,
+                                    'reserved_stock'  => 0,
+                                    'is_available'    => $stockVal > 0,
+                                ]);
+                            }
+                            $parentVariant->update(['stock' => $parentVarStockTotal]);
+                            $totalStock += $parentVarStockTotal;
+                        }
+
+                        foreach ($varData['sub_variants'] as $j => $subVarData) {
+                            $subName = trim($subVarData['name_translations']['indonesia'] ?? '')
+                                ?: (trim($subVarData['name_translations']['english'] ?? '')
+                                    ?: trim($subVarData['name_translations']['arabic'] ?? ''));
+
+                            $subImagePath = null;
+                            $subImgFile   = $request->file("variants.{$i}.sub_variants.{$j}.image");
+                            if ($subImgFile) {
+                                $subImagePath = $subImgFile->store('variants', 'public');
+                            }
+
+                            $subSku = trim($subVarData['sku'] ?? '');
+                            if (!$subSku) {
+                                do {
+                                    $subSku = $product->sku . '-' . strtoupper(str()->random(4));
+                                } while (
+                                    in_array($subSku, $usedSkus) ||
+                                    \App\Models\Product::where('sku', $subSku)->exists() ||
+                                    \App\Models\ProductVariant::where('sku', $subSku)->exists()
+                                );
+                            }
+                            $usedSkus[] = $subSku;
+
+                            $subPrice = ($subVarData['price'] === null || $subVarData['price'] === '') ? $product->price : $subVarData['price'];
+
+                            $childVariant = $product->variants()->create([
+                                'parent_id'        => $parentVariant->id,
+                                'type'             => $subVarData['type'] ?? null,
+                                'type_translations' => $subVarData['type_translations'] ?? null,
+                                'name'             => $subName,
+                                'name_translations' => $subVarData['name_translations'],
+                                'sku'              => $subSku,
+                                'price'            => $subPrice,
+                                'stock'            => 0,
+                                'image'            => $subImagePath,
+                                'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
+                                'stock_type'       => 'variant',
+                                'unit'             => null,
+                            ]);
+
+                            if ($productStockType !== 'parent' && $varStockType !== 'parent') {
+                                $childStockTotal = 0;
+                                foreach ((array) ($subVarData['branch_stocks'] ?? []) as $bStock) {
+                                    $stockVal = (int) ($bStock['stock'] ?? 0);
+                                    $childStockTotal += $stockVal;
+                                    $childVariant->branchStocks()->create([
+                                        'store_branch_id' => $bStock['store_branch_id'],
+                                        'stock'           => $stockVal,
+                                        'reserved_stock'  => 0,
+                                        'is_available'    => $stockVal > 0,
+                                    ]);
+                                }
+                                $childVariant->update(['stock' => $childStockTotal]);
+                                $totalStock += $childStockTotal;
+                            }
+                        }
+                    } else {
+                        if ($productStockType !== 'parent') {
+                            $varStockTotal = 0;
+                            foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
+                                $stockVal = (int) ($bStock['stock'] ?? 0);
+                                $varStockTotal += $stockVal;
+                                $parentVariant->branchStocks()->create([
+                                    'store_branch_id' => $bStock['store_branch_id'],
+                                    'stock'           => $stockVal,
+                                    'reserved_stock'  => 0,
+                                    'is_available'    => $stockVal > 0,
+                                ]);
+                            }
+                            $parentVariant->update(['stock' => $varStockTotal]);
+                            $totalStock += $varStockTotal;
+                        }
                     }
-                    $variant->update(['stock' => $varTotal]);
-                    $totalStock += $varTotal;
                 }
-                $product->update(['stock' => $totalStock]);
+
+                if ($productStockType !== 'parent') {
+                    $product->update(['stock' => $totalStock]);
+                }
             }
         });
 
@@ -265,10 +422,11 @@ class ProductController extends Controller
                 ['indonesia' => '', 'english' => '', 'arabic' => ''],
                 is_array($product->description_translations) ? $product->description_translations : []
             ),
-            'productVariants' => $product->variants->map(fn ($v) => [
+            'productVariants' => $product->variants->map(fn($v) => [
                 'id'               => $v->id,
+                'parent_id'        => $v->parent_id,
                 'type'             => $v->type,
-                'type_translations'=> array_merge(
+                'type_translations' => array_merge(
                     ['indonesia' => $v->type, 'english' => $v->type, 'arabic' => $v->type],
                     is_array($v->type_translations) ? $v->type_translations : []
                 ),
@@ -276,10 +434,12 @@ class ProductController extends Controller
                 'price'            => $v->price,
                 'unit_id'          => $v->unit_id,
                 'image'            => $v->image,
-                'name_translations'=> array_merge(
+                'name_translations' => array_merge(
                     ['indonesia' => '', 'english' => '', 'arabic' => ''],
                     is_array($v->name_translations) ? $v->name_translations : []
                 ),
+                'stock_type'       => $v->stock_type,
+                'unit'             => $v->unit,
                 'stocks' => $v->branchStocks,
             ]),
             'initialStocks'  => $product->branchStocks,
@@ -298,14 +458,16 @@ class ProductController extends Controller
 
         $nameTranslations = $request->input('name_translations', []);
         $hasName = !empty(trim($nameTranslations['indonesia'] ?? '')) ||
-                   !empty(trim($nameTranslations['english'] ?? '')) ||
-                   !empty(trim($nameTranslations['arabic'] ?? ''));
+            !empty(trim($nameTranslations['english'] ?? '')) ||
+            !empty(trim($nameTranslations['arabic'] ?? ''));
 
         if (!$hasName) {
             return back()->withErrors([
                 'name_translations.indonesia' => 'Nama produk wajib diisi pada salah satu bahasa (Indonesia, English, atau Arab).'
             ])->withInput();
         }
+
+
 
         $rules = [
             'name_translations.indonesia' => 'nullable|string|max:255',
@@ -318,21 +480,45 @@ class ProductController extends Controller
             'is_new'                      => 'nullable|boolean',
             'is_best_seller'              => 'nullable|boolean',
             'images.*'                    => 'nullable|image|max:5120',
+            'stock_type'                  => 'nullable|in:variant,parent',
+            'unit'                        => 'nullable|string|max:50',
         ];
 
         if ($request->has('variants')) {
-            foreach ($request->input('variants') as $index => $varData) {
+            foreach ($request->input('variants') as $i => $varData) {
+                $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 $varId = $varData['id'] ?? null;
-                $rules["variants.{$index}.sku"] = [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    'distinct',
-                    'unique:products,sku',
-                    $varId ? "unique:product_variants,sku,{$varId}" : 'unique:product_variants,sku',
-                ];
-                $rules["variants.{$index}.name"] = 'required|string|max:255';
-                $rules["variants.{$index}.image"] = 'nullable|image|max:5120';
+
+                if (!$hasSub) {
+                    $rules["variants.{$i}.sku"] = [
+                        'nullable',
+                        'string',
+                        'max:255',
+                        'distinct',
+                        'unique:products,sku',
+                        $varId ? "unique:product_variants,sku,{$varId}" : "unique:product_variants,sku"
+                    ];
+                    $rules["variants.{$i}.name"] = 'required|string|max:255';
+                    $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                } else {
+                    $rules["variants.{$i}.name"] = 'required|string|max:255';
+                    $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                    if (isset($varData['sub_variants'])) {
+                        foreach ($varData['sub_variants'] as $j => $subVarData) {
+                            $subVarId = $subVarData['id'] ?? null;
+                            $rules["variants.{$i}.sub_variants.{$j}.sku"] = [
+                                'nullable',
+                                'string',
+                                'max:255',
+                                'distinct',
+                                'unique:products,sku',
+                                $subVarId ? "unique:product_variants,sku,{$subVarId}" : "unique:product_variants,sku"
+                            ];
+                            $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
+                            $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
+                        }
+                    }
+                }
             }
         }
 
@@ -340,9 +526,14 @@ class ProductController extends Controller
             'sku.unique'                  => 'SKU produk sudah digunakan.',
             'variants.*.sku.unique'       => 'SKU varian sudah digunakan.',
             'variants.*.sku.distinct'     => 'SKU varian tidak boleh sama dengan varian lainnya.',
-            'variants.*.name.required'    => 'Nama varian/sub-varian wajib diisi.',
+            'variants.*.name.required'    => 'Nama varian wajib diisi.',
             'variants.*.image.image'      => 'Berkas harus berupa gambar.',
             'variants.*.image.max'        => 'Ukuran gambar varian tidak boleh lebih dari 5MB.',
+            'variants.*.sub_variants.*.sku.unique'   => 'SKU sub-varian sudah digunakan.',
+            'variants.*.sub_variants.*.sku.distinct' => 'SKU sub-varian tidak boleh sama.',
+            'variants.*.sub_variants.*.name.required' => 'Nama sub-varian wajib diisi.',
+            'variants.*.sub_variants.*.image.image'   => 'Berkas harus berupa gambar.',
+            'variants.*.sub_variants.*.image.max'     => 'Ukuran gambar sub-varian tidak boleh lebih dari 5MB.',
         ]);
 
         DB::transaction(function () use ($request, $product) {
@@ -351,11 +542,11 @@ class ProductController extends Controller
 
             $primaryTitle = trim($nameTranslations['indonesia'] ?? '')
                 ?: (trim($nameTranslations['english'] ?? '')
-                ?: trim($nameTranslations['arabic'] ?? ''));
+                    ?: trim($nameTranslations['arabic'] ?? ''));
 
             $primaryDescription = trim($descTranslations['indonesia'] ?? '')
                 ?: (trim($descTranslations['english'] ?? '')
-                ?: trim($descTranslations['arabic'] ?? ''));
+                    ?: trim($descTranslations['arabic'] ?? ''));
 
             $hasVariants = $request->boolean('has_variants');
             $price = $request->price;
@@ -363,11 +554,24 @@ class ProductController extends Controller
             if ($hasVariants && ($price === null || $price === '')) {
                 $minPrice = null;
                 foreach ((array) $request->variants as $varData) {
-                    $vPrice = $varData['price'];
-                    if ($vPrice !== null && $vPrice !== '') {
-                        $vPriceVal = (float) $vPrice;
-                        if ($minPrice === null || $vPriceVal < $minPrice) {
-                            $minPrice = $vPriceVal;
+                    $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    if ($hasSub && isset($varData['sub_variants'])) {
+                        foreach ((array) $varData['sub_variants'] as $subVarData) {
+                            $subPrice = $subVarData['price'];
+                            if ($subPrice !== null && $subPrice !== '') {
+                                $subPriceVal = (float) $subPrice;
+                                if ($minPrice === null || $subPriceVal < $minPrice) {
+                                    $minPrice = $subPriceVal;
+                                }
+                            }
+                        }
+                    } else {
+                        $vPrice = $varData['price'];
+                        if ($vPrice !== null && $vPrice !== '') {
+                            $vPriceVal = (float) $vPrice;
+                            if ($minPrice === null || $vPriceVal < $minPrice) {
+                                $minPrice = $vPriceVal;
+                            }
                         }
                     }
                 }
@@ -379,13 +583,15 @@ class ProductController extends Controller
                 'title'                   => $primaryTitle,
                 'name_translations'       => $request->name_translations,
                 'description'             => $primaryDescription,
-                'description_translations'=> $request->description_translations,
+                'description_translations' => $request->description_translations,
                 'sku'                     => trim($request->sku),
                 'price'                   => $price,
                 'product_category_id'     => $request->product_category_id,
                 'product_sub_category_id' => $request->product_sub_category_id ?: null,
                 'is_new'                  => $request->boolean('is_new'),
                 'is_best_seller'          => $request->boolean('is_best_seller'),
+                'stock_type'              => $request->input('stock_type', 'variant'),
+                'unit'                    => $request->input('unit'),
             ]);
 
             // 2. Sync product gallery images
@@ -421,12 +627,15 @@ class ProductController extends Controller
             }
 
             // 3. Handle stocks / variants
-            if (!$hasVariants) {
-                $product->variants()->each(function ($v) {
-                    if ($v->image) Storage::disk('public')->delete($v->image);
+            $productStockType = $request->input('stock_type', 'variant');
+            $product->branchStocks()->delete();
+            if ($productStockType === 'parent' || !$hasVariants) {
+                // Clear variant stocks since product holds central stock
+                $product->variants->each(function ($v) {
+                    $v->branchStocks()->delete();
+                    $v->update(['stock' => 0]);
                 });
-                $product->variants()->delete();
-                $product->branchStocks()->delete();
+
                 $totalStock = 0;
                 foreach ((array) $request->branch_stocks as $bStock) {
                     $stockVal    = (int) ($bStock['stock'] ?? 0);
@@ -439,31 +648,84 @@ class ProductController extends Controller
                     ]);
                 }
                 $product->update(['stock' => $totalStock]);
-            } else {
-                $product->branchStocks()->delete();
-                $keepVariantIds = [];
-                $totalStock = 0;
+            }
+
+            // Sync variants
+            if ($hasVariants) {
+                // Collect and delete variants/sub-variants that are not in the request first to prevent duplicate SKU constraints
+                $requestVariantIds = [];
+                foreach ((array) $request->variants as $varData) {
+                    if (!empty($varData['id'])) {
+                        $requestVariantIds[] = (int) $varData['id'];
+                    }
+                    if (isset($varData['sub_variants'])) {
+                        foreach ($varData['sub_variants'] as $subVarData) {
+                            if (!empty($subVarData['id'])) {
+                                $requestVariantIds[] = (int) $subVarData['id'];
+                            }
+                        }
+                    }
+                }
+                $product->variants()->whereNotIn('id', $requestVariantIds)->each(function ($v) {
+                    if ($v->image) Storage::disk('public')->delete($v->image);
+                    $v->delete();
+                });
+
+                $keepVariantIds = $requestVariantIds;
                 $usedSkus = [];
+                $totalStock = 0;
 
                 foreach ((array) $request->variants as $i => $varData) {
+                    $hasSub = filter_var($varData['has_sub_variants'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $varId = $varData['id'] ?? null;
                     $varName = trim($varData['name_translations']['indonesia'] ?? '')
                         ?: (trim($varData['name_translations']['english'] ?? '')
-                        ?: trim($varData['name_translations']['arabic'] ?? ''));
-                    $varId       = $varData['id'] ?? null;
+                            ?: trim($varData['name_translations']['arabic'] ?? ''));
+
                     $varImgFile  = $request->file("variants.{$i}.image");
+                    $varSku = trim($varData['sku'] ?? '');
+                    $varPrice = ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'];
+                    $varStockType = $varData['stock_type'] ?? 'variant';
+                    $varUnit = $varData['unit'] ?? null;
+                    if (is_array($varUnit)) {
+                        $varUnit = $varUnit['name'] ?? ($varUnit['indonesia'] ?? null);
+                    }
+                    $varUnitId = $varData['unit_id'] ?: null;
+
+                    // Sanitization based on stock_type mode
+                    if ($productStockType === 'parent') {
+                        $varStockType = 'variant';
+                        $varUnit = null;
+                        if ($hasSub) {
+                            $varUnitId = null;
+                        }
+                    } else {
+                        if ($hasSub) {
+                            $varUnitId = null;
+                            if ($varStockType !== 'parent') {
+                                $varUnit = null;
+                            }
+                        }
+                    }
 
                     if ($varId) {
                         $variant = $product->variants()->find($varId);
                         if ($variant) {
-                            $varSku = trim($varData['sku'] ?? '') ?: $variant->sku;
+                            if (!$varSku) {
+                                $varSku = $variant->sku;
+                            }
                             $updates = [
+                                'parent_id'        => null,
                                 'type'             => $varData['type'] ?? $variant->type,
-                                'type_translations'=> $varData['type_translations'] ?? null,
+                                'type_translations' => $varData['type_translations'] ?? null,
                                 'name'             => $varName,
-                                'name_translations'=> $varData['name_translations'],
+                                'name_translations' => $varData['name_translations'],
                                 'sku'              => $varSku,
-                                'price'            => ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'],
-                                'unit_id'          => $varData['unit_id'] ?: null,
+                                'price'            => $varPrice,
+                                'stock'            => 0,
+                                'unit_id'          => $varUnitId,
+                                'stock_type'       => $varStockType,
+                                'unit'             => $varUnit,
                             ];
                             if ($varData['image_deleted'] ?? false) {
                                 if ($variant->image) Storage::disk('public')->delete($variant->image);
@@ -480,11 +742,10 @@ class ProductController extends Controller
                         if ($varImgFile) {
                             $varImagePath = $varImgFile->store('variants', 'public');
                         }
-
-                        $varSku = trim($varData['sku'] ?? '');
                         if (!$varSku) {
                             do {
-                                $varSku = $product->sku . '-' . strtoupper(str()->random(4));
+                                $suffix = $hasSub ? 'PARENT-' . strtoupper(str()->random(4)) : strtoupper(str()->random(4));
+                                $varSku = $product->sku . '-' . $suffix;
                             } while (
                                 in_array($varSku, $usedSkus) ||
                                 \App\Models\Product::where('sku', $varSku)->exists() ||
@@ -494,43 +755,164 @@ class ProductController extends Controller
                         $usedSkus[] = $varSku;
 
                         $variant = $product->variants()->create([
+                            'parent_id'        => null,
                             'type'             => $varData['type'] ?? null,
-                            'type_translations'=> $varData['type_translations'] ?? null,
+                            'type_translations' => $varData['type_translations'] ?? null,
                             'name'             => $varName,
-                            'name_translations'=> $varData['name_translations'],
+                            'name_translations' => $varData['name_translations'],
                             'sku'              => $varSku,
-                            'price'            => ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'],
+                            'price'            => $varPrice,
                             'stock'            => 0,
                             'image'            => $varImagePath,
-                            'unit_id'          => $varData['unit_id'] ?: null,
+                            'unit_id'          => $varUnitId,
+                            'stock_type'       => $varStockType,
+                            'unit'             => $varUnit,
                         ]);
                     }
 
                     if ($variant) {
                         $keepVariantIds[] = $variant->id;
                         $variant->branchStocks()->delete();
-                        $varTotal = 0;
-                        foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
-                            $stockVal   = (int) ($bStock['stock'] ?? 0);
-                            $varTotal  += $stockVal;
-                            $variant->branchStocks()->create([
-                                'store_branch_id' => $bStock['store_branch_id'],
-                                'stock'           => $stockVal,
-                                'reserved_stock'  => 0,
-                                'is_available'    => $stockVal > 0,
-                            ]);
+
+                        if ($hasSub && isset($varData['sub_variants'])) {
+                            $parentVarStockTotal = 0;
+                            if ($productStockType !== 'parent' && $varStockType === 'parent') {
+                                foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
+                                    $stockVal = (int) ($bStock['stock'] ?? 0);
+                                    $parentVarStockTotal += $stockVal;
+                                    $variant->branchStocks()->create([
+                                        'store_branch_id' => $bStock['store_branch_id'],
+                                        'stock'           => $stockVal,
+                                        'reserved_stock'  => 0,
+                                        'is_available'    => $stockVal > 0,
+                                    ]);
+                                }
+                                $variant->update(['stock' => $parentVarStockTotal]);
+                                $totalStock += $parentVarStockTotal;
+                            }
+
+                            foreach ($varData['sub_variants'] as $j => $subVarData) {
+                                $subVarId = $subVarData['id'] ?? null;
+                                $subName = trim($subVarData['name_translations']['indonesia'] ?? '')
+                                    ?: (trim($subVarData['name_translations']['english'] ?? '')
+                                        ?: trim($subVarData['name_translations']['arabic'] ?? ''));
+
+                                $subImgFile = $request->file("variants.{$i}.sub_variants.{$j}.image");
+                                $subSku = trim($subVarData['sku'] ?? '');
+                                $subPrice = ($subVarData['price'] === null || $subVarData['price'] === '') ? $product->price : $subVarData['price'];
+
+                                if ($subVarId) {
+                                    $childVariant = $product->variants()->find($subVarId);
+                                    if ($childVariant) {
+                                        if (!$subSku) {
+                                            $subSku = $childVariant->sku;
+                                        }
+                                        $subUpdates = [
+                                            'parent_id'        => $variant->id,
+                                            'type'             => $subVarData['type'] ?? $childVariant->type,
+                                            'type_translations' => $subVarData['type_translations'] ?? null,
+                                            'name'             => $subName,
+                                            'name_translations' => $subVarData['name_translations'],
+                                            'sku'              => $subSku,
+                                            'price'            => $subPrice,
+                                            'stock'            => 0,
+                                            'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
+                                            'stock_type'       => 'variant',
+                                            'unit'             => null,
+                                        ];
+                                        if ($subVarData['image_deleted'] ?? false) {
+                                            if ($childVariant->image) Storage::disk('public')->delete($childVariant->image);
+                                            $subUpdates['image'] = null;
+                                        } elseif ($subImgFile) {
+                                            if ($childVariant->image) Storage::disk('public')->delete($childVariant->image);
+                                            $subUpdates['image'] = $subImgFile->store('variants', 'public');
+                                        }
+                                        $childVariant->update($subUpdates);
+                                        $usedSkus[] = $subSku;
+                                    }
+                                } else {
+                                    $subImagePath = null;
+                                    if ($subImgFile) {
+                                        $subImagePath = $subImgFile->store('variants', 'public');
+                                    }
+                                    if (!$subSku) {
+                                        do {
+                                            $subSku = $product->sku . '-' . strtoupper(str()->random(4));
+                                        } while (
+                                            in_array($subSku, $usedSkus) ||
+                                            \App\Models\Product::where('sku', $subSku)->exists() ||
+                                            \App\Models\ProductVariant::where('sku', $subSku)->exists()
+                                        );
+                                    }
+                                    $usedSkus[] = $subSku;
+
+                                    $childVariant = $product->variants()->create([
+                                        'parent_id'        => $variant->id,
+                                        'type'             => $subVarData['type'] ?? null,
+                                        'type_translations' => $subVarData['type_translations'] ?? null,
+                                        'name'             => $subName,
+                                        'name_translations' => $subVarData['name_translations'],
+                                        'sku'              => $subSku,
+                                        'price'            => $subPrice,
+                                        'stock'            => 0,
+                                        'image'            => $subImagePath,
+                                        'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
+                                        'stock_type'       => 'variant',
+                                        'unit'             => null,
+                                    ]);
+                                }
+
+                                if ($childVariant) {
+                                    $keepVariantIds[] = $childVariant->id;
+                                    $childVariant->branchStocks()->delete();
+
+                                    if ($productStockType !== 'parent' && $varStockType !== 'parent') {
+                                        $childStockTotal = 0;
+                                        foreach ((array) ($subVarData['branch_stocks'] ?? []) as $bStock) {
+                                            $stockVal = (int) ($bStock['stock'] ?? 0);
+                                            $childStockTotal += $stockVal;
+                                            $childVariant->branchStocks()->create([
+                                                'store_branch_id' => $bStock['store_branch_id'],
+                                                'stock'           => $stockVal,
+                                                'reserved_stock'  => 0,
+                                                'is_available'    => $stockVal > 0,
+                                            ]);
+                                        }
+                                        $childVariant->update(['stock' => $childStockTotal]);
+                                        $totalStock += $childStockTotal;
+                                    }
+                                }
+                            }
+                        } else {
+                            if ($productStockType !== 'parent') {
+                                $varStockTotal = 0;
+                                foreach ((array) ($varData['branch_stocks'] ?? []) as $bStock) {
+                                    $stockVal = (int) ($bStock['stock'] ?? 0);
+                                    $varStockTotal += $stockVal;
+                                    $variant->branchStocks()->create([
+                                        'store_branch_id' => $bStock['store_branch_id'],
+                                        'stock'           => $stockVal,
+                                        'reserved_stock'  => 0,
+                                        'is_available'    => $stockVal > 0,
+                                    ]);
+                                }
+                                $variant->update(['stock' => $varStockTotal]);
+                                $totalStock += $varStockTotal;
+                            }
                         }
-                        $variant->update(['stock' => $varTotal]);
-                        $totalStock += $varTotal;
                     }
                 }
 
-                // Delete variants removed in frontend
-                $product->variants()->whereNotIn('id', $keepVariantIds)->each(function ($v) {
+                // Deletions already handled at the beginning of the block
+
+                if ($productStockType !== 'parent') {
+                    $product->update(['stock' => $totalStock]);
+                }
+            } else {
+                $product->variants()->each(function ($v) {
                     if ($v->image) Storage::disk('public')->delete($v->image);
-                    $v->delete();
                 });
-                $product->update(['stock' => $totalStock]);
+                $product->variants()->delete();
             }
         });
 
@@ -562,7 +944,64 @@ class ProductController extends Controller
     }
 
     /**
-     * Recursively convert "null" and "undefined" strings to actual null values.
+     * Check if any SKU in the list is already used by another product or variant.
+     */
+    public function checkSku(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $productId = $request->input('product_id');
+        $skus = $request->input('skus', []);
+
+        if (empty($skus)) {
+            return response()->json(['duplicates' => []]);
+        }
+
+        // Clean and lowercase SKUs
+        $skus = array_map(function ($sku) {
+            return strtolower(trim($sku));
+        }, $skus);
+
+        $duplicates = [];
+
+        // Check products table
+        $productQuery = DB::table('products')
+            ->whereIn(DB::raw('LOWER(sku)'), $skus);
+        if ($productId) {
+            $productQuery->where('id', '!=', $productId);
+        }
+        $dupProducts = $productQuery->select('sku', 'title')->get();
+
+        foreach ($dupProducts as $p) {
+            $duplicates[] = [
+                'sku'          => $p->sku,
+                'source'       => 'product',
+                'product_name' => $p->title,
+            ];
+        }
+
+        // Check product_variants table
+        $variantQuery = DB::table('product_variants')
+            ->join('products', 'product_variants.product_id', '=', 'products.id')
+            ->whereIn(DB::raw('LOWER(product_variants.sku)'), $skus);
+        if ($productId) {
+            $variantQuery->where('product_variants.product_id', '!=', $productId);
+        }
+        $dupVariants = $variantQuery->select('product_variants.sku', 'products.title as product_title')->get();
+
+        foreach ($dupVariants as $v) {
+            $duplicates[] = [
+                'sku'          => $v->sku,
+                'source'       => 'variant',
+                'product_name' => $v->product_title,
+            ];
+        }
+
+        return response()->json([
+            'duplicates' => $duplicates,
+        ]);
+    }
+
+    /**
+     * Recursively convert "null" and "undefined" strings to actual null values, and trim all string inputs.
      */
     private function cleanNullStrings($data)
     {
@@ -578,6 +1017,7 @@ class ProductController extends Controller
             if ($trimmed === 'null' || $trimmed === 'undefined') {
                 return null;
             }
+            return $trimmed;
         }
 
         return $data;

@@ -40,11 +40,12 @@ const NewProduct = ({ products = [] }) => {
                     {useSlider ? (
                         <SlickSlider>
                             {products.map((product) => (
-                                <div key={product.id} className="md:px-2 px-4">
+                                <div key={product.id} className="md:px-2 px-0">
                                     <ProductCard
                                         slug={product.slug}
                                         title={product.name_translations?.[locale] || product.title}
                                         price={product.price}
+                                        variants={product.variants}
                                         sold={product.sold}
                                         image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
                                         status={product.status}
@@ -56,13 +57,14 @@ const NewProduct = ({ products = [] }) => {
                             ))}
                         </SlickSlider>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-8 max-w-7xl mx-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:px-16 px-8 max-w-7xl mx-auto">
                             {products.map((product) => (
                                 <ProductCard
                                     key={product.id}
                                     slug={product.slug}
                                     title={product.name_translations?.[locale] || product.title}
                                     price={product.price}
+                                    variants={product.variants}
                                     sold={product.sold}
                                     image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
                                     status={product.status}

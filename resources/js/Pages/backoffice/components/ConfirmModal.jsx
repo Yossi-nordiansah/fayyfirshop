@@ -75,13 +75,15 @@ export default function ConfirmModal({
                         </div>
 
                         <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={onCancel}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                            >
-                                {resolvedCancelLabel}
-                            </button>
+                            {cancelLabel !== false && (
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                >
+                                    {resolvedCancelLabel}
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={onConfirm}

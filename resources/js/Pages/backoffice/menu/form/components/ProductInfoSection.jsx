@@ -87,8 +87,8 @@ function RichTextArea({ value = '', onChange, placeholder = '', dir = 'ltr', row
                 requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = lineStart; });
             } else {
                 const nextNum = +numMatch[1] + 1;
-                const insert  = `\n${nextNum}. `;
-                const next    = value.slice(0, s) + insert + value.slice(s);
+                const insert = `\n${nextNum}. `;
+                const next = value.slice(0, s) + insert + value.slice(s);
                 onChange(next);
                 requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = s + insert.length; });
             }
@@ -214,7 +214,7 @@ export default function ProductInfoSection({ activeLang, data, setData, errors, 
                                     {t('product.badge.new', 'Baru')}
                                 </span>
                                 <span className="block text-[10px] text-slate-400">
-                                    {t('backoffice.product.form.is_new_hint', 'Tampilkan label produk baru')} (New / جديد)
+                                    {t('backoffice.product.form.is_new_hint', 'Tampilkan label produk baru')}
                                 </span>
                             </div>
                         </label>
@@ -239,7 +239,7 @@ export default function ProductInfoSection({ activeLang, data, setData, errors, 
                                     {t('product.badge.best_seller', 'Terlaris')}
                                 </span>
                                 <span className="block text-[10px] text-slate-400">
-                                    {t('backoffice.product.form.is_best_seller_hint', 'Tampilkan label produk terlaris')} (Best Seller / الأكثر مبيعاً)
+                                    {t('backoffice.product.form.is_best_seller_hint', 'Tampilkan label produk terlaris')}
                                 </span>
                             </div>
                         </label>

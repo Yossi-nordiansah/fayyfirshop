@@ -16,8 +16,8 @@ function useSlidesToShow() {
     const getSlides = () => {
         if (typeof window === "undefined") return 4;
         const w = window.innerWidth;
-        if (w <= 480) return 1;
-        if (w <= 768) return 1;
+        if (w <= 480) return 2;
+        if (w <= 768) return 2;
         if (w <= 1024) return 2;
         return 4;
     };
@@ -72,7 +72,7 @@ const SlickSlider = ({ children }) => {
             {
                 breakpoint: 768,
                 settings: {
-                    slidesToShow: 1,
+                    slidesToShow: 2,
                     slidesToScroll: 1,
                     centerMode: false,
                     arrows: false,
@@ -81,7 +81,7 @@ const SlickSlider = ({ children }) => {
             {
                 breakpoint: 480,
                 settings: {
-                    slidesToShow: 1,
+                    slidesToShow: 2,
                     slidesToScroll: 1,
                     centerMode: false,
                     arrows: false,
@@ -91,7 +91,7 @@ const SlickSlider = ({ children }) => {
     };
 
     return (
-        <section className="bg-transparent pb-2 md:px-8 px-2 lg:px-12">
+        <section className="bg-transparent pb-2 md:px-8 px-0 lg:px-16">
             {/* React Slick Slider */}
             <div className="product-slider">
                 <Slider {...settings}>{children}</Slider>

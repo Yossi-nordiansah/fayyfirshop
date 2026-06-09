@@ -24,7 +24,15 @@ const ProductCard = ({
     // Determine lowest price if variants exist, otherwise use base price
     const displayPrice = React.useMemo(() => {
         if (variants && variants.length > 0) {
-            const prices = variants.map(v => v.price).filter(p => typeof p === 'number');
+            const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
+            const targetVariants = hasChildren
+                ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
+                : variants;
+
+            const prices = targetVariants
+                .map(v => v.price)
+                .filter(p => typeof p === 'number' && p > 0);
+
             if (prices.length > 0) {
                 return Math.min(...prices);
             }
@@ -91,11 +99,11 @@ const ProductCard = ({
                 )}
 
                 {/* Product Image */}
-                <div className="relative overflow-hidden aspect-square bg-zinc-900/50">
+                <div className="relative overflow-hidden aspect-square bg-white">
                     <img
                         src={Array.isArray(image) ? image[0] : image}
                         alt={title}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-102"
                         loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
