@@ -50,7 +50,6 @@ export default function WarehouseSelection({
                             <span className={`inline-block w-2 h-2 rounded-full ${hasAllStock ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                         </div>
                         <h3 className="mt-1 text-sm font-bold text-slate-800">{branch.name}</h3>
-                        <p className="mt-2 text-xs text-slate-600 leading-relaxed">{fullAddress}</p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-bold self-start md:self-auto">
                         {hasAllStock ? (

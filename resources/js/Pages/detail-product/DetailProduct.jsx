@@ -147,6 +147,82 @@ const parseCapacityJs = (variantName, parentUnit = null, activeVariant = null) =
     return capacityBase / parentBase;
 };
 
+const parseWeightJs = (variant, product) => {
+    if (variant) {
+        // Prioritize direct weight values input in backoffice
+        if (variant.weight && parseInt(variant.weight, 10) > 0) {
+            return parseInt(variant.weight, 10);
+        }
+
+        if (variant.parent_id && product && product.variants) {
+            const parentVar = product.variants.find(v => v.id === variant.parent_id);
+            if (parentVar && parentVar.weight && parseInt(parentVar.weight, 10) > 0) {
+                return parseInt(parentVar.weight, 10);
+            }
+        }
+
+        const variantsToTry = [variant];
+        if (variant.parent_id && product && product.variants) {
+            const parentVar = product.variants.find(v => v.id === variant.parent_id);
+            if (parentVar) {
+                variantsToTry.push(parentVar);
+            }
+        }
+
+        for (const v of variantsToTry) {
+            const textToParse = v.name || '';
+            let unitName = '';
+            if (v.unit) {
+                unitName = typeof v.unit === 'object' ? (v.unit.name || '') : String(v.unit);
+            } else if (product && product.unit) {
+                unitName = typeof product.unit === 'object' ? (product.unit.name || '') : String(product.unit);
+            }
+            unitName = unitName.toLowerCase();
+
+            // Match numbers and units
+            const matches = textToParse.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i);
+            if (matches) {
+                const value = parseFloat(matches[1]);
+                const unit = matches[2] ? matches[2].toLowerCase() : '';
+
+                if (unit === 'kg' || unit === 'kilogram' || unitName === 'kilogram') {
+                    return Math.round(value * 1000);
+                }
+                if (['g', 'gr', 'gram'].includes(unit) || unitName === 'gram' || unitName === 'gr') {
+                    return Math.round(value);
+                }
+                if (unitName === 'kg' || unitName === 'kilogram') {
+                    return Math.round(value * 1000);
+                }
+                if (['g', 'gr', 'gram'].includes(unitName)) {
+                    return Math.round(value);
+                }
+            }
+        }
+    }
+
+    if (product && product.weight > 0) {
+        return parseInt(product.weight, 10);
+    }
+
+    // Fallback parsing from product title
+    if (product && product.title) {
+        const matches = product.title.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i);
+        if (matches) {
+            const value = parseFloat(matches[1]);
+            const unit = matches[2] ? matches[2].toLowerCase() : '';
+            if (unit === 'kg' || unit === 'kilogram') {
+                return Math.round(value * 1000);
+            }
+            if (['g', 'gr', 'gram'].includes(unit)) {
+                return Math.round(value);
+            }
+        }
+    }
+
+    return 1000; // default 1kg
+};
+
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
     const { auth } = usePage().props;
@@ -445,7 +521,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     // Resolusi combined gallery: gambar produk (Eloquent / static JSON) + gambar varian
     const productImages = React.useMemo(() => {
         if (product.images && product.images.length > 0) {
-            return product.images.map((img) => img.image_path).filter(Boolean);
+            const sortedImages = [...product.images].sort((a, b) => {
+                const aPrimary = !!a.is_primary && a.is_primary !== '0' && a.is_primary !== 0;
+                const bPrimary = !!b.is_primary && b.is_primary !== '0' && b.is_primary !== 0;
+                if (aPrimary && !bPrimary) return -1;
+                if (!aPrimary && bPrimary) return 1;
+                return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+            });
+            return sortedImages.map((img) => img.image_path).filter(Boolean);
         }
         if (Array.isArray(product.image)) {
             return product.image;
@@ -481,6 +564,26 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     }, [product.variants, isDbProduct]);
 
     const [activeImage, setActiveImage] = useState(allImages[0] || null);
+    const [swipeDirection, setSwipeDirection] = useState("none");
+
+    const handleSelectImage = (img) => {
+        if (!img) return;
+        const currentIndex = allImages.indexOf(activeImage);
+        const targetIndex = allImages.indexOf(img);
+        if (currentIndex !== -1 && targetIndex !== -1) {
+            if (targetIndex > currentIndex) {
+                setSwipeDirection("next");
+            } else if (targetIndex < currentIndex) {
+                setSwipeDirection("prev");
+            } else {
+                setSwipeDirection("none");
+            }
+        } else {
+            setSwipeDirection("none");
+        }
+        setActiveImage(img);
+    };
+
     const [quantity, setQuantity] = useState(1);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isPendingBuyNow, setIsPendingBuyNow] = useState(false);
@@ -488,6 +591,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     // Sinkronisasi state ketika produk / locale / image pool berubah
     useEffect(() => {
+        setSwipeDirection("none");
         if (isDbProduct) {
             setSelectedColor(null);
             setSelectedSize(null);
@@ -537,7 +641,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const handleColorSelect = (color) => {
         setSelectedColor(color);
         if (variantImagesMap[color]) {
-            setActiveImage(variantImagesMap[color]);
+            handleSelectImage(variantImagesMap[color]);
         }
     };
 
@@ -763,6 +867,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             stock: currentStock,
             quantity,
             sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
+            weight: parseWeightJs(activeVariant, product),
         };
 
         const currentCart = JSON.parse(localStorage.getItem(cartKey) || "[]");
@@ -830,6 +935,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             stock: currentStock,
             quantity,
             sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
+            weight: parseWeightJs(activeVariant, product),
         };
 
         // Simpan hanya item ini ke cart agar checkout hanya memproses produk ini saja
@@ -924,18 +1030,35 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         >
                             {/* Main Image */}
                             <div className="relative overflow-hidden border shadow-xl rounded-3xl bg-zinc-50 border-zinc-100 aspect-square">
-                                <AnimatePresence mode="wait">
                                     <motion.img
                                         key={activeImage}
                                         src={resolveProductImage(activeImage)}
                                         alt={displayName}
-                                        className="object-cover w-full h-full"
-                                        initial={{ opacity: 0, scale: 1.04 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.97 }}
-                                        transition={{ duration: 0.35 }}
+                                        className="object-cover w-full h-full select-none cursor-grab active:cursor-grabbing"
+                                        style={{ touchAction: "pan-y" }}
+                                        initial={{ x: swipeDirection === "next" ? "100%" : swipeDirection === "prev" ? "-100%" : 0 }}
+                                        animate={{ x: 0 }}
+                                        transition={{ type: "tween", ease: "easeOut", duration: 0.22 }}
+                                        drag={allImages.length > 1 ? "x" : false}
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.5}
+                                        onDragEnd={(event, info) => {
+                                            if (allImages.length <= 1) return;
+                                            const threshold = 50;
+                                            const currentIndex = allImages.indexOf(activeImage);
+                                            if (info.offset.x < -threshold) {
+                                                // Swipe left -> Next image (comes from right)
+                                                setSwipeDirection("next");
+                                                const nextIdx = (currentIndex + 1) % allImages.length;
+                                                setActiveImage(allImages[nextIdx]);
+                                            } else if (info.offset.x > threshold) {
+                                                // Swipe right -> Prev image (comes from left)
+                                                setSwipeDirection("prev");
+                                                const prevIdx = (currentIndex - 1 + allImages.length) % allImages.length;
+                                                setActiveImage(allImages[prevIdx]);
+                                            }
+                                        }}
                                     />
-                                </AnimatePresence>
 
                                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
@@ -976,7 +1099,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                         return (
                                             <button
                                                 key={idx}
-                                                onClick={() => setActiveImage(img)}
+                                                onClick={() => handleSelectImage(img)}
                                                 className={`relative flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all duration-300 ${isActive
                                                     ? "border-blue-500 shadow-lg shadow-blue-200 scale-[1.03]"
                                                     : "border-zinc-200 hover:border-blue-300"
@@ -1027,7 +1150,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
                             {/* Title */}
                             <div>
-                                <h1 className="text-3xl lg:text-4xl font-['Cinzel'] font-bold text-zinc-900 leading-tight tracking-wide mb-3">
+                                <h1 className="text-3xl lg:text-4xl font-bold text-zinc-900 leading-tight tracking-wide mb-3">
                                     {displayName}
                                 </h1>
 
@@ -1128,14 +1251,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                                 const firstSub = parent.sub_variants[0];
                                                                 setSelectedVariantId(firstSub.id);
                                                                 if (firstSub.image) {
-                                                                    setActiveImage(firstSub.image);
+                                                                    handleSelectImage(firstSub.image);
                                                                 } else if (parent.image) {
-                                                                    setActiveImage(parent.image);
+                                                                    handleSelectImage(parent.image);
                                                                 }
                                                             } else {
                                                                 setSelectedVariantId(parent.id);
                                                                 if (parent.image) {
-                                                                    setActiveImage(parent.image);
+                                                                    handleSelectImage(parent.image);
                                                                 }
                                                             }
                                                         }}
@@ -1222,9 +1345,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                                 onClick={() => {
                                                                     setSelectedVariantId(subVar.id);
                                                                     if (subVar.image) {
-                                                                        setActiveImage(subVar.image);
+                                                                        handleSelectImage(subVar.image);
                                                                     } else if (currentParent.image) {
-                                                                        setActiveImage(currentParent.image);
+                                                                        handleSelectImage(currentParent.image);
                                                                     }
                                                                 }}
                                                                 disabled={isSubOutOfStock}
@@ -1413,7 +1536,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className="pt-10 mt-4 border-t border-zinc-100"
                     >
-                        <h2 className="text-lg font-['Cinzel'] font-bold text-zinc-900 mb-4 flex items-center gap-3">
+                        <h2 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-3">
                             {t("product.detail.description_title", "Deskripsi Produk")}
                             <span className="flex-1 h-px bg-gradient-to-r from-zinc-200 to-transparent" />
                         </h2>

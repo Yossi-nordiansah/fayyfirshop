@@ -8,6 +8,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreBranchController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\CustomerController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -76,6 +78,7 @@ Route::get('/product/{slug}', function ($slug) {
             'stock_type'       => $v->stock_type,
             'unit_id'          => $v->unit_id,
             'unit'             => $unitResolved,
+            'weight'           => $v->weight,
             'image'            => $v->image,
             'branch_stocks'    => $v->branchStocks ?? [],
         ];
@@ -172,13 +175,33 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::patch('/admin/{admin}', [AdminController::class, 'update'])->name('backoffice.admin.update');
     Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('backoffice.admin.destroy');
 
-    Route::get('/customer', function () {
-        return Inertia::render('backoffice/menu/Customer');
-    })->name('backoffice.customer');
+    Route::get('/customer', [CustomerController::class, 'index'])->name('backoffice.customer');
+    Route::delete('/customer/{customer}', [CustomerController::class, 'destroy'])->name('backoffice.customer.destroy');
+    Route::get('/customer/{customer}/statistics', [CustomerController::class, 'statistics'])->name('backoffice.customer.statistics');
+    Route::post('/customer/{customer}/voucher', [CustomerController::class, 'assignVoucher'])->name('backoffice.customer.assign-voucher');
 
     Route::get('/reports', function () {
         return Inertia::render('backoffice/menu/Reports');
     })->name('backoffice.reports');
+
+    Route::get('/promotion', [PromotionController::class, 'index'])->name('backoffice.promotion');
+    Route::post('/promotion/ticker', [PromotionController::class, 'storeTicker'])->name('backoffice.promotion.ticker.store');
+    // Laravel POST dengan _method PUT/PATCH untuk request berisi multipart file upload
+    Route::post('/promotion/ticker/{id}', [PromotionController::class, 'updateTicker'])->name('backoffice.promotion.ticker.update');
+    Route::delete('/promotion/ticker/{id}', [PromotionController::class, 'destroyTicker'])->name('backoffice.promotion.ticker.destroy');
+
+    Route::post('/promotion/voucher', [PromotionController::class, 'storeVoucher'])->name('backoffice.promotion.voucher.store');
+    Route::put('/promotion/voucher/{id}', [PromotionController::class, 'updateVoucher'])->name('backoffice.promotion.voucher.update');
+    Route::delete('/promotion/voucher/{id}', [PromotionController::class, 'destroyVoucher'])->name('backoffice.promotion.voucher.destroy');
+
+    Route::post('/promotion/event', [PromotionController::class, 'storeEvent'])->name('backoffice.promotion.event.store');
+    Route::post('/promotion/event/{id}', [PromotionController::class, 'updateEvent'])->name('backoffice.promotion.event.update');
+    Route::delete('/promotion/event/{id}', [PromotionController::class, 'destroyEvent'])->name('backoffice.promotion.event.destroy');
+
+    Route::post('/promotion/referral', [PromotionController::class, 'storeReferral'])->name('backoffice.promotion.referral.store');
+    Route::put('/promotion/referral/{id}', [PromotionController::class, 'updateReferral'])->name('backoffice.promotion.referral.update');
+    Route::delete('/promotion/referral/{id}', [PromotionController::class, 'destroyReferral'])->name('backoffice.promotion.referral.destroy');
+    Route::get('/promotion/referral/{id}/statistics', [PromotionController::class, 'referralStatistics'])->name('backoffice.promotion.referral.statistics');
 
     Route::get('/store-branches', [StoreBranchController::class, 'index'])
         ->name('backoffice.store-branches.index');
@@ -203,8 +226,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/search-area', [StoreBranchController::class, 'searchArea'])->name('checkout.search-area');
     Route::post('/checkout/check-stock', [CheckoutController::class, 'checkStock'])->name('checkout.check-stock');
     Route::post('/checkout/rates', [CheckoutController::class, 'getRates'])->name('checkout.rates');
+    Route::post('/checkout/apply-voucher', [CheckoutController::class, 'applyVoucher'])->name('checkout.apply-voucher');
     Route::post('/checkout/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.place-order');
     Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/orders', [OrderController::class, 'userOrders'])->name('orders.index');
     Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');
 });
 

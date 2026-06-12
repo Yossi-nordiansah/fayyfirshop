@@ -26,6 +26,7 @@ class Product extends Model
         'rating',
         'review_count',
         'sold',
+        'weight',
         'product_category_id',
         'product_sub_category_id',
         'name_translations',
@@ -42,6 +43,7 @@ class Product extends Model
         'rating' => 'decimal:1',
         'review_count' => 'integer',
         'sold' => 'integer',
+        'weight' => 'integer',
         'is_new' => 'boolean',
         'is_best_seller' => 'boolean',
     ];

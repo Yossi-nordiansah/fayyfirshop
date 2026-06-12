@@ -68,7 +68,7 @@ const SidebarFilter = ({
                         >
                             {/* Drawer Header */}
                             <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
-                                <span className="font-['Cinzel'] font-bold text-xs uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+                                <span className="font-bold text-xs uppercase tracking-wider text-zinc-900 flex items-center gap-2">
                                     <Filter size={14} className="text-amber-600" />
                                     Filter Kategori
                                 </span>

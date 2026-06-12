@@ -20,6 +20,13 @@ const BestSeller = ({ products = [] }) => {
 
     if (products.length === 0) return null;
 
+    const getPrimaryImage = (product) => {
+        if (!product.images || product.images.length === 0) return product.image;
+        const primary = product.images.find(img => !!img.is_primary && img.is_primary !== '0' && img.is_primary !== 0);
+        const target = primary || product.images[0];
+        return target?.image_path ? `/storage/${target.image_path}` : product.image;
+    };
+
     const useSlider = products.length > 4 || (isMobile && products.length > 1);
 
     return (
@@ -27,7 +34,7 @@ const BestSeller = ({ products = [] }) => {
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <div className="flex items-center justify-center md:justify-start gap-2 mb-3 px-8">
-                    <span className="text-blue-600 text-xs font-bold tracking-[0.4em] uppercase font-['Cinzel']">
+                    <span className="text-blue-600 text-xs font-bold tracking-[0.4em] uppercase">
                         {t("home.bestseller.subtitle", "Best Seller Product")}{" "}
                         {/* Multi-language Subtitle */}
                     </span>
@@ -60,7 +67,7 @@ const BestSeller = ({ products = [] }) => {
                                         price={product.price}
                                         variants={product.variants}
                                         sold={product.sold}
-                                        image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
+                                        image={getPrimaryImage(product)}
                                         status={product.status}
                                         is_new={product.is_new}
                                         is_best_seller={product.is_best_seller}
@@ -79,7 +86,7 @@ const BestSeller = ({ products = [] }) => {
                                     price={product.price}
                                     variants={product.variants}
                                     sold={product.sold}
-                                    image={product.images?.[0]?.image_path ? `/storage/${product.images[0].image_path}` : product.image}
+                                    image={getPrimaryImage(product)}
                                     status={product.status}
                                     is_new={product.is_new}
                                     is_best_seller={product.is_best_seller}

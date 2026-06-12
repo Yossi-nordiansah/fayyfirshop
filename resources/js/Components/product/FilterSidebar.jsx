@@ -64,7 +64,7 @@ const FilterSidebar = ({
         <aside className="sticky hidden border shadow-xl lg:block w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
             {/* Heading */}
             <div className="flex items-center justify-between pb-5 mb-6 border-b border-zinc-100">
-                <span className="font-['Cinzel'] font-bold text-xs uppercase tracking-[0.2em] text-zinc-900 flex items-center gap-2">
+                <span className="font-bold text-xs uppercase tracking-[0.2em] text-zinc-900 flex items-center gap-2">
                     <Filter size={14} className="text-amber-600" />
                     {t("nav.product", "Kategori")}
                 </span>

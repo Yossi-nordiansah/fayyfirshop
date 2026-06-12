@@ -105,6 +105,7 @@ export default function ProductForm({
                     sku: hasSub ? '' : (p.sku || ''),
                     price: hasSub ? '' : (p.price || ''),
                     unit_id: hasSub ? '' : (p.unit_id || ''),
+                    weight: hasSub ? '' : (p.weight ?? ''),
                     image: null,
                     imagePreview: hasSub ? null : (p.image ? `/storage/${p.image}` : null),
                     name_translations: p.name_translations,
@@ -187,6 +188,7 @@ export default function ProductForm({
                             unit_id: subUnitId,
                             sku: c.sku || '',
                             price: c.price || '',
+                            weight: c.weight ?? '',
                             image: null,
                             imagePreview: c.image ? `/storage/${c.image}` : null,
                             branch_stocks: storeBranches.map(branch => {
@@ -288,6 +290,7 @@ export default function ProductForm({
                     sku: hasSub ? '' : v.sku,
                     price: hasSub ? '' : v.price,
                     unit_id: hasSub ? '' : v.unit_id,
+                    weight: hasSub ? '' : (v.weight ?? ''),
                     image: null,
                     imagePreview: hasSub ? null : (v.image ? `/storage/${v.image}` : null),
                     name_translations: {
@@ -344,6 +347,7 @@ export default function ProductForm({
                     unit_id: subUnitId || '',
                     sku: v.sku || '',
                     price: v.price || '',
+                    weight: v.weight ?? '',
                     image: null,
                     imagePreview: v.image ? `/storage/${v.image}` : null,
                     branch_stocks: storeBranches.map(branch => {
@@ -389,6 +393,7 @@ export default function ProductForm({
         is_best_seller: product?.is_best_seller ?? false,
         stock_type: product?.stock_type ?? 'variant',
         unit: product?.unit ?? '',
+        weight: product?.weight ?? '',
 
         // Gallery images
         images: [],   // new File uploads
@@ -411,6 +416,43 @@ export default function ProductForm({
         // Variants
         variants: groupVariantsFromDB(productVariants, storeBranches, units),
     });
+
+    const hasWeightVariant = useMemo(() => {
+        if (!form.data.has_variants || !form.data.variants) return false;
+        return form.data.variants.some(v => {
+            const isSize = v.type?.toLowerCase() === 'ukuran' || v.type_translations?.indonesia?.toLowerCase() === 'ukuran';
+            if (!isSize) return false;
+
+            const isWeightStr = (str) => {
+                if (!str) return false;
+                return /\b(gr|kg|g|gram|kilogram)\b/i.test(str);
+            };
+
+            const isWeightUnit = (unitId) => {
+                if (!unitId) return false;
+                const foundUnit = units.find(u => u.id === Number(unitId));
+                if (!foundUnit) return false;
+                const name = foundUnit.name.toLowerCase();
+                return name === 'gr' || name === 'kg' || name === 'g' || name === 'gram' || name === 'kilogram';
+            };
+
+            const isParentWeightUnit = (unitName) => {
+                if (!unitName) return false;
+                const name = unitName.toLowerCase();
+                return name === 'gr' || name === 'kg' || name === 'g' || name === 'gram' || name === 'kilogram';
+            };
+
+            if (v.has_sub_variants) {
+                return v.sub_variants?.some(sv => {
+                    const svName = sv.name_translations?.indonesia || '';
+                    return isWeightStr(svName) || isWeightUnit(sv.unit_id);
+                });
+            } else {
+                const vName = v.name_translations?.indonesia || '';
+                return isWeightStr(vName) || isWeightUnit(v.unit_id) || isParentWeightUnit(v.unit);
+            }
+        });
+    }, [form.data.has_variants, form.data.variants, units]);
 
     // ── image handlers ────────────────────────────────────────────────────────
     const handleAddImages = (e) => {
@@ -478,7 +520,7 @@ export default function ProductForm({
                     id: null,
                     type: type.trim(),
                     type_translations: defaultTranslations,
-                    sku: '', price: '', unit_id: '',
+                    sku: '', price: '', unit_id: '', weight: '',
                     image: null, imagePreview: null,
                     name_translations: { indonesia: '', arabic: '', english: '' },
                     has_sub_variants: false,
@@ -585,6 +627,7 @@ export default function ProductForm({
                 unit_id: '',
                 sku: '',
                 price: '',
+                weight: '',
                 image: null,
                 imagePreview: null,
                 branch_stocks: storeBranches.map(b => ({
@@ -941,7 +984,8 @@ export default function ProductForm({
                             image_deleted: sv.image_deleted || false,
                             name: nameTranslations.indonesia || nameTranslations.english || nameTranslations.arabic || '',
                             name_translations: nameTranslations,
-                            branch_stocks: cleanedVariantStocks
+                            branch_stocks: cleanedVariantStocks,
+                            weight: sv.weight || 0
                         };
                     });
 
@@ -983,13 +1027,17 @@ export default function ProductForm({
                         stock_type: v.stock_type || 'variant',
                         unit: v.unit || '',
                         has_sub_variants: false,
-                        sub_variants: []
+                        sub_variants: [],
+                        weight: v.weight || 0
                     });
                 }
             });
 
+            const finalWeight = hasWeightVariant ? 0 : (data.weight || 0);
+
             return {
                 ...data,
+                weight: finalWeight,
                 ...(isEditing ? { _method: 'PATCH' } : {}),
                 branch_stocks: cleanedBranchStocks,
                 variants: transformedVariants
@@ -1165,6 +1213,7 @@ export default function ProductForm({
                                     categories={categories}
                                     availableSubCategories={availableSubCategories}
                                     handleCategoryChange={handleCategoryChange}
+                                    hasWeightVariant={hasWeightVariant}
                                     t={t}
                                     locale={locale}
                                 />

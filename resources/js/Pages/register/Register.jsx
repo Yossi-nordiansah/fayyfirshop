@@ -236,7 +236,7 @@ export default function Register() {
 
                         <div className="flex flex-col items-start justify-between gap-4 mb-8 sm:flex-row sm:items-center" dir={isRtl ? "rtl" : "ltr"}>
                             <div>
-                                <h1 className="text-2xl md:text-3xl font-['Cinzel'] font-bold text-slate-900 tracking-wide">
+                                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-wide">
                                     {t("register.title", "Daftar Akun")}
                                 </h1>
                                 <p className="mt-1 text-xs text-slate-500">

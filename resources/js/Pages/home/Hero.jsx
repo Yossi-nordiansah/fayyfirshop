@@ -128,7 +128,7 @@ const HeroSlider = () => {
                                     {/* Category Badge */}
                                     <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full w-fit backdrop-blur-md">
                                         <span className="text-white">{slide.icon}</span>
-                                        <span className="text-white text-xs font-bold tracking-[0.3em] uppercase font-['Cinzel']">
+                                        <span className="text-white text-xs font-bold tracking-[0.3em] uppercase">
                                             {slide.category}
                                         </span>
                                     </div>
@@ -160,7 +160,7 @@ const HeroSlider = () => {
                                             href={`/products/${slide.slug}`}
                                             className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
                                         >
-                                            <span className="relative z-10 tracking-[0.2em] uppercase text-sm font-['Cinzel']">
+                                            <span className="relative z-10 tracking-[0.2em] uppercase text-sm">
                                                 {t('hero.explore', 'Jelajahi Koleksi')}
                                             </span>
                                             <span className="relative z-10 transition-transform group-hover:translate-x-1">

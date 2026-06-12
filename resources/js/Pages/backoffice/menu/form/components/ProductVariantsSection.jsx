@@ -85,6 +85,40 @@ const formatValueWithSeparator = (value) => {
     });
 };
 
+const isWeightVariant = (item, parent = null, units = []) => {
+    const type = item.type || parent?.type || '';
+    const isSize = type.toLowerCase() === 'ukuran';
+    if (!isSize) return false;
+
+    const isWeightStr = (str) => {
+        if (!str) return false;
+        return /\b(gr|kg|g|gram|kilogram)\b/i.test(str);
+    };
+
+    const isWeightUnit = (unitId) => {
+        if (!unitId) return false;
+        const foundUnit = units.find(u => u.id === Number(unitId));
+        if (!foundUnit) return false;
+        const name = foundUnit.name.toLowerCase();
+        return ['gr', 'kg', 'g', 'gram', 'kilogram'].includes(name);
+    };
+
+    const isParentWeightUnit = (unitName) => {
+        if (!unitName) return false;
+        const name = unitName.toLowerCase();
+        return ['gr', 'kg', 'g', 'gram', 'kilogram'].includes(name);
+    };
+
+    const nameVal = item.name_translations?.indonesia || item.name || '';
+
+    return (
+        isWeightStr(nameVal) ||
+        isWeightUnit(item.unit_id) ||
+        (parent && isParentWeightUnit(parent.unit)) ||
+        isParentWeightUnit(item.unit)
+    );
+};
+
 // ─── Component 3: Varian & Inventaris ─────────────────────────────────────────
 export default function ProductVariantsSection({
     data,
@@ -313,25 +347,54 @@ export default function ProductVariantsSection({
                         }
                     </span>
 
-                    {/* Unit selector for Single Product or Parent Stock Product */}
-                    <div className="space-y-2 max-w-xs">
-                        <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
-                            {data.has_variants
-                                ? t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')
-                                : t('backoffice.product.form.variant_unit', 'Satuan (Unit)')
-                            } <span className="text-rose-500">*</span>
-                        </label>
-                        <select
-                            value={data.unit || ''}
-                            onChange={e => setData('unit', e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-950"
-                            required
-                        >
-                            <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
-                            {units.map(u => (
-                                <option key={u.id} value={u.name}>{u.name}</option>
-                            ))}
-                        </select>
+                    {/* Unit selector and Weight input */}
+                    <div className={!data.has_variants ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "space-y-2 max-w-xs"}>
+                        {/* Unit selector */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                                {data.has_variants
+                                    ? t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')
+                                    : t('backoffice.product.form.variant_unit', 'Satuan (Unit)')
+                                } <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                                value={data.unit || ''}
+                                onChange={e => setData('unit', e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-950"
+                                required
+                            >
+                                <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
+                                {units.map(u => (
+                                    <option key={u.id} value={u.name}>{u.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Weight input for Single Product (when there are no variants) */}
+                        {!data.has_variants && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                                    {t('backoffice.product.weight', 'Berat Produk (Gram)')} <span className="text-rose-500">*</span>
+                                </label>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        value={data.weight === '' || data.weight === null || data.weight === undefined ? '' : String(data.weight)}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            setData('weight', val === '' ? '' : parseInt(val, 10));
+                                        }}
+                                        placeholder="e.g. 1000"
+                                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-12 text-sm font-semibold outline-none focus:border-blue-950"
+                                        required
+                                    />
+                                    <span className="absolute right-3 text-xs font-bold text-slate-400">gram</span>
+                                </div>
+                                {errors.weight && (
+                                    <p className="mt-1 text-xs text-rose-600">{errors.weight}</p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -694,7 +757,12 @@ export default function ProductVariantsSection({
 
                                         {/* SKU, Price, and Unit Row */}
                                         {showSkuAndPrice && (
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                            <div className={`grid grid-cols-1 gap-4 ${(2 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) === 4
+                                                ? 'sm:grid-cols-4'
+                                                : (2 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) === 3
+                                                    ? 'sm:grid-cols-3'
+                                                    : 'sm:grid-cols-2'
+                                                }`}>
                                                 {/* SKU */}
                                                 <div>
                                                     <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">{t('backoffice.product.form.variant_sku', 'SKU Varian')}</label>
@@ -714,7 +782,7 @@ export default function ProductVariantsSection({
 
                                                 {/* Price */}
                                                 <div>
-                                                    <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">
+                                                    <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500 text-nowrap">
                                                         {t('backoffice.product.form.variant_price', 'Harga (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
                                                     </label>
                                                     <input
@@ -758,6 +826,34 @@ export default function ProductVariantsSection({
                                                             <span className="text-xs text-slate-400 italic block">{t('backoffice.product.form.follows_parent_unit', 'Mengikuti satuan induk')}</span>
                                                         </div>
                                                     )
+                                                )}
+
+                                                {/* Weight (Only if NOT weight variant) */}
+                                                {!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) && (
+                                                    <div>
+                                                        <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500">
+                                                            {t('backoffice.product.weight', 'Berat (Gram)')} <span className="text-rose-500">*</span>
+                                                        </label>
+                                                        <div className="relative flex items-center">
+                                                            <input
+                                                                type="text"
+                                                                value={variant.weight === '' || variant.weight === null || variant.weight === undefined ? '' : String(variant.weight)}
+                                                                onChange={e => {
+                                                                    const val = e.target.value.replace(/\D/g, '');
+                                                                    updateVariantField(vIdx, 'weight', val === '' ? '' : parseInt(val, 10));
+                                                                }}
+                                                                placeholder="e.g. 1000"
+                                                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-950"
+                                                                required
+                                                            />
+                                                            <span className="absolute right-3 text-xs font-bold text-slate-400">gram</span>
+                                                        </div>
+                                                        {getVariantError(vIdx, null, 'weight') && (
+                                                            <p className="mt-1 text-[11px] font-semibold text-rose-500">
+                                                                {getVariantError(vIdx, null, 'weight')}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
@@ -943,7 +1039,10 @@ export default function ProductVariantsSection({
                                                                 </div>
 
                                                                 {/* Sub-Variant SKU, Price, and Unit Row */}
-                                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-2 border-t border-slate-100">
+                                                                <div className={`grid grid-cols-1 gap-3 pt-2 border-t border-slate-100 ${!isWeightVariant(subVar, variant.stock_type === 'parent' ? variant : null, units)
+                                                                    ? 'sm:grid-cols-4'
+                                                                    : 'sm:grid-cols-3'
+                                                                    }`}>
                                                                     {/* SKU */}
                                                                     <div>
                                                                         <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">{t('backoffice.product.form.sub_variant_sku', 'SKU Sub-Varian')}</label>
@@ -963,8 +1062,8 @@ export default function ProductVariantsSection({
 
                                                                     {/* Price */}
                                                                     <div>
-                                                                        <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">
-                                                                            {t('backoffice.product.th_base_price', 'Harga Dasar (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
+                                                                        <label className="mb-1 text-nowrap block text-[10px] font-bold uppercase text-slate-500">
+                                                                            {t('backoffice.product.th_base_price', 'Harga (IDR)')} <span className="font-normal normal-case text-slate-400">— {t('backoffice.product.form.optional', 'opsional')}</span>
                                                                         </label>
                                                                         <input
                                                                             type="text"
@@ -1009,6 +1108,34 @@ export default function ProductVariantsSection({
                                                                                     : t('backoffice.product.form.no_unit_needed', 'Tidak memerlukan satuan')
                                                                                 }
                                                                             </span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Weight (Only if NOT weight variant) */}
+                                                                    {!isWeightVariant(subVar, variant.stock_type === 'parent' ? variant : null, units) && (
+                                                                        <div>
+                                                                            <label className="mb-1 block text-[10px] font-bold uppercase text-slate-500">
+                                                                                {t('backoffice.product.weight', 'Berat (Gram)')} <span className="text-rose-500">*</span>
+                                                                            </label>
+                                                                            <div className="relative flex items-center">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={subVar.weight === '' || subVar.weight === null || subVar.weight === undefined ? '' : String(subVar.weight)}
+                                                                                    onChange={e => {
+                                                                                        const val = e.target.value.replace(/\D/g, '');
+                                                                                        updateSubVariantField(vIdx, svIdx, 'weight', val === '' ? '' : parseInt(val, 10));
+                                                                                    }}
+                                                                                    placeholder="e.g. 1000"
+                                                                                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-blue-950"
+                                                                                    required
+                                                                                />
+                                                                                <span className="absolute right-2.5 text-xs font-bold text-slate-400">gram</span>
+                                                                            </div>
+                                                                            {getVariantError(vIdx, svIdx, 'weight') && (
+                                                                                <p className="mt-1 text-[10px] font-semibold text-rose-500">
+                                                                                    {getVariantError(vIdx, svIdx, 'weight')}
+                                                                                </p>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </div>

@@ -44,7 +44,7 @@ class OrderController extends Controller
 
     public function createBiteshipShipment(Request $request, $id)
     {
-        $order = Order::with(['user', 'storeBranch', 'items.product', 'items.variant'])->findOrFail($id);
+        $order = Order::with(['user', 'storeBranch', 'items.product', 'items.variant.parent'])->findOrFail($id);
 
         if (!empty($order->tracking_number)) {
             return redirect()
@@ -75,11 +75,22 @@ class OrderController extends Controller
 
             $weight = $this->parseWeight($variant, $product);
 
+            $desc = 'Standard Product';
+            if ($variant) {
+                if ($variant->parent) {
+                    $parentName = $variant->parent->name_translations['indonesia'] ?? $variant->parent->name;
+                    $childName = $variant->name_translations['indonesia'] ?? $variant->name;
+                    $desc = "{$parentName} ({$childName})";
+                } else {
+                    $desc = $variant->name_translations['indonesia'] ?? $variant->name;
+                }
+            }
+
             $biteshipItems[] = [
                 'name' => $product->title ?: ($product->name_translations['indonesia'] ?? 'Product'),
-                'description' => $variant ? ($variant->name_translations['indonesia'] ?? $variant->name) : 'Standard Product',
+                'description' => $desc,
                 'value' => (int) $item->price,
-                'weight' => (int) $weight,
+                'weight' => (int) ($weight * $item->quantity),
                 'quantity' => (int) $item->quantity
             ];
         }
@@ -150,6 +161,294 @@ class OrderController extends Controller
         }
     }
 
+    public function userOrders()
+    {
+        $orders = Order::with([
+            'items.product.images',
+            'items.variant',
+            'storeBranch'
+        ])
+        ->where('user_id', auth()->id())
+        ->latest('id')
+        ->get();
+
+        // If no orders are found in DB, populate dummy orders for testing as requested by user.
+        if ($orders->isEmpty()) {
+            $orders = $this->getDummyOrders();
+        }
+
+        return Inertia::render('orders/OrderHistoryPage', [
+            'orders' => $orders
+        ]);
+    }
+
+    private function getDummyOrders()
+    {
+        $userId = auth()->id();
+
+        return collect([
+            // 1. Pending / Unpaid Order
+            [
+                'id' => 99991,
+                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY1',
+                'user_id' => $userId,
+                'store_branch_id' => 1,
+                'subtotal' => 155000.00,
+                'discount_amount' => 0.00,
+                'shipping_cost' => 12000.00,
+                'total_amount' => 167000.00,
+                'shipping_courier' => 'J&T',
+                'shipping_service' => 'EZ',
+                'tracking_number' => null,
+                'shipping_address' => 'Jl. Merdeka No. 45, Gambir, Jakarta Pusat, DKI Jakarta 10110',
+                'status' => 'pending',
+                'payment_status' => 'unpaid',
+                'notes' => 'Tolong dikemas dengan bubble wrap tebal ya.',
+                'created_at' => now()->subHours(2)->toIso8601String(),
+                'store_branch' => [
+                    'id' => 1,
+                    'name' => 'Gudang Utama Jakarta',
+                    'code' => 'ID',
+                ],
+                'items' => [
+                    [
+                        'id' => 101,
+                        'order_id' => 99991,
+                        'product_id' => 1,
+                        'product_variant_id' => 10,
+                        'quantity' => 1,
+                        'price' => 155000.00,
+                        'product' => [
+                            'id' => 1,
+                            'title' => 'Fayyfir Signature Perfume',
+                            'name_translations' => [
+                                'indonesia' => 'Fayyfir Parfum Khas',
+                                'english' => 'Fayyfir Signature Perfume',
+                                'arabic' => 'عطر فيفير المميز'
+                            ],
+                            'images' => [
+                                ['id' => 1, 'image_path' => '/images/default-perfume.png']
+                            ]
+                        ],
+                        'variant' => [
+                            'id' => 10,
+                            'name' => '50 ml',
+                            'name_translations' => [
+                                'indonesia' => '50 ml',
+                                'english' => '50 ml',
+                                'arabic' => '٥٠ مل'
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            // 2. Paid / Processing Order
+            [
+                'id' => 99992,
+                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY2',
+                'user_id' => $userId,
+                'store_branch_id' => 1,
+                'subtotal' => 380000.00,
+                'discount_amount' => 0.00,
+                'shipping_cost' => 22000.00,
+                'total_amount' => 402000.00,
+                'shipping_courier' => 'SICEPAT',
+                'shipping_service' => 'REG',
+                'tracking_number' => null,
+                'shipping_address' => 'Jl. Diponegoro No. 12, Tegalsari, Surabaya, Jawa Timur 60264',
+                'status' => 'processing',
+                'payment_status' => 'paid',
+                'notes' => null,
+                'created_at' => now()->subDays(1)->toIso8601String(),
+                'store_branch' => [
+                    'id' => 1,
+                    'name' => 'Gudang Utama Jakarta',
+                    'code' => 'ID',
+                ],
+                'items' => [
+                    [
+                        'id' => 102,
+                        'order_id' => 99992,
+                        'product_id' => 2,
+                        'product_variant_id' => 11,
+                        'quantity' => 2,
+                        'price' => 190000.00,
+                        'product' => [
+                            'id' => 2,
+                            'title' => 'Arabic Oud Al-Majed',
+                            'name_translations' => [
+                                'indonesia' => 'Oud Arab Al-Majed',
+                                'english' => 'Arabic Oud Al-Majed',
+                                'arabic' => 'عود الماجد العربي'
+                            ],
+                            'images' => [
+                                ['id' => 2, 'image_path' => '/images/default-oud.png']
+                            ]
+                        ],
+                        'variant' => [
+                            'id' => 11,
+                            'name' => '100 ml',
+                            'name_translations' => [
+                                'indonesia' => '100 ml',
+                                'english' => '100 ml',
+                                'arabic' => '١٠٠ مل'
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            // 3. Shipped / In Delivery Order
+            [
+                'id' => 99993,
+                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY3',
+                'user_id' => $userId,
+                'store_branch_id' => 1,
+                'subtotal' => 290000.00,
+                'discount_amount' => 0.00,
+                'shipping_cost' => 15000.00,
+                'total_amount' => 305000.00,
+                'shipping_courier' => 'JNE',
+                'shipping_service' => 'REG',
+                'tracking_number' => 'JNETEST123456789',
+                'shipping_address' => 'Komp. Pondok Indah Blok A-5, Kebayoran Lama, Jakarta Selatan, DKI Jakarta 12310',
+                'status' => 'shipped',
+                'payment_status' => 'paid',
+                'notes' => 'Kirim sore hari ya kalau bisa.',
+                'created_at' => now()->subDays(2)->toIso8601String(),
+                'store_branch' => [
+                    'id' => 1,
+                    'name' => 'Gudang Utama Jakarta',
+                    'code' => 'ID',
+                ],
+                'items' => [
+                    [
+                        'id' => 103,
+                        'order_id' => 99993,
+                        'product_id' => 3,
+                        'product_variant_id' => null,
+                        'quantity' => 1,
+                        'price' => 290000.00,
+                        'product' => [
+                            'id' => 3,
+                            'title' => 'Premium Bakhoor Burner',
+                            'name_translations' => [
+                                'indonesia' => 'Pembakar Bakhoor Premium',
+                                'english' => 'Premium Bakhoor Burner',
+                                'arabic' => 'مبخرة بخور فاخرة'
+                            ],
+                            'images' => [
+                                ['id' => 3, 'image_path' => '/images/default-burner.png']
+                            ]
+                        ],
+                        'variant' => null
+                    ]
+                ]
+            ],
+            // 4. Completed Order
+            [
+                'id' => 99994,
+                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY4',
+                'user_id' => $userId,
+                'store_branch_id' => 1,
+                'subtotal' => 85000.00,
+                'discount_amount' => 0.00,
+                'shipping_cost' => 9000.00,
+                'total_amount' => 94000.00,
+                'shipping_courier' => 'Anteraja',
+                'shipping_service' => 'REG',
+                'tracking_number' => 'ANTRJ1234567890',
+                'shipping_address' => 'Jl. Kemang Raya No. 88, Mampang Prapatan, Jakarta Selatan, DKI Jakarta 12730',
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'notes' => null,
+                'created_at' => now()->subDays(5)->toIso8601String(),
+                'store_branch' => [
+                    'id' => 1,
+                    'name' => 'Gudang Utama Jakarta',
+                    'code' => 'ID',
+                ],
+                'items' => [
+                    [
+                        'id' => 104,
+                        'order_id' => 99994,
+                        'product_id' => 4,
+                        'product_variant_id' => 12,
+                        'quantity' => 1,
+                        'price' => 85000.00,
+                        'product' => [
+                            'id' => 4,
+                            'title' => 'Organic Jasmine Aromatic Oil',
+                            'name_translations' => [
+                                'indonesia' => 'Minyak Aromatik Melati Organik',
+                                'english' => 'Organic Jasmine Aromatic Oil',
+                                'arabic' => 'زيت الياسمين العضوي العطري'
+                            ],
+                            'images' => [
+                                ['id' => 4, 'image_path' => '/images/default-jasmine.png']
+                            ]
+                        ],
+                        'variant' => [
+                            'id' => 12,
+                            'name' => '10 ml',
+                            'name_translations' => [
+                                'indonesia' => '10 ml',
+                                'english' => '10 ml',
+                                'arabic' => '١٠ مل'
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            // 5. Cancelled Order
+            [
+                'id' => 99995,
+                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY5',
+                'user_id' => $userId,
+                'store_branch_id' => 1,
+                'subtotal' => 110000.00,
+                'discount_amount' => 0.00,
+                'shipping_cost' => 12000.00,
+                'total_amount' => 122000.00,
+                'shipping_courier' => 'TIKI',
+                'shipping_service' => 'REG',
+                'tracking_number' => null,
+                'shipping_address' => 'Jl. Sudirman Kav. 21, Setiabudi, Jakarta Selatan, DKI Jakarta 12920',
+                'status' => 'cancelled',
+                'payment_status' => 'unpaid',
+                'notes' => null,
+                'created_at' => now()->subDays(10)->toIso8601String(),
+                'store_branch' => [
+                    'id' => 1,
+                    'name' => 'Gudang Utama Jakarta',
+                    'code' => 'ID',
+                ],
+                'items' => [
+                    [
+                        'id' => 105,
+                        'order_id' => 99995,
+                        'product_id' => 5,
+                        'product_variant_id' => null,
+                        'quantity' => 1,
+                        'price' => 110000.00,
+                        'product' => [
+                            'id' => 5,
+                            'title' => 'Pure Amber Incense',
+                            'name_translations' => [
+                                'indonesia' => 'Dupa Amber Murni',
+                                'english' => 'Pure Amber Incense',
+                                'arabic' => 'بخور العنبر النقي'
+                            ],
+                            'images' => [
+                                ['id' => 5, 'image_path' => '/images/default-amber.png']
+                            ]
+                        ],
+                        'variant' => null
+                    ]
+                ]
+            ]
+        ]);
+    }
+
     public function trackOrder($id)
     {
         $order = Order::with(['items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
@@ -201,35 +500,85 @@ class OrderController extends Controller
 
     private function parseWeight($variant, $product)
     {
-        $textToParse = '';
-        $unitName = '';
-
+        // 1. If variant is present, try to check its direct weight field first, then try to parse weight from name/unit
         if ($variant) {
-            $textToParse = $variant->name;
-            if ($variant->unit) {
-                $unitName = strtolower($variant->unit->name);
+            if (isset($variant->weight) && $variant->weight > 0) {
+                return (int) $variant->weight;
             }
-        } else if ($product) {
+            
+            if ($variant->parent && isset($variant->parent->weight) && $variant->parent->weight > 0) {
+                return (int) $variant->parent->weight;
+            }
+
+            $namesToTry = [];
+            $namesToTry[] = [
+                'text' => $variant->name,
+                'unit' => $variant->unit
+            ];
+            
+            if ($variant->parent) {
+                $namesToTry[] = [
+                    'text' => $variant->parent->name,
+                    'unit' => $variant->parent->unit
+                ];
+            }
+
+            foreach ($namesToTry as $itemToTry) {
+                $textToParse = $itemToTry['text'];
+                $unitName = '';
+                
+                if ($itemToTry['unit']) {
+                    if (is_object($itemToTry['unit'])) {
+                        $unitName = strtolower($itemToTry['unit']->name ?? '');
+                    } else {
+                        $unitName = strtolower((string)$itemToTry['unit']);
+                    }
+                } elseif ($product && !empty($product->unit)) {
+                    if (is_object($product->unit)) {
+                        $unitName = strtolower($product->unit->name ?? '');
+                    } else {
+                        $unitName = strtolower((string)$product->unit);
+                    }
+                }
+
+                preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
+
+                if (!empty($matches)) {
+                    $value = (float) $matches[1];
+                    $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+
+                    if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram' || $unitName === 'kg') {
+                        return (int) ($value * 1000);
+                    }
+
+                    if (in_array($unit, ['g', 'gr', 'gram']) || $unitName === 'gram' || $unitName === 'gr' || $unitName === 'g') {
+                        return (int) $value;
+                    }
+                }
+            }
+        }
+
+        // 2. If it's a single product or the variant didn't yield a weight, use the product's weight field
+        if ($product && isset($product->weight) && $product->weight > 0) {
+            return (int) $product->weight;
+        }
+
+        // 3. Fallback to product title parsing
+        if ($product) {
             $textToParse = $product->title;
+            preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i', $textToParse, $matches);
+            if (!empty($matches)) {
+                $value = (float) $matches[1];
+                $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                if ($unit === 'kg' || $unit === 'kilogram') {
+                    return (int) ($value * 1000);
+                }
+                if (in_array($unit, ['g', 'gr', 'gram'])) {
+                    return (int) $value;
+                }
+            }
         }
 
-        preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
-
-        if (!empty($matches)) {
-            $value = (float) $matches[1];
-            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
-
-            if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram') {
-                return (int) ($value * 1000);
-            }
-
-            if (in_array($unit, ['g', 'gr', 'gram', 'ml']) || $unitName === 'gram') {
-                return (int) $value;
-            }
-
-            return (int) $value;
-        }
-
-        return 1000;
+        return 1000; // Default to 1000g (1kg)
     }
 }

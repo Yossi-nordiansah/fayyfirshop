@@ -94,7 +94,7 @@ export default function CartPage() {
                             <div className="flex items-center justify-center w-20 h-20 mb-5 text-blue-700 bg-white rounded-full shadow-sm">
                                 <ShoppingBag size={34} />
                             </div>
-                            <h1 className="font-['Cinzel'] text-2xl font-bold tracking-wide text-zinc-900 md:text-3xl">
+                            <h1 className="text-2xl font-bold tracking-wide text-zinc-900 md:text-3xl">
                                 {t("cart.login_required_title", "Login terlebih dahulu")}
                             </h1>
                             <p className="max-w-md mt-3 text-sm leading-relaxed text-zinc-500">
@@ -128,7 +128,7 @@ export default function CartPage() {
                                         <ArrowLeft size={16} />
                                         {t("cart.continue_shopping", "Lanjut Belanja")}
                                     </Link>
-                                    <h1 className="font-['Cinzel'] text-3xl font-bold tracking-wide text-zinc-900 md:text-4xl">
+                                    <h1 className="text-3xl font-bold tracking-wide text-zinc-900 md:text-4xl">
                                         {t("cart.title", "Keranjang Belanja")}
                                     </h1>
                                     <p className="mt-2 text-sm text-zinc-500">
@@ -258,7 +258,7 @@ export default function CartPage() {
                                     </div>
 
                                     <aside className="p-5 border shadow-sm h-fit rounded-2xl border-zinc-100 bg-zinc-50 lg:sticky lg:top-28">
-                                        <h2 className="font-['Cinzel'] text-lg font-bold text-zinc-900">
+                                        <h2 className="text-lg font-bold text-zinc-900">
                                             {t("cart.summary", "Ringkasan Pesanan")}
                                         </h2>
                                         <div className="pb-5 mt-5 space-y-3 text-sm border-b border-zinc-200">

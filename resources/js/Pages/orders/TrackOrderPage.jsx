@@ -69,7 +69,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
             <Head title={`${t("orders.track.page_title", "Lacak Pesanan")} - Fayyfir Shop`} />
             <Navbar alwaysSolid={true} />
 
-            <div className="min-h-screen bg-slate-50 pb-20 pt-28">
+            <div className="min-h-screen bg-slate-50 pb-20 pt-28 ">
                 <div className="max-w-4xl mx-auto px-4">
                     {/* Header */}
                     <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
@@ -77,7 +77,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                             <ArrowLeft size={18} />
                         </Link>
                         <div>
-                            <h1 className="font-['Cinzel'] text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
+                            <h1 className="text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
                                 {t("orders.track.title", "Lacak Pengiriman")}
                             </h1>
                             <p className="mt-1 text-xs text-slate-500">
@@ -177,7 +177,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                         <aside className="space-y-6">
                             {/* Brief Info */}
                             <div className="p-5 border shadow-sm rounded-3xl border-slate-100 bg-white">
-                                <h3 className="font-['Cinzel'] text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Detail Invoice</h3>
+                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Detail Invoice</h3>
 
                                 <div className="mt-4 space-y-3.5 text-xs">
                                     <div>
@@ -217,7 +217,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
                             {/* Destination Info */}
                             <div className="p-5 border shadow-sm rounded-3xl border-slate-100 bg-white">
-                                <h3 className="font-['Cinzel'] text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Penerima</h3>
+                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Penerima</h3>
 
                                 <div className="mt-4 space-y-3.5 text-xs text-slate-600">
                                     <div className="flex gap-2">

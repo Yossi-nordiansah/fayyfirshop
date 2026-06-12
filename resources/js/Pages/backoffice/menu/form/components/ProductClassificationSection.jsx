@@ -22,6 +22,7 @@ export default function ProductClassificationSection({
     categories,
     availableSubCategories,
     handleCategoryChange,
+    hasWeightVariant = false,
     t,
     locale,
 }) {
@@ -98,8 +99,8 @@ export default function ProductClassificationSection({
 
                 {/* Price */}
                 <div>
-                    <label className="mb-1.5 block text-xs font-bold text-slate-700">
-                        {t('backoffice.product.th_base_price', 'Harga Dasar (IDR)')} {!data.has_variants && <span className="text-rose-500">*</span>}
+                    <label className="mb-1.5 block text-nowrap text-xs font-bold text-slate-700">
+                        {t('backoffice.product.th_base_price', 'Harga (IDR)')} {!data.has_variants && <span className="text-rose-500">*</span>}
                     </label>
                     <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Rp</span>
@@ -120,6 +121,8 @@ export default function ProductClassificationSection({
                             : t('backoffice.product.modal.price_note', 'Disimpan dalam Rupiah (IDR) dan divalidasi otomatis.')}
                     </p>
                 </div>
+
+
             </div>
         </div>
     );

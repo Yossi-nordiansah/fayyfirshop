@@ -100,6 +100,16 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'notifications' => $notifications,
+            'activePromoTickers' => fn () => \Illuminate\Support\Facades\Schema::hasTable('promo_tickers')
+                ? \App\Models\PromoTicker::where('is_active', true)->orderBy('sort_order')->get()
+                : [],
+            'activeEvents' => fn () => \Illuminate\Support\Facades\Schema::hasTable('events')
+                ? \App\Models\Event::where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now())
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                : [],
             'navCategories' => fn () => \App\Models\ProductCategory::with('subCategories')
                 ->orderBy('name')
                 ->get()

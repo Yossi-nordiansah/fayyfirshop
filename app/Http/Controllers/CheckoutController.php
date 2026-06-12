@@ -10,6 +10,7 @@ use App\Models\ProductVariant;
 use App\Models\ProductVariantBranchStock;
 use App\Models\StoreBranch;
 use App\Models\User;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -24,9 +25,23 @@ class CheckoutController extends Controller
         $user = auth()->user();
         $storeBranches = StoreBranch::where('is_active', true)->get();
 
+        $userVouchers = [];
+        if ($user && Schema::hasTable('user_vouchers') && Schema::hasTable('vouchers')) {
+            $userVouchers = DB::table('user_vouchers')
+                ->join('vouchers', 'user_vouchers.voucher_id', '=', 'vouchers.id')
+                ->where('user_vouchers.user_id', $user->id)
+                ->where('user_vouchers.is_used', false)
+                ->where('vouchers.is_active', true)
+                ->where('vouchers.end_date', '>=', now())
+                ->where('vouchers.distribution_type', 'manual')
+                ->select('vouchers.id', 'vouchers.code', 'vouchers.name', 'vouchers.type', 'vouchers.value', 'vouchers.min_spending', 'vouchers.max_discount')
+                ->get();
+        }
+
         return Inertia::render('checkout/CheckoutPage', [
             'user' => $user,
             'storeBranches' => $storeBranches,
+            'userVouchers' => $userVouchers,
         ]);
     }
 
@@ -101,9 +116,24 @@ class CheckoutController extends Controller
             $stockData[$branch->id] = $branchStocks;
         }
 
+        $weights = [];
+        foreach ($request->items as $item) {
+            $productId = $item['id'];
+            $variantId = $item['variantId'] ?? null;
+            $key = $productId . '-' . ($variantId ?? 'null');
+
+            $product = Product::find($productId);
+            $variant = $variantId ? ProductVariant::with(['unit', 'parent'])->find($variantId) : null;
+
+            if ($product) {
+                $weights[$key] = $this->parseWeight($variant, $product);
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'stocks' => $stockData
+            'stocks' => $stockData,
+            'weights' => $weights
         ]);
     }
 
@@ -129,7 +159,7 @@ class CheckoutController extends Controller
         foreach ($request->items as $item) {
             $product = Product::find($item['id']);
             $variantId = $item['variantId'] ?? null;
-            $variant = $variantId ? ProductVariant::with('unit')->find($variantId) : null;
+            $variant = $variantId ? ProductVariant::with(['unit', 'parent'])->find($variantId) : null;
 
             if (!$product) continue;
 
@@ -140,12 +170,23 @@ class CheckoutController extends Controller
             $totalWeight += ($weight * $quantity);
             $totalValue += ($price * $quantity);
 
+            $desc = 'Standard Product';
+            if ($variant) {
+                if ($variant->parent) {
+                    $parentName = $variant->parent->name_translations['indonesia'] ?? $variant->parent->name;
+                    $childName = $variant->name_translations['indonesia'] ?? $variant->name;
+                    $desc = "{$parentName} ({$childName})";
+                } else {
+                    $desc = $variant->name_translations['indonesia'] ?? $variant->name;
+                }
+            }
+
             $biteshipItems[] = [
                 'name' => $product->title ?: ($product->name_translations['indonesia'] ?? 'Product'),
-                'description' => $variant ? ($variant->name_translations['indonesia'] ?? $variant->name) : 'Standard Product',
+                'description' => $desc,
                 'value' => (int) $price,
-                'weight' => (int) $weight,
-                'quantity' => (int) $quantity
+                'weight' => (int) ($weight * $quantity),
+                'quantity' => 1
             ];
         }
 
@@ -172,10 +213,10 @@ class CheckoutController extends Controller
                         $rates = [];
                         foreach ($data['pricing'] as $pricing) {
                             $rates[] = [
-                                'courier_name' => strtoupper($pricing['courier_company']),
-                                'courier_service_name' => strtoupper($pricing['courier_service']),
-                                'price' => $pricing['price'],
-                                'duration' => $pricing['duration'],
+                                'courier_name' => strtoupper($pricing['courier_name'] ?? $pricing['courier_company'] ?? $pricing['company'] ?? 'UNKNOWN'),
+                                'courier_service_name' => strtoupper($pricing['courier_service_name'] ?? $pricing['courier_service'] ?? $pricing['courier_service_code'] ?? 'STANDARD'),
+                                'price' => $pricing['price'] ?? $pricing['shipping_fee'] ?? 0,
+                                'duration' => $pricing['duration'] ?? '2-3 days',
                             ];
                         }
                         return response()->json([
@@ -196,6 +237,248 @@ class CheckoutController extends Controller
         return $this->getInternationalOrFallbackRates($originBranch, $destinationAreaId, $totalWeight);
     }
 
+    public function applyVoucher(Request $request)
+    {
+        $request->validate([
+            'subtotal' => 'required|numeric|min:0',
+            'other_discount' => 'nullable|numeric|min:0',
+            'voucher_id' => 'nullable|integer',
+            'code' => 'nullable|string',
+        ]);
+
+        $subtotal = (float)$request->subtotal;
+        $otherDiscount = (float)($request->other_discount ?? 0);
+        $remainingSubtotal = max(0.0, $subtotal - $otherDiscount);
+        $userId = auth()->id();
+
+        // Case 1: Manual Voucher selected from dropdown
+        if ($request->voucher_id) {
+            $voucher = Voucher::where('id', $request->voucher_id)->where('distribution_type', 'manual')->first();
+            if (!$voucher) {
+                return response()->json(['success' => false, 'message' => 'Voucher tidak ditemukan.'], 422);
+            }
+
+            if (!$voucher->is_active) {
+                return response()->json(['success' => false, 'message' => 'Voucher sudah tidak aktif.'], 422);
+            }
+
+            $now = now();
+            if ($voucher->start_date && $voucher->start_date->gt($now)) {
+                return response()->json(['success' => false, 'message' => 'Masa berlaku voucher belum dimulai.'], 422);
+            }
+
+            if ($voucher->end_date && $voucher->end_date->lt($now)) {
+                return response()->json(['success' => false, 'message' => 'Voucher sudah kedaluwarsa.'], 422);
+            }
+
+            if ($voucher->total_quota > 0 && $voucher->used_quota >= $voucher->total_quota) {
+                return response()->json(['success' => false, 'message' => 'Kuota voucher telah habis.'], 422);
+            }
+
+            if (Schema::hasTable('voucher_usages')) {
+                $userUsage = DB::table('voucher_usages')
+                    ->where('voucher_id', $voucher->id)
+                    ->where('user_id', $userId)
+                    ->count();
+
+                if ($userUsage >= $voucher->max_use_per_user) {
+                    return response()->json(['success' => false, 'message' => 'Anda telah melebihi batas maksimal penggunaan voucher ini.'], 422);
+                }
+            }
+
+            if (Schema::hasTable('user_vouchers')) {
+                $assignment = DB::table('user_vouchers')
+                    ->where('voucher_id', $voucher->id)
+                    ->where('user_id', $userId)
+                    ->first();
+
+                if (!$assignment) {
+                    return response()->json(['success' => false, 'message' => 'Voucher ini tidak ditargetkan untuk akun Anda.'], 422);
+                }
+
+                if ($assignment->is_used) {
+                    return response()->json(['success' => false, 'message' => 'Voucher ini sudah pernah Anda gunakan.'], 422);
+                }
+            } else {
+                return response()->json(['success' => false, 'message' => 'Sistem voucher manual tidak tersedia.'], 422);
+            }
+
+            if ($subtotal < $voucher->min_spending) {
+                $diff = $voucher->min_spending - $subtotal;
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Minimal belanja untuk voucher ini adalah Rp ' . number_format($voucher->min_spending, 0, ',', '.') . '. Kurang Rp ' . number_format($diff, 0, ',', '.') . ' lagi.'
+                ], 422);
+            }
+
+            $discountAmount = 0;
+            if ($voucher->type === 'fixed') {
+                $discountAmount = (float)$voucher->value;
+            } elseif ($voucher->type === 'percentage') {
+                $discountAmount = $remainingSubtotal * ($voucher->value / 100);
+                if ($voucher->max_discount > 0 && $discountAmount > $voucher->max_discount) {
+                    $discountAmount = (float)$voucher->max_discount;
+                }
+            }
+
+            if ($discountAmount > $remainingSubtotal) {
+                $discountAmount = $remainingSubtotal;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Voucher berhasil diterapkan.',
+                'applied_type' => 'manual_voucher',
+                'voucher' => [
+                    'id' => $voucher->id,
+                    'code' => $voucher->code,
+                    'name' => $voucher->name,
+                    'type' => $voucher->type,
+                    'value' => $voucher->value,
+                    'min_spending' => $voucher->min_spending,
+                    'max_discount' => $voucher->max_discount,
+                    'discount_amount' => $discountAmount,
+                ]
+            ]);
+        }
+
+        // Case 2: Code applied via input field (scans Event Vouchers AND Referrals)
+        if ($request->code) {
+            $code = strtoupper(trim($request->code));
+
+            // A. Check Event Voucher first
+            $voucher = Voucher::where('code', $code)->where('distribution_type', 'event')->first();
+            if ($voucher) {
+                if (!$voucher->is_active) {
+                    return response()->json(['success' => false, 'message' => 'Voucher sudah tidak aktif.'], 422);
+                }
+
+                $now = now();
+                if ($voucher->start_date && $voucher->start_date->gt($now)) {
+                    return response()->json(['success' => false, 'message' => 'Masa berlaku voucher belum dimulai.'], 422);
+                }
+
+                if ($voucher->end_date && $voucher->end_date->lt($now)) {
+                    return response()->json(['success' => false, 'message' => 'Voucher sudah kedaluwarsa.'], 422);
+                }
+
+                if ($voucher->total_quota > 0 && $voucher->used_quota >= $voucher->total_quota) {
+                    return response()->json(['success' => false, 'message' => 'Kuota voucher telah habis.'], 422);
+                }
+
+                if (Schema::hasTable('voucher_usages')) {
+                    $userUsage = DB::table('voucher_usages')
+                        ->where('voucher_id', $voucher->id)
+                        ->where('user_id', $userId)
+                        ->count();
+
+                    if ($userUsage >= $voucher->max_use_per_user) {
+                        return response()->json(['success' => false, 'message' => 'Anda telah melebihi batas maksimal penggunaan voucher ini.'], 422);
+                    }
+                }
+
+                if ($subtotal < $voucher->min_spending) {
+                    $diff = $voucher->min_spending - $subtotal;
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Minimal belanja untuk voucher ini adalah Rp ' . number_format($voucher->min_spending, 0, ',', '.') . '. Kurang Rp ' . number_format($diff, 0, ',', '.') . ' lagi.'
+                    ], 422);
+                }
+
+                $discountAmount = 0;
+                if ($voucher->type === 'fixed') {
+                    $discountAmount = (float)$voucher->value;
+                } elseif ($voucher->type === 'percentage') {
+                    $discountAmount = $remainingSubtotal * ($voucher->value / 100);
+                    if ($voucher->max_discount > 0 && $discountAmount > $voucher->max_discount) {
+                        $discountAmount = (float)$voucher->max_discount;
+                    }
+                }
+
+                if ($discountAmount > $remainingSubtotal) {
+                    $discountAmount = $remainingSubtotal;
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Voucher event berhasil diterapkan.',
+                    'applied_type' => 'event_voucher',
+                    'voucher' => [
+                        'id' => $voucher->id,
+                        'code' => $voucher->code,
+                        'name' => $voucher->name,
+                        'type' => $voucher->type,
+                        'value' => $voucher->value,
+                        'min_spending' => $voucher->min_spending,
+                        'max_discount' => $voucher->max_discount,
+                        'discount_amount' => $discountAmount,
+                    ]
+                ]);
+            }
+
+            // B. Check Referral Code next
+            if (Schema::hasTable('referrals')) {
+                $referral = \App\Models\Referral::where('code', $code)->first();
+                if ($referral) {
+                    if (!$referral->is_active) {
+                        return response()->json(['success' => false, 'message' => 'Kode referral sudah tidak aktif.'], 422);
+                    }
+
+                    $now = now();
+                    if ($referral->start_date && $referral->start_date->gt($now)) {
+                        return response()->json(['success' => false, 'message' => 'Masa berlaku kode referral belum dimulai.'], 422);
+                    }
+
+                    if ($referral->end_date && $referral->end_date->lt($now)) {
+                        return response()->json(['success' => false, 'message' => 'Kode referral sudah kedaluwarsa.'], 422);
+                    }
+
+                    if ($referral->total_quota > 0 && $referral->used_quota >= $referral->total_quota) {
+                        return response()->json(['success' => false, 'message' => 'Kuota penggunaan kode referral telah habis.'], 422);
+                    }
+
+                    if ($subtotal < $referral->min_spending) {
+                        $diff = $referral->min_spending - $subtotal;
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Minimal belanja untuk kode referral ini adalah Rp ' . number_format($referral->min_spending, 0, ',', '.') . '. Kurang Rp ' . number_format($diff, 0, ',', '.') . ' lagi.'
+                        ], 422);
+                    }
+
+                    $discountAmount = 0;
+                    if ($referral->type === 'fixed') {
+                        $discountAmount = (float)$referral->value;
+                    } elseif ($referral->type === 'percentage') {
+                        $discountAmount = $remainingSubtotal * ($referral->value / 100);
+                    }
+
+                    if ($discountAmount > $remainingSubtotal) {
+                        $discountAmount = $remainingSubtotal;
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Kode referral berhasil diterapkan.',
+                        'applied_type' => 'referral',
+                        'referral' => [
+                            'id' => $referral->id,
+                            'code' => $referral->code,
+                            'name' => $referral->name,
+                            'type' => $referral->type,
+                            'value' => $referral->value,
+                            'min_spending' => $referral->min_spending,
+                            'discount_amount' => $discountAmount,
+                        ]
+                    ]);
+                }
+            }
+
+            return response()->json(['success' => false, 'message' => 'Kode voucher atau referral tidak valid.'], 422);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Kode atau ID voucher harus diisi.'], 422);
+    }
+
     public function placeOrder(Request $request)
     {
         $request->validate([
@@ -211,6 +494,12 @@ class CheckoutController extends Controller
             'items.*.id' => 'required|integer',
             'items.*.variantId' => 'nullable|integer',
             'items.*.quantity' => 'required|integer|min:1',
+            'voucher_id' => 'nullable|integer',
+            'voucher_code' => 'nullable|string',
+            'event_voucher_id' => 'nullable|integer',
+            'event_voucher_code' => 'nullable|string',
+            'referral_id' => 'nullable|integer',
+            'referral_code' => 'nullable|string',
         ]);
 
         $user = auth()->user();
@@ -362,15 +651,141 @@ class CheckoutController extends Controller
 
                 $invoiceNumber = 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(6));
 
+                // Resolve manual voucher and calculate manual discount
+                $manualVoucherId = $request->voucher_id;
+                $manualVoucher = null;
+                $manualDiscount = 0;
+
+                if ($manualVoucherId) {
+                    $manualVoucher = Voucher::find($manualVoucherId);
+                    if ($manualVoucher && $manualVoucher->distribution_type === 'manual') {
+                        if (
+                            $manualVoucher->is_active &&
+                            (!$manualVoucher->start_date || $manualVoucher->start_date->lte(now())) &&
+                            (!$manualVoucher->end_date || $manualVoucher->end_date->gte(now())) &&
+                            ($manualVoucher->total_quota == 0 || $manualVoucher->used_quota < $manualVoucher->total_quota) &&
+                            ($subtotal >= $manualVoucher->min_spending)
+                        ) {
+                            $userUsage = DB::table('voucher_usages')->where('voucher_id', $manualVoucher->id)->where('user_id', $user->id)->count();
+                            if ($userUsage < $manualVoucher->max_use_per_user) {
+                                $canUse = false;
+                                if (Schema::hasTable('user_vouchers')) {
+                                    $assignment = DB::table('user_vouchers')
+                                        ->where('voucher_id', $manualVoucher->id)
+                                        ->where('user_id', $user->id)
+                                        ->where('is_used', false)
+                                        ->first();
+                                    if ($assignment) {
+                                        $canUse = true;
+                                    }
+                                }
+
+                                if ($canUse) {
+                                    if ($manualVoucher->type === 'fixed') {
+                                        $manualDiscount = (float)$manualVoucher->value;
+                                    } elseif ($manualVoucher->type === 'percentage') {
+                                        $manualDiscount = $subtotal * ($manualVoucher->value / 100);
+                                        if ($manualVoucher->max_discount > 0 && $manualDiscount > $manualVoucher->max_discount) {
+                                            $manualDiscount = (float)$manualVoucher->max_discount;
+                                        }
+                                    }
+
+                                    if ($manualDiscount > $subtotal) {
+                                        $manualDiscount = $subtotal;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Resolve event voucher and calculate event discount
+                $eventVoucherId = $request->event_voucher_id;
+                $eventVoucherCode = $request->event_voucher_code;
+                $eventVoucher = null;
+                $eventDiscount = 0;
+
+                if ($eventVoucherId) {
+                    $eventVoucher = Voucher::find($eventVoucherId);
+                } elseif ($eventVoucherCode) {
+                    $eventVoucher = Voucher::where('code', strtoupper(trim($eventVoucherCode)))->first();
+                }
+
+                if ($eventVoucher && $eventVoucher->distribution_type === 'event') {
+                    if (
+                        $eventVoucher->is_active &&
+                        (!$eventVoucher->start_date || $eventVoucher->start_date->lte(now())) &&
+                        (!$eventVoucher->end_date || $eventVoucher->end_date->gte(now())) &&
+                        ($eventVoucher->total_quota == 0 || $eventVoucher->used_quota < $eventVoucher->total_quota) &&
+                        ($subtotal >= $eventVoucher->min_spending)
+                    ) {
+                        $userUsage = DB::table('voucher_usages')->where('voucher_id', $eventVoucher->id)->where('user_id', $user->id)->count();
+                        if ($userUsage < $eventVoucher->max_use_per_user) {
+                            $remainingSubtotal = max(0, $subtotal - $manualDiscount);
+                            if ($remainingSubtotal > 0) {
+                                if ($eventVoucher->type === 'fixed') {
+                                    $eventDiscount = (float)$eventVoucher->value;
+                                } elseif ($eventVoucher->type === 'percentage') {
+                                    $eventDiscount = $remainingSubtotal * ($eventVoucher->value / 100);
+                                    if ($eventVoucher->max_discount > 0 && $eventDiscount > $eventVoucher->max_discount) {
+                                        $eventDiscount = (float)$eventVoucher->max_discount;
+                                    }
+                                }
+
+                                if ($eventDiscount > $remainingSubtotal) {
+                                    $eventDiscount = $remainingSubtotal;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Resolve referral code and calculate referral discount
+                $referralId = $request->referral_id;
+                $referralCode = $request->referral_code;
+                $referral = null;
+                $referralDiscount = 0;
+
+                if ($referralId) {
+                    $referral = \App\Models\Referral::find($referralId);
+                } elseif ($referralCode) {
+                    $referral = \App\Models\Referral::where('code', strtoupper(trim($referralCode)))->first();
+                }
+
+                if ($referral) {
+                    if (
+                        $referral->is_active &&
+                        (!$referral->start_date || $referral->start_date->lte(now())) &&
+                        (!$referral->end_date || $referral->end_date->gte(now())) &&
+                        ($referral->total_quota == 0 || $referral->used_quota < $referral->total_quota) &&
+                        ($subtotal >= $referral->min_spending)
+                    ) {
+                        $remainingSubtotal = max(0.0, $subtotal - $manualDiscount - $eventDiscount);
+                        if ($remainingSubtotal > 0) {
+                            if ($referral->type === 'fixed') {
+                                $referralDiscount = (float)$referral->value;
+                            } elseif ($referral->type === 'percentage') {
+                                $referralDiscount = $remainingSubtotal * ($referral->value / 100);
+                            }
+
+                            if ($referralDiscount > $remainingSubtotal) {
+                                $referralDiscount = $remainingSubtotal;
+                            }
+                        }
+                    }
+                }
+
+                $discountAmount = $manualDiscount + $eventDiscount + $referralDiscount;
+
                 // Create Order
                 $order = Order::create([
                     'invoice_number' => $invoiceNumber,
                     'user_id' => $user->id,
                     'store_branch_id' => $branchId,
                     'subtotal' => $subtotal,
-                    'discount_amount' => 0,
+                    'discount_amount' => $discountAmount,
                     'shipping_cost' => $request->shipping_cost,
-                    'total_amount' => $subtotal + $request->shipping_cost,
+                    'total_amount' => $subtotal + $request->shipping_cost - $discountAmount,
                     'shipping_courier' => $request->shipping_courier,
                     'shipping_service' => $request->shipping_service,
                     'shipping_address' => $request->shipping_address,
@@ -378,6 +793,67 @@ class CheckoutController extends Controller
                     'status' => 'pending',
                     'payment_status' => ($request->payment_method === 'cod') ? 'unpaid' : 'paid', // Bank Transfer is mock paid
                 ]);
+
+                // Track and apply manual voucher usage
+                if ($manualVoucher && $manualDiscount > 0) {
+                    $manualVoucher->increment('used_quota');
+
+                    if (Schema::hasTable('voucher_usages')) {
+                        DB::table('voucher_usages')->insert([
+                            'voucher_id' => $manualVoucher->id,
+                            'user_id' => $user->id,
+                            'order_id' => $order->id,
+                            'discount_obtained' => $manualDiscount,
+                            'used_at' => now(),
+                        ]);
+                    }
+
+                    if (Schema::hasTable('user_vouchers')) {
+                        DB::table('user_vouchers')
+                            ->where('voucher_id', $manualVoucher->id)
+                            ->where('user_id', $user->id)
+                            ->update([
+                                'is_used' => true,
+                                'used_at' => now(),
+                                'updated_at' => now()
+                            ]);
+                    }
+                }
+
+                // Track and apply event voucher usage
+                if ($eventVoucher && $eventDiscount > 0) {
+                    $eventVoucher->increment('used_quota');
+
+                    if (Schema::hasTable('voucher_usages')) {
+                        DB::table('voucher_usages')->insert([
+                            'voucher_id' => $eventVoucher->id,
+                            'user_id' => $user->id,
+                            'order_id' => $order->id,
+                            'discount_obtained' => $eventDiscount,
+                            'used_at' => now(),
+                        ]);
+                    }
+                }
+
+                // Track and apply referral usage
+                if ($referral && $referralDiscount > 0) {
+                    $referral->increment('used_quota');
+
+                    $commissionEarned = $subtotal * ($referral->commission_percentage / 100);
+
+                    if (Schema::hasTable('referral_usages')) {
+                        DB::table('referral_usages')->insert([
+                            'referral_id' => $referral->id,
+                            'user_id' => $user->id,
+                            'order_id' => $order->id,
+                            'discount_obtained' => $referralDiscount,
+                            'commission_earned' => $commissionEarned,
+                            'used_at' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
 
                 // Create Order Items and Decrement Stocks
                 foreach ($orderItemsData as $itemData) {
@@ -457,36 +933,83 @@ class CheckoutController extends Controller
 
     private function parseWeight($variant, $product)
     {
-        $textToParse = '';
-        $unitName = '';
-
+        // 1. If variant is present, try to check its direct weight field first, then try to parse weight from name/unit
         if ($variant) {
-            $textToParse = $variant->name;
-            if ($variant->unit) {
-                $unitName = strtolower($variant->unit->name);
+            if (isset($variant->weight) && $variant->weight > 0) {
+                return (int) $variant->weight;
             }
-        } else if ($product) {
-            $textToParse = $product->title;
+
+            if ($variant->parent && isset($variant->parent->weight) && $variant->parent->weight > 0) {
+                return (int) $variant->parent->weight;
+            }
+
+            $namesToTry = [];
+            $namesToTry[] = [
+                'text' => $variant->name,
+                'unit' => $variant->unit
+            ];
+
+            if ($variant->parent) {
+                $namesToTry[] = [
+                    'text' => $variant->parent->name,
+                    'unit' => $variant->parent->unit
+                ];
+            }
+
+            foreach ($namesToTry as $itemToTry) {
+                $textToParse = $itemToTry['text'];
+                $unitName = '';
+
+                if ($itemToTry['unit']) {
+                    if (is_object($itemToTry['unit'])) {
+                        $unitName = strtolower($itemToTry['unit']->name ?? '');
+                    } else {
+                        $unitName = strtolower((string)$itemToTry['unit']);
+                    }
+                } elseif ($product && !empty($product->unit)) {
+                    if (is_object($product->unit)) {
+                        $unitName = strtolower($product->unit->name ?? '');
+                    } else {
+                        $unitName = strtolower((string)$product->unit);
+                    }
+                }
+
+                preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
+
+                if (!empty($matches)) {
+                    $value = (float) $matches[1];
+                    $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+
+                    if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram' || $unitName === 'kg') {
+                        return (int) ($value * 1000);
+                    }
+
+                    if (in_array($unit, ['g', 'gr', 'gram']) || $unitName === 'gram' || $unitName === 'gr' || $unitName === 'g') {
+                        return (int) $value;
+                    }
+                }
+            }
         }
 
-        // Look for numbers in the string
-        preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
+        // 2. If it's a single product or the variant didn't yield a weight, use the product's weight field
+        if ($product && isset($product->weight) && $product->weight > 0) {
+            return (int) $product->weight;
+        }
 
-        if (!empty($matches)) {
-            $value = (float) $matches[1];
-            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
-
-            // If unit is kg or kilogram
-            if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram') {
-                return (int) ($value * 1000);
+        // 3. Fallback to product title parsing
+        if ($product) {
+            $textToParse = $product->title;
+            preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i', $textToParse, $matches);
+            if (!empty($matches)) {
+                $value = (float) $matches[1];
+                $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                if ($unit === 'kg' || $unit === 'kilogram') {
+                    return (int) ($value * 1000);
+                }
+                if (in_array($unit, ['g', 'gr', 'gram'])) {
+                    return (int) $value;
+                }
             }
-
-            // If unit is gram, g, gr, ml (assume 1ml = 1g for shipping)
-            if (in_array($unit, ['g', 'gr', 'gram', 'ml']) || $unitName === 'gram') {
-                return (int) $value;
-            }
-
-            return (int) $value;
         }
 
         return 1000; // Default to 1000g (1kg)
@@ -494,26 +1017,75 @@ class CheckoutController extends Controller
 
     private function getDomesticIDFallbackRates($totalWeight)
     {
-        // Simple fallback calculation: Rp 10.000 + Rp 5.000 per additional kg
-        $weightInKg = ceil($totalWeight / 1000);
-        $cost = 10000 + (($weightInKg - 1) * 5000);
+        $weightInKg = (int) ceil($totalWeight / 1000);
+        if ($weightInKg < 1) {
+            $weightInKg = 1;
+        }
+
+        $rates = [
+            [
+                'courier_name' => 'JNE',
+                'courier_service_name' => 'REGULER',
+                'price' => $weightInKg * 23000,
+                'duration' => '1 - 2 days',
+            ],
+            [
+                'courier_name' => 'SICEPAT',
+                'courier_service_name' => 'REGULER',
+                'price' => $weightInKg * 21000,
+                'duration' => '2 - 3 days',
+            ],
+            [
+                'courier_name' => 'J&T',
+                'courier_service_name' => 'EZ',
+                'price' => $weightInKg * 21000,
+                'duration' => '2 - 3 days',
+            ],
+            [
+                'courier_name' => 'ANTERAJA',
+                'courier_service_name' => 'REGULER',
+                'price' => $weightInKg * 24800,
+                'duration' => '2 - 4 days',
+            ],
+            [
+                'courier_name' => 'TIKI',
+                'courier_service_name' => 'REGULER',
+                'price' => $weightInKg * 21000,
+                'duration' => '3 days',
+            ],
+            [
+                'courier_name' => 'POS INDONESIA',
+                'courier_service_name' => 'POS REGULER',
+                'price' => $weightInKg * 21000,
+                'duration' => '2 days',
+            ]
+        ];
+
+        // JNE Trucking has a minimum weight of 10 kg
+        if ($weightInKg >= 10) {
+            $rates[] = [
+                'courier_name' => 'JNE',
+                'courier_service_name' => 'JNE TRUCKING',
+                'price' => 60000 + (($weightInKg - 10) * 6000),
+                'duration' => '4 - 5 days',
+            ];
+        } else {
+            $rates[] = [
+                'courier_name' => 'JNE',
+                'courier_service_name' => 'JNE TRUCKING',
+                'price' => 60000,
+                'duration' => '4 - 5 days',
+            ];
+        }
+
+        // Sort rates by price ascending
+        usort($rates, function ($a, $b) {
+            return $a['price'] <=> $b['price'];
+        });
 
         return response()->json([
             'success' => true,
-            'rates' => [
-                [
-                    'courier_name' => 'JNE',
-                    'courier_service_name' => 'REG',
-                    'price' => $cost,
-                    'duration' => '2-3 Days',
-                ],
-                [
-                    'courier_name' => 'SICEPAT',
-                    'courier_service_name' => 'REG',
-                    'price' => max(0, $cost - 2000),
-                    'duration' => '2-4 Days',
-                ]
-            ]
+            'rates' => $rates
         ]);
     }
 

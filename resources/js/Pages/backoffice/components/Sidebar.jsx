@@ -9,6 +9,7 @@ import {
     ContactRound,
     LayoutDashboard,
     MessageSquareText,
+    Sparkles,
 } from 'lucide-react';
 
 const menuItems = [
@@ -63,6 +64,12 @@ const menuItems = [
         fallback: 'Reports',
         href: '/backoffice/reports',
         icon: BarChart3,
+    },
+    {
+        labelKey: 'backoffice.sidebar.promotion',
+        fallback: 'Promotion',
+        href: '/backoffice/promotion',
+        icon: Sparkles,
     },
 ];
 

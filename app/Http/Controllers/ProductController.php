@@ -83,6 +83,7 @@ class ProductController extends Controller
             'images.*'                    => 'nullable|image|max:5120',
             'stock_type'                  => 'nullable|in:variant,parent',
             'unit'                        => 'nullable|string|max:50',
+            'weight'                      => 'nullable|integer|min:0',
         ];
 
         if ($request->has('variants')) {
@@ -92,6 +93,7 @@ class ProductController extends Controller
                     $rules["variants.{$i}.sku"] = 'nullable|string|max:255|distinct|unique:products,sku|unique:product_variants,sku';
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                    $rules["variants.{$i}.weight"] = 'nullable|integer|min:0';
                 } else {
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
@@ -100,6 +102,7 @@ class ProductController extends Controller
                             $rules["variants.{$i}.sub_variants.{$j}.sku"] = 'nullable|string|max:255|distinct|unique:products,sku|unique:product_variants,sku';
                             $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
                             $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
+                            $rules["variants.{$i}.sub_variants.{$j}.weight"] = 'nullable|integer|min:0';
                         }
                     }
                 }
@@ -177,6 +180,7 @@ class ProductController extends Controller
                 'is_best_seller'          => $request->boolean('is_best_seller'),
                 'stock_type'              => $request->input('stock_type', 'variant'),
                 'unit'                    => $request->input('unit'),
+                'weight'                  => $request->input('weight', 0),
             ]);
 
             // 2. Upload product gallery images
@@ -271,6 +275,7 @@ class ProductController extends Controller
                         'name_translations' => $varData['name_translations'],
                         'sku'              => $varSku,
                         'price'            => $varPrice,
+                        'weight'           => $varData['weight'] ?? 0,
                         'stock'            => 0,
                         'image'            => $varImagePath,
                         'unit_id'          => $varUnitId,
@@ -328,6 +333,7 @@ class ProductController extends Controller
                                 'name_translations' => $subVarData['name_translations'],
                                 'sku'              => $subSku,
                                 'price'            => $subPrice,
+                                'weight'           => $subVarData['weight'] ?? 0,
                                 'stock'            => 0,
                                 'image'            => $subImagePath,
                                 'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
@@ -482,6 +488,7 @@ class ProductController extends Controller
             'images.*'                    => 'nullable|image|max:5120',
             'stock_type'                  => 'nullable|in:variant,parent',
             'unit'                        => 'nullable|string|max:50',
+            'weight'                      => 'nullable|integer|min:0',
         ];
 
         if ($request->has('variants')) {
@@ -500,6 +507,7 @@ class ProductController extends Controller
                     ];
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
+                    $rules["variants.{$i}.weight"] = 'nullable|integer|min:0';
                 } else {
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
@@ -516,6 +524,7 @@ class ProductController extends Controller
                             ];
                             $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
                             $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
+                            $rules["variants.{$i}.sub_variants.{$j}.weight"] = 'nullable|integer|min:0';
                         }
                     }
                 }
@@ -592,6 +601,7 @@ class ProductController extends Controller
                 'is_best_seller'          => $request->boolean('is_best_seller'),
                 'stock_type'              => $request->input('stock_type', 'variant'),
                 'unit'                    => $request->input('unit'),
+                'weight'                  => $request->input('weight', 0),
             ]);
 
             // 2. Sync product gallery images
@@ -722,6 +732,7 @@ class ProductController extends Controller
                                 'name_translations' => $varData['name_translations'],
                                 'sku'              => $varSku,
                                 'price'            => $varPrice,
+                                'weight'           => $varData['weight'] ?? 0,
                                 'stock'            => 0,
                                 'unit_id'          => $varUnitId,
                                 'stock_type'       => $varStockType,
@@ -762,6 +773,7 @@ class ProductController extends Controller
                             'name_translations' => $varData['name_translations'],
                             'sku'              => $varSku,
                             'price'            => $varPrice,
+                            'weight'           => $varData['weight'] ?? 0,
                             'stock'            => 0,
                             'image'            => $varImagePath,
                             'unit_id'          => $varUnitId,
@@ -815,6 +827,7 @@ class ProductController extends Controller
                                             'name_translations' => $subVarData['name_translations'],
                                             'sku'              => $subSku,
                                             'price'            => $subPrice,
+                                            'weight'           => $subVarData['weight'] ?? 0,
                                             'stock'            => 0,
                                             'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
                                             'stock_type'       => 'variant',
@@ -854,6 +867,7 @@ class ProductController extends Controller
                                         'name_translations' => $subVarData['name_translations'],
                                         'sku'              => $subSku,
                                         'price'            => $subPrice,
+                                        'weight'           => $subVarData['weight'] ?? 0,
                                         'stock'            => 0,
                                         'image'            => $subImagePath,
                                         'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),

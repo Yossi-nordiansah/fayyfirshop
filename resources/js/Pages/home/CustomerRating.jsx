@@ -71,7 +71,7 @@ const CustomerRating = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <div className="text-center max-w-3xl mx-auto mb-5 space-y-2">
-                    <span className="text-blue-600 text-xs font-bold uppercase font-['Cinzel'] block tracking-[0.4em]">
+                    <span className="text-blue-600 text-xs font-bold uppercase block tracking-[0.4em]">
                         {t("rating.subtitle", "Customer Testimonials")}
                     </span>
                     <h2 className="text-2xl md:text-4xl text-zinc-900 font-['Amiri'] font-bold tracking-wide">

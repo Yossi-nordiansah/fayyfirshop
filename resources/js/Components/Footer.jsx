@@ -67,7 +67,7 @@ const Footer = () => {
 
                     {/* Quick Links */}
                     <div className="space-y-6">
-                        <h4 className="text-white font-bold font-['Cinzel'] tracking-wider text-sm uppercase">
+                        <h4 className="text-white font-bold tracking-wider text-sm uppercase">
                             {t("footer.quick_links")}
                         </h4>
                         <ul className="space-y-4">
@@ -90,7 +90,7 @@ const Footer = () => {
 
                     {/* Customer Service */}
                     <div className="space-y-6">
-                        <h4 className="text-white font-bold font-['Cinzel'] tracking-wider text-sm uppercase">
+                        <h4 className="text-white font-bold tracking-wider text-sm uppercase">
                             {t("footer.customer_service")}
                         </h4>
                         <ul className="space-y-4">
@@ -113,7 +113,7 @@ const Footer = () => {
 
                     {/* Contact & Newsletter */}
                     <div className="space-y-6">
-                        <h4 className="text-white font-bold font-['Cinzel'] tracking-wider text-sm uppercase">
+                        <h4 className="text-white font-bold tracking-wider text-sm uppercase">
                             {t("footer.contact_us")}
                         </h4>
                         <div className="space-y-4 text-xs">

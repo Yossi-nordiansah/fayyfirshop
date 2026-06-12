@@ -129,7 +129,14 @@ export default function Products({ category = null, subCategory = null, products
             return prod.image;
         }
         if (prod.images && prod.images.length > 0) {
-            return prod.images.map(img => {
+            const sortedImages = [...prod.images].sort((a, b) => {
+                const aPrimary = !!a.is_primary && a.is_primary !== '0' && a.is_primary !== 0;
+                const bPrimary = !!b.is_primary && b.is_primary !== '0' && b.is_primary !== 0;
+                if (aPrimary && !bPrimary) return -1;
+                if (!aPrimary && bPrimary) return 1;
+                return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+            });
+            return sortedImages.map(img => {
                 if (!img.image_path) return '/images/logo-footer.png';
                 return img.image_path.startsWith('http') || img.image_path.startsWith('/')
                     ? img.image_path
@@ -636,10 +643,12 @@ export default function Products({ category = null, subCategory = null, products
                                                 )}
                                                 :{" "}
                                                 {activeCategoryInfo
-                                                    ? t(
-                                                        activeCategoryInfo.translationKey,
-                                                        activeCategoryInfo.name,
-                                                    )
+                                                    ? activeCategoryInfo.name_translations?.[locale] ||
+                                                      activeCategoryInfo.name ||
+                                                      t(
+                                                          activeCategoryInfo.translationKey,
+                                                          activeCategoryInfo.name,
+                                                      )
                                                     : selectedCat}
                                             </span>
                                             <button
@@ -659,10 +668,12 @@ export default function Products({ category = null, subCategory = null, products
                                             <span>
                                                 {t("filter.sub", "Sub")}:{" "}
                                                 {activeSubcategoryInfo
-                                                    ? t(
-                                                        activeSubcategoryInfo.translationKey,
-                                                        activeSubcategoryInfo.name,
-                                                    )
+                                                    ? activeSubcategoryInfo.name_translations?.[locale] ||
+                                                      activeSubcategoryInfo.name ||
+                                                      t(
+                                                          activeSubcategoryInfo.translationKey,
+                                                          activeSubcategoryInfo.name,
+                                                      )
                                                     : selectedSub}
                                             </span>
                                             <button
@@ -670,7 +681,7 @@ export default function Products({ category = null, subCategory = null, products
                                                     handleCategorySelect(
                                                         selectedCat,
                                                         null,
-                                                    )
+                                                     )
                                                 }
                                                 className="hover:text-amber-900"
                                             >
@@ -751,7 +762,7 @@ export default function Products({ category = null, subCategory = null, products
                                         </div>
                                         <div className="space-y-2">
                                             {/* Title */}
-                                            <h3 className="text-xl font-bold text-slate-700 font-['Cinzel'] tracking-wide">
+                                            <h3 className="text-xl font-bold text-slate-700 tracking-wide">
                                                 {t(
                                                     "catalog.empty.title",
                                                     "No Products Found",

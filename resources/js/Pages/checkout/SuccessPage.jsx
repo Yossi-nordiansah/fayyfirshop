@@ -58,7 +58,7 @@ export default function SuccessPage({ order }) {
                         </div>
 
                         {/* Title */}
-                        <h1 className="font-['Cinzel'] text-2xl md:text-3xl font-extrabold text-slate-900 tracking-wide">
+                        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-wide">
                             {t("checkout.success.title", "Terima Kasih!")}
                         </h1>
                         <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">

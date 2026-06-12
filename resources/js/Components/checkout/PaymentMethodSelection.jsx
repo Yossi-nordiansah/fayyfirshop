@@ -20,7 +20,7 @@ export default function PaymentMethodSelection({
                     className={`flex items-center gap-3 p-4 border rounded-2xl text-left transition-all ${paymentMethod === 'bank_transfer'
                         ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
                         : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                    }`}
+                        }`}
                 >
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'bank_transfer' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
                         {paymentMethod === 'bank_transfer' && <div className="w-2 h-2 rounded-full bg-white" />}
@@ -31,13 +31,13 @@ export default function PaymentMethodSelection({
                     </div>
                 </button>
 
-                <button
+                {/* <button
                     type="button"
                     onClick={() => setPaymentMethod("cod")}
                     className={`flex items-center gap-3 p-4 border rounded-2xl text-left transition-all ${paymentMethod === 'cod'
                         ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
                         : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                    }`}
+                        }`}
                 >
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'cod' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
                         {paymentMethod === 'cod' && <div className="w-2 h-2 rounded-full bg-white" />}
@@ -46,7 +46,7 @@ export default function PaymentMethodSelection({
                         <h3 className="text-sm font-bold">Cash on Delivery (COD)</h3>
                         <p className="text-xs text-slate-500 mt-0.5">Bayar tunai di tempat saat barang sampai</p>
                     </div>
-                </button>
+                </button> */}
             </div>
         </section>
     );
