@@ -16,6 +16,7 @@ import {
     DollarSign,
     Box
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -28,12 +29,6 @@ export default function Orders({ orders = [], status }) {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [bookingShipmentId, setBookingShipmentId] = useState(null);
-
-    // Form for updating status & payment status
-    const updateForm = useForm({
-        status: '',
-        payment_status: '',
-    });
 
     const formatPrice = (value) => {
         // Backoffice displays centered values in IDR
@@ -69,24 +64,7 @@ export default function Orders({ orders = [], status }) {
     // open order details modal
     const handleOpenDetail = (order) => {
         setSelectedOrder(order);
-        updateForm.setData({
-            status: order.status,
-            payment_status: order.payment_status,
-        });
         setIsDetailOpen(true);
-    };
-
-    // submit status override
-    const handleUpdateStatus = (e) => {
-        e.preventDefault();
-        updateForm.patch(route('backoffice.orders.update-status', selectedOrder.id), {
-            preserveScroll: true,
-            onSuccess: (page) => {
-                // Refresh modal data
-                const updated = page.props.orders.find(o => o.id === selectedOrder.id);
-                if (updated) setSelectedOrder(updated);
-            }
-        });
     };
 
     // request Biteship shipping booking
@@ -97,6 +75,34 @@ export default function Orders({ orders = [], status }) {
             onFinish: () => {
                 setBookingShipmentId(null);
                 setIsDetailOpen(false);
+            }
+        });
+    };
+
+    const handleApproveCancel = (orderId) => {
+        if (!confirm("Apakah Anda yakin ingin menyetujui pembatalan pesanan ini? Stok produk akan dikembalikan.")) {
+            return;
+        }
+        router.post(route('backoffice.orders.approve-cancellation', orderId), {}, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                // Refresh modal data
+                const updated = page.props.orders.find(o => o.id === selectedOrder.id);
+                if (updated) setSelectedOrder(updated);
+            }
+        });
+    };
+
+    const handleRejectCancel = (orderId) => {
+        if (!confirm("Apakah Anda yakin ingin menolak pembatalan pesanan ini?")) {
+            return;
+        }
+        router.post(route('backoffice.orders.reject-cancellation', orderId), {}, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                // Refresh modal data
+                const updated = page.props.orders.find(o => o.id === selectedOrder.id);
+                if (updated) setSelectedOrder(updated);
             }
         });
     };
@@ -209,6 +215,7 @@ export default function Orders({ orders = [], status }) {
                                             <th className="p-4">Shipping Warehouse</th>
                                             <th className="p-4 text-right">Total Billing</th>
                                             <th className="p-4">Status</th>
+                                            {statusTab === 'cancelled' && <th className="p-4">Cancellation Reason</th>}
                                             <th className="p-4">Payment</th>
                                             <th className="p-4 text-center">Actions</th>
                                         </tr>
@@ -235,8 +242,27 @@ export default function Orders({ orders = [], status }) {
                                                     <td className="p-4 font-extrabold text-blue-900 text-right">
                                                         {formatPrice(order.total_amount)}
                                                     </td>
-                                                    <td className="p-4">{getStatusBadge(order.status)}</td>
-                                                    <td className="p-4">{getPaymentBadge(order.payment_status)}</td>
+                                                     <td className="p-4">
+                                                         <div className="flex flex-col gap-1 items-start">
+                                                             {getStatusBadge(order.status)}
+                                                             {order.cancellation_status === 'pending' && (
+                                                                 <span className="inline-flex items-center gap-1 rounded bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 animate-pulse">
+                                                                     Cancel Req
+                                                                 </span>
+                                                             )}
+                                                             {order.cancellation_status === 'rejected' && (
+                                                                 <span className="inline-flex items-center gap-1 rounded bg-slate-100 border border-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-500">
+                                                                     Cancel Ditolak
+                                                                 </span>
+                                                             )}
+                                                         </div>
+                                                     </td>
+                                                     {statusTab === 'cancelled' && (
+                                                         <td className="p-4 max-w-[200px] truncate font-medium text-rose-600" title={order.cancellation_reason}>
+                                                             {order.cancellation_reason || '-'}
+                                                         </td>
+                                                     )}
+                                                     <td className="p-4">{getPaymentBadge(order.payment_status)}</td>
                                                     <td className="p-4 text-center">
                                                         <button
                                                             onClick={() => handleOpenDetail(order)}
@@ -414,6 +440,59 @@ export default function Orders({ orders = [], status }) {
                                     </div>
                                 </div>
 
+                                 {/* Cancellation Request Panel */}
+                                 {selectedOrder.cancellation_status === 'pending' && (
+                                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs space-y-3">
+                                         <div className="flex items-center justify-between">
+                                             <h4 className="font-bold text-rose-800 flex items-center gap-1">
+                                                 <AlertCircle size={14} /> Pengajuan Pembatalan Pesanan
+                                             </h4>
+                                             <span className="text-[10px] font-bold text-rose-600 bg-rose-100/55 px-2 py-0.5 rounded-full uppercase">
+                                                 Pending Approval
+                                             </span>
+                                         </div>
+                                         <div className="bg-white border border-rose-100/60 p-3 rounded-xl text-slate-700 leading-relaxed">
+                                             <span className="font-bold text-slate-900 block mb-1">Alasan Pembatalan:</span>
+                                             "{selectedOrder.cancellation_reason}"
+                                         </div>
+                                         <div className="flex gap-2">
+                                             <button
+                                                 type="button"
+                                                 onClick={() => handleApproveCancel(selectedOrder.id)}
+                                                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition shadow-sm"
+                                             >
+                                                 Setujui Pembatalan (Refund & Batal)
+                                             </button>
+                                             <button
+                                                 type="button"
+                                                 onClick={() => handleRejectCancel(selectedOrder.id)}
+                                                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition border border-slate-200"
+                                             >
+                                                 Tolak Pengajuan
+                                             </button>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                  {(selectedOrder.status === 'cancelled' || (selectedOrder.cancellation_status && selectedOrder.cancellation_status !== 'pending')) && (
+                                      <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl text-xs space-y-1">
+                                          <h4 className="font-bold text-rose-800 flex items-center gap-1">
+                                              Detail Pembatalan
+                                          </h4>
+                                          <p className="text-slate-600">
+                                              <strong>Status Pengajuan:</strong>{' '}
+                                              <span className={`font-bold uppercase ${selectedOrder.cancellation_status === 'rejected' ? 'text-rose-600' : 'text-slate-700'}`}>
+                                                  {selectedOrder.cancellation_status === 'rejected' 
+                                                      ? 'Pengajuan Pembatalan Ditolak' 
+                                                      : (selectedOrder.cancellation_status === 'approved' ? 'Disetujui' : (selectedOrder.cancellation_status || 'Disetujui'))}
+                                              </span>
+                                          </p>
+                                          <p className="text-slate-600">
+                                              <strong>Alasan:</strong> "{selectedOrder.cancellation_reason || 'Tidak ada alasan khusus atau dibatalkan otomatis oleh sistem.'}"
+                                          </p>
+                                      </div>
+                                  )}
+
                                 {/* Order Notes */}
                                 {selectedOrder.notes && (
                                     <div className="p-4 bg-amber-50/30 border border-amber-100 rounded-2xl text-xs">
@@ -423,49 +502,26 @@ export default function Orders({ orders = [], status }) {
                                 )}
                             </div>
 
-                            {/* Modal Footer: Update Controls */}
-                            <div className="p-5 border-t border-slate-100 bg-slate-50/50">
-                                <form onSubmit={handleUpdateStatus} className="flex flex-wrap items-center justify-between gap-4">
-                                    <div className="flex flex-wrap items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <label className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1"><ActivityIcon size={12} /> Status</label>
-                                            <select
-                                                value={updateForm.data.status}
-                                                onChange={e => updateForm.setData('status', e.target.value)}
-                                                className="text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none font-semibold text-slate-800 focus:border-blue-500"
-                                            >
-                                                <option value="pending">Pending</option>
-                                                <option value="processing">Processing</option>
-                                                <option value="shipped">Shipped</option>
-                                                <option value="completed">Completed</option>
-                                                <option value="cancelled">Cancelled</option>
-                                            </select>
-                                        </div>
+                             {/* Modal Footer: Status Overview */}
+                             <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                                 <div className="flex flex-wrap items-center gap-6">
+                                     <div className="flex items-center gap-2">
+                                         <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
+                                             <ActivityIcon size={12} /> Order Status
+                                         </span>
+                                         {getStatusBadge(selectedOrder.status)}
+                                     </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <label className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1"><DollarSign size={12} /> Payment</label>
-                                            <select
-                                                value={updateForm.data.payment_status}
-                                                onChange={e => updateForm.setData('payment_status', e.target.value)}
-                                                className="text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none font-semibold text-slate-800 focus:border-blue-500"
-                                            >
-                                                <option value="unpaid">Unpaid</option>
-                                                <option value="paid">Paid</option>
-                                                <option value="expired">Expired</option>
-                                                <option value="refunded">Refunded</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                     <div className="flex items-center gap-2">
+                                         <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
+                                             <DollarSign size={12} /> Payment Status
+                                         </span>
+                                         {getPaymentBadge(selectedOrder.payment_status)}
+                                     </div>
+                                 </div>
+                             </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={updateForm.processing}
-                                        className="px-4 py-2 bg-blue-950 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition disabled:opacity-50"
-                                    >
-                                        {updateForm.processing ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </form>
-                            </div>
+
                         </motion.div>
                     </div>
                 )}

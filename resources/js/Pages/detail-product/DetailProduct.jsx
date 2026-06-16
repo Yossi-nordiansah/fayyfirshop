@@ -56,7 +56,11 @@ const getUnitLabel = (unit, lang) => {
 
 const formatFullVariantName = (v, lang) => {
     if (!v) return '';
-    let name = v.name_translations?.[lang] || v.name_translations?.indonesia || v.name || '';
+    let trans = v.name_translations;
+    if (typeof trans === 'string') {
+        try { trans = JSON.parse(trans); } catch (e) { trans = null; }
+    }
+    let name = trans?.[lang] || trans?.indonesia || v.name || '';
 
     // Check if it's actually of type "ukuran" (size)
     const isUkuranType = (typeStr, transObj) => {
@@ -838,7 +842,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const handleAddToCart = () => {
         if (!canBuy) return;
 
-        const cartKey = "fayyfir_cart";
+        const cartKey = auth?.user ? `fayyfir_cart_${auth.user.id}` : "fayyfir_cart";
 
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryName = typeof product.category === 'object' && product.category !== null
@@ -851,10 +855,51 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 ? (product.sub_category.name_translations?.[locale] || product.sub_category.name)
                 : product.subCategory || '';
 
+        // Resolve variant & sub-variant names with multi-language support
+        let variantName = null;
+        let subVariantName = null;
+        const variantNameTranslations = { indonesia: null, english: null, arabic: null };
+        const subVariantNameTranslations = { indonesia: null, english: null, arabic: null };
+
+        if (isDbProduct && activeVariant) {
+            ['indonesia', 'english', 'arabic'].forEach((l) => {
+                const fullVariantName = formatFullVariantName(activeVariant, l);
+                const regex = /\(([^)]+)\)/;
+                const match = fullVariantName.match(regex);
+                if (match) {
+                    variantNameTranslations[l] = fullVariantName.replace(/\s*\([^)]+\)/g, '').trim();
+                    subVariantNameTranslations[l] = match[1].trim();
+                } else {
+                    variantNameTranslations[l] = fullVariantName;
+                    subVariantNameTranslations[l] = null;
+                }
+            });
+            variantName = variantNameTranslations[locale];
+            subVariantName = subVariantNameTranslations[locale];
+        } else {
+            variantName = selectedColor || null;
+            subVariantName = selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null;
+            ['indonesia', 'english', 'arabic'].forEach((l) => {
+                variantNameTranslations[l] = variantName;
+                subVariantNameTranslations[l] = subVariantName;
+            });
+        }
+
+        let productTrans = product.name_translations;
+        if (typeof productTrans === 'string') {
+            try { productTrans = JSON.parse(productTrans); } catch (e) { productTrans = null; }
+        }
+        const titleTranslations = productTrans || {
+            indonesia: product.name || '',
+            english: product.name || '',
+            arabic: product.name || ''
+        };
+
         const cartItem = {
             id: product.id,
             slug: product.slug,
             title: displayName,
+            title_translations: titleTranslations,
             category: categoryName,
             subCategory: subCategoryName,
             image: resolveProductImage(activeImage || allImages[0] || ""),
@@ -863,6 +908,10 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             size: isDbProduct
                 ? formatFullVariantName(activeVariant, locale)
                 : (selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null),
+            variantName,
+            subVariantName,
+            variantNameTranslations,
+            subVariantNameTranslations,
             price: currentPrice,
             stock: currentStock,
             quantity,
@@ -887,6 +936,11 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 stock: currentStock,
                 price: currentPrice,
                 image: cartItem.image,
+                variantName,
+                subVariantName,
+                variantNameTranslations,
+                subVariantNameTranslations,
+                title_translations: cartItem.title_translations,
             };
         } else {
             currentCart.push(cartItem);
@@ -907,6 +961,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             return;
         }
 
+        const checkoutKey = auth?.user ? `fayyfir_checkout_${auth.user.id}` : "fayyfir_checkout";
 
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryNameResolved = typeof product.category === 'object' && product.category !== null
@@ -919,10 +974,51 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 ? (product.sub_category.name_translations?.[locale] || product.sub_category.name)
                 : product.subCategory || '';
 
+        // Resolve variant & sub-variant names with multi-language support
+        let variantName = null;
+        let subVariantName = null;
+        const variantNameTranslations = { indonesia: null, english: null, arabic: null };
+        const subVariantNameTranslations = { indonesia: null, english: null, arabic: null };
+
+        if (isDbProduct && activeVariant) {
+            ['indonesia', 'english', 'arabic'].forEach((l) => {
+                const fullVariantName = formatFullVariantName(activeVariant, l);
+                const regex = /\(([^)]+)\)/;
+                const match = fullVariantName.match(regex);
+                if (match) {
+                    variantNameTranslations[l] = fullVariantName.replace(/\s*\([^)]+\)/g, '').trim();
+                    subVariantNameTranslations[l] = match[1].trim();
+                } else {
+                    variantNameTranslations[l] = fullVariantName;
+                    subVariantNameTranslations[l] = null;
+                }
+            });
+            variantName = variantNameTranslations[locale];
+            subVariantName = subVariantNameTranslations[locale];
+        } else {
+            variantName = selectedColor || null;
+            subVariantName = selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null;
+            ['indonesia', 'english', 'arabic'].forEach((l) => {
+                variantNameTranslations[l] = variantName;
+                subVariantNameTranslations[l] = subVariantName;
+            });
+        }
+
+        let productTrans = product.name_translations;
+        if (typeof productTrans === 'string') {
+            try { productTrans = JSON.parse(productTrans); } catch (e) { productTrans = null; }
+        }
+        const titleTranslations = productTrans || {
+            indonesia: product.name || '',
+            english: product.name || '',
+            arabic: product.name || ''
+        };
+
         const cartItem = {
             id: product.id,
             slug: product.slug,
             title: displayName,
+            title_translations: titleTranslations,
             category: categoryNameResolved,
             subCategory: subCategoryNameResolved,
             image: resolveProductImage(activeImage || allImages[0] || ""),
@@ -931,6 +1027,10 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             size: isDbProduct
                 ? formatFullVariantName(activeVariant, locale)
                 : (selectedSize || (product.size && Array.isArray(product.size) ? product.size[0] : product.size) || null),
+            variantName,
+            subVariantName,
+            variantNameTranslations,
+            subVariantNameTranslations,
             price: currentPrice,
             stock: currentStock,
             quantity,
@@ -938,8 +1038,8 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             weight: parseWeightJs(activeVariant, product),
         };
 
-        // Simpan hanya item ini ke cart agar checkout hanya memproses produk ini saja
-        localStorage.setItem("fayyfir_cart", JSON.stringify([cartItem]));
+        // Simpan hanya item ini ke checkout agar checkout hanya memproses produk ini saja
+        localStorage.setItem(checkoutKey, JSON.stringify([cartItem]));
         window.dispatchEvent(new Event("fayyfir-cart-updated"));
 
         router.visit('/checkout');
@@ -1030,35 +1130,35 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         >
                             {/* Main Image */}
                             <div className="relative overflow-hidden border shadow-xl rounded-3xl bg-zinc-50 border-zinc-100 aspect-square">
-                                    <motion.img
-                                        key={activeImage}
-                                        src={resolveProductImage(activeImage)}
-                                        alt={displayName}
-                                        className="object-cover w-full h-full select-none cursor-grab active:cursor-grabbing"
-                                        style={{ touchAction: "pan-y" }}
-                                        initial={{ x: swipeDirection === "next" ? "100%" : swipeDirection === "prev" ? "-100%" : 0 }}
-                                        animate={{ x: 0 }}
-                                        transition={{ type: "tween", ease: "easeOut", duration: 0.22 }}
-                                        drag={allImages.length > 1 ? "x" : false}
-                                        dragConstraints={{ left: 0, right: 0 }}
-                                        dragElastic={0.5}
-                                        onDragEnd={(event, info) => {
-                                            if (allImages.length <= 1) return;
-                                            const threshold = 50;
-                                            const currentIndex = allImages.indexOf(activeImage);
-                                            if (info.offset.x < -threshold) {
-                                                // Swipe left -> Next image (comes from right)
-                                                setSwipeDirection("next");
-                                                const nextIdx = (currentIndex + 1) % allImages.length;
-                                                setActiveImage(allImages[nextIdx]);
-                                            } else if (info.offset.x > threshold) {
-                                                // Swipe right -> Prev image (comes from left)
-                                                setSwipeDirection("prev");
-                                                const prevIdx = (currentIndex - 1 + allImages.length) % allImages.length;
-                                                setActiveImage(allImages[prevIdx]);
-                                            }
-                                        }}
-                                    />
+                                <motion.img
+                                    key={activeImage}
+                                    src={resolveProductImage(activeImage)}
+                                    alt={displayName}
+                                    className="object-cover w-full h-full select-none cursor-grab active:cursor-grabbing"
+                                    style={{ touchAction: "pan-y" }}
+                                    initial={{ x: swipeDirection === "next" ? "100%" : swipeDirection === "prev" ? "-100%" : 0 }}
+                                    animate={{ x: 0 }}
+                                    transition={{ type: "tween", ease: "easeOut", duration: 0.22 }}
+                                    drag={allImages.length > 1 ? "x" : false}
+                                    dragConstraints={{ left: 0, right: 0 }}
+                                    dragElastic={0.5}
+                                    onDragEnd={(event, info) => {
+                                        if (allImages.length <= 1) return;
+                                        const threshold = 50;
+                                        const currentIndex = allImages.indexOf(activeImage);
+                                        if (info.offset.x < -threshold) {
+                                            // Swipe left -> Next image (comes from right)
+                                            setSwipeDirection("next");
+                                            const nextIdx = (currentIndex + 1) % allImages.length;
+                                            setActiveImage(allImages[nextIdx]);
+                                        } else if (info.offset.x > threshold) {
+                                            // Swipe right -> Prev image (comes from left)
+                                            setSwipeDirection("prev");
+                                            const prevIdx = (currentIndex - 1 + allImages.length) % allImages.length;
+                                            setActiveImage(allImages[prevIdx]);
+                                        }
+                                    }}
+                                />
 
                                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 

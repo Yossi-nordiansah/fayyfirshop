@@ -12,6 +12,7 @@ import {
     LogIn,
     LogOut,
     ShoppingBag,
+    Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
@@ -32,6 +33,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     const [cartCount, setCartCount] = useState(0);
 
     const [showEventPopup, setShowEventPopup] = useState(false);
+    const [toast, setToast] = useState(null); // { message, actionLabel, actionUrl }
 
     // Find the latest active event that has a banner image
     const activeEvent = activeEvents?.find((e) => e.is_active && e.image_path);
@@ -52,13 +54,70 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
         setShowEventPopup(false);
     };
 
+    useEffect(() => {
+        const handleShowToast = (e) => {
+            const data = e.detail;
+            if (typeof data === "string") {
+                setToast({ message: data });
+            } else if (data && data.message) {
+                setToast(data);
+            }
+        };
+
+        window.addEventListener("fayyfir-show-toast", handleShowToast);
+        return () => {
+            window.removeEventListener("fayyfir-show-toast", handleShowToast);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => {
+                setToast(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
+
     const { locale, setLocale, t } = useLanguage();
 
     useEffect(() => {
+        const key = user ? `fayyfir_cart_${user.id}` : "fayyfir_cart";
+
         const updateCartCount = () => {
-            const cart = JSON.parse(localStorage.getItem("fayyfir_cart") || "[]");
+            const currentKey = user ? `fayyfir_cart_${user.id}` : "fayyfir_cart";
+            const cart = JSON.parse(localStorage.getItem(currentKey) || "[]");
             setCartCount(cart.reduce((total, item) => total + (item.quantity || 0), 0));
         };
+
+        // Merge guest cart if user is logged in
+        if (user) {
+            const guestCart = JSON.parse(localStorage.getItem("fayyfir_cart") || "[]");
+            if (guestCart.length > 0) {
+                const userCart = JSON.parse(localStorage.getItem(key) || "[]");
+                const mergedCart = [...userCart];
+                guestCart.forEach((guestItem) => {
+                    const existingIndex = mergedCart.findIndex(
+                        (item) =>
+                            item.id === guestItem.id &&
+                            item.variantId === guestItem.variantId &&
+                            item.color === guestItem.color &&
+                            item.size === guestItem.size
+                    );
+                    if (existingIndex >= 0) {
+                        mergedCart[existingIndex].quantity = Math.min(
+                            mergedCart[existingIndex].quantity + guestItem.quantity,
+                            guestItem.stock || 999
+                        );
+                    } else {
+                        mergedCart.push(guestItem);
+                    }
+                });
+                localStorage.setItem(key, JSON.stringify(mergedCart));
+                localStorage.removeItem("fayyfir_cart");
+                window.dispatchEvent(new Event("fayyfir-cart-updated"));
+            }
+        }
 
         updateCartCount();
 
@@ -83,7 +142,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
             window.removeEventListener("storage", updateCartCount);
             window.removeEventListener("fayyfir-cart-updated", updateCartCount);
         };
-    }, []);
+    }, [user]);
 
     const languages = [
         { code: "indonesia", label: "Indonesia", flag: "🇮🇩" },
@@ -280,22 +339,17 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                 />
                             </div>
 
-                            {/* Cart Icon */}
-                            <Link
-                                href="/cart"
-                                className="relative py-2 text-white transition-all duration-300 hover:text-blue-500 hover:scale-110 group"
-                                aria-label="Cart"
+                            {/* Notification Icon */}
+                            <button
+                                className="relative py-2 text-white transition-all duration-300 hover:text-blue-500 hover:scale-110 group cursor-pointer"
+                                aria-label="Notifications"
+                                onClick={(e) => e.preventDefault()}
                             >
-                                <ShoppingCart size={20} />
-                                {cartCount > 0 && (
-                                    <span className="absolute -right-2 -top-1 min-w-5 h-5 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold leading-5 text-white text-center shadow-md">
-                                        {cartCount}
-                                    </span>
-                                )}
-                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
-                                    Cart
+                                <Bell size={20} />
+                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
+                                    {t("nav.notifications", "Notifications")}
                                 </span>
-                            </Link>
+                            </button>
 
                             {/* PREMIUM ACCOUNT DROPDOWN */}
                             <div
@@ -346,6 +400,20 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                         >
                                                             <User size={16} className="text-zinc-400" />
                                                             {t("nav.account.profile", "Edit Profile")}
+                                                        </Link>
+                                                        <Link
+                                                            href="/cart"
+                                                            className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <ShoppingCart size={16} className="text-zinc-400" />
+                                                                <span>{t("cart.title", "Keranjang Belanja")}</span>
+                                                            </div>
+                                                            {cartCount > 0 && (
+                                                                <span className="min-w-5 h-5 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold leading-5 text-white text-center shadow-sm">
+                                                                    {cartCount}
+                                                                </span>
+                                                            )}
                                                         </Link>
                                                         <Link
                                                             href={route('orders.index')}
@@ -444,22 +512,11 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                     {/* Language Selector */}
                                     <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} />
 
-                                    {/* Cart */}
-                                    <Link
-                                        href="/cart"
-                                        onClick={() => setIsOpen(false)}
-                                        className="flex items-center justify-between w-full py-2 transition-colors border-b border-white/5 hover:text-blue-400"
-                                    >
-                                        <span className="text-sm font-semibold tracking-wider uppercase">Cart</span>
-                                        <span className="relative">
-                                            <ShoppingCart size={18} />
-                                            {cartCount > 0 && (
-                                                <span className="absolute -right-2 -top-2 min-w-4 h-4 rounded-full bg-amber-500 px-1 text-[9px] font-bold leading-4 text-white text-center">
-                                                    {cartCount}
-                                                </span>
-                                            )}
-                                        </span>
-                                    </Link>
+                                    {/* Notifications */}
+                                    <div className="flex items-center justify-between w-full py-2 transition-colors border-b border-white/5 text-white/80">
+                                        <span className="text-sm font-semibold tracking-wider uppercase">{t("nav.notifications", "Notifications")}</span>
+                                        <Bell size={18} />
+                                    </div>
 
                                     {/* Account Actions */}
                                     {user ? (
@@ -488,6 +545,19 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 >
                                                     <ShoppingBag size={14} />
                                                     {t("nav.account.orders", "Pesanan Saya")}
+                                                </Link>
+                                                <Link
+                                                    href="/cart"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl"
+                                                >
+                                                    <ShoppingCart size={14} />
+                                                    {t("cart.title", "Keranjang Belanja")}
+                                                    {cartCount > 0 && (
+                                                        <span className="ml-1.5 px-2 py-0.5 rounded-full bg-amber-500 text-[10px] text-white font-bold leading-none">
+                                                            {cartCount}
+                                                        </span>
+                                                    )}
                                                 </Link>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <Link
@@ -577,6 +647,32 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                             </div>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* Global Toast Notification */}
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="fixed bottom-6 left-6 right-6 z-[9999] flex items-center justify-between gap-4 rounded-2xl bg-zinc-900/95 backdrop-blur-md border border-white/10 px-5 py-4 text-sm font-semibold text-white shadow-2xl md:left-auto md:w-96"
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>{toast.message}</span>
+                        </div>
+                        {toast.actionUrl && (
+                            <Link
+                                href={toast.actionUrl}
+                                className="text-amber-400 hover:text-amber-300 transition-colors shrink-0 text-xs uppercase tracking-wider font-bold"
+                            >
+                                {toast.actionLabel || "View"}
+                            </Link>
+                        )}
+                    </motion.div>
                 )}
             </AnimatePresence>
         </>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
+import axios from "axios";
 import {
     ShoppingBag,
     Calendar,
@@ -17,6 +18,7 @@ import {
     Package,
     Store,
     DollarSign,
+    RefreshCw,
     X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,8 +33,44 @@ export default function OrderHistoryPage({ orders = [] }) {
 
     const [activeTab, setActiveTab] = useState("all");
     const [expandedOrderId, setExpandedOrderId] = useState(null);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const [cancelReason, setCancelReason] = useState("");
+    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+    const openCancelModal = (orderId) => {
+        setCancellingOrderId(orderId);
+        setCancelReason("");
+        setIsCancelModalOpen(true);
+    };
+
+    const closeCancelModal = () => {
+        setIsCancelModalOpen(false);
+        setCancellingOrderId(null);
+        setCancelReason("");
+    };
+
+    const handleCancelSubmit = (e) => {
+        e.preventDefault();
+        if (!cancelReason.trim()) {
+            alert(t("orders.cancel_reason_required", "Silakan masukkan alasan pembatalan."));
+            return;
+        }
+
+        setIsSubmittingCancel(true);
+        axios.post(route('orders.cancel-request', cancellingOrderId), {
+            reason: cancelReason
+        })
+            .then(res => {
+                setIsSubmittingCancel(false);
+                closeCancelModal();
+                router.reload();
+            })
+            .catch(err => {
+                setIsSubmittingCancel(false);
+                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembatalan.");
+            });
+    };
 
     // Helpers
     const formatPrice = (value) => {
@@ -105,7 +143,14 @@ export default function OrderHistoryPage({ orders = [] }) {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
     };
 
-    const getStatusStyle = (status, paymentStatus) => {
+    const getStatusStyle = (status, paymentStatus, cancellationStatus) => {
+        if (cancellationStatus === "pending") {
+            return {
+                bg: "bg-amber-100 text-amber-800 border-amber-200",
+                label: t("orders.status.cancellation_pending", "Menunggu Pembatalan"),
+                icon: <Clock size={12} className="stroke-[3]" />
+            };
+        }
         if (status === "cancelled") {
             return {
                 bg: "bg-rose-50 text-rose-600 border-rose-100",
@@ -156,8 +201,50 @@ export default function OrderHistoryPage({ orders = [] }) {
     };
 
     const handlePayNow = (order) => {
-        setSelectedOrderForPayment(order);
-        setShowPaymentModal(true);
+        axios.post(route('orders.payment-token', order.id))
+            .then(res => {
+                if (res.data && res.data.snap_token) {
+                    window.snap.pay(res.data.snap_token, {
+                        onSuccess: function (result) {
+                            router.reload();
+                        },
+                        onPending: function (result) {
+                            router.reload();
+                        },
+                        onError: function (result) {
+                            alert(t("orders.payment_failed", "Pembayaran gagal. Silakan coba lagi."));
+                        },
+                        onClose: function () {
+                            router.reload();
+                        }
+                    });
+                } else {
+                    alert(res.data.message || "Gagal mendapatkan token pembayaran.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembayaran.");
+            });
+    };
+
+    const handleCancelOrder = (orderId) => {
+        if (!confirm(t("payment.cancel_confirm", "Apakah Anda yakin ingin membatalkan pesanan ini?"))) {
+            return;
+        }
+
+        axios.post(route('checkout.payment.cancel', orderId))
+            .then(res => {
+                if (res.data.success) {
+                    router.reload();
+                } else {
+                    alert(res.data.message || "Gagal membatalkan pesanan.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembatalan.");
+            });
     };
 
     const getWhatsAppUrl = (order) => {
@@ -246,7 +333,7 @@ export default function OrderHistoryPage({ orders = [] }) {
                                     className="space-y-4"
                                 >
                                     {filteredOrders.map((order) => {
-                                        const statusInfo = getStatusStyle(order.status, order.payment_status);
+                                        const statusInfo = getStatusStyle(order.status, order.payment_status, order.cancellation_status);
                                         const isExpanded = expandedOrderId === order.id;
 
                                         return (
@@ -359,6 +446,19 @@ export default function OrderHistoryPage({ orders = [] }) {
                                                                             </p>
                                                                         </div>
                                                                     )}
+                                                                    {order.cancellation_reason && (
+                                                                        <div className="mt-3">
+                                                                            <h5 className="font-bold text-slate-900 mb-1">Alasan Pembatalan</h5>
+                                                                            <p className="text-rose-600 bg-rose-50/50 border border-rose-100 p-3 rounded-2xl">
+                                                                                "{order.cancellation_reason}"
+                                                                                {order.cancellation_status && (
+                                                                                    <span className="block text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                                                                                        Status Pengajuan: {order.cancellation_status}
+                                                                                    </span>
+                                                                                )}
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 {/* Right: Payment details */}
@@ -423,14 +523,55 @@ export default function OrderHistoryPage({ orders = [] }) {
                                                             <span>{t("orders.action.contact", "Hubungi Admin")}</span>
                                                         </a>
 
-                                                        {/* Special Action: Pay Now if Unpaid */}
-                                                        {order.payment_status === "unpaid" && order.status === "pending" && (
+                                                        {/* Special Actions: Pay Now, Change Method, Cancel if Unpaid */}
+                                                        {order.payment_status === "unpaid" && order.status === "pending" && order.cancellation_status !== "pending" && (
+                                                            <>
+                                                                <Link
+                                                                    href={route('checkout.payment', order.id)}
+                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-4 py-2 rounded-xl shadow-md transition-all active:scale-[0.98]"
+                                                                >
+                                                                    <CreditCard size={14} />
+                                                                    <span>{t("orders.action.pay", "Bayar Sekarang")}</span>
+                                                                </Link>
+                                                                <button
+                                                                    onClick={() => openCancelModal(order.id)}
+                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all active:scale-[0.98]"
+                                                                >
+                                                                    <X size={14} />
+                                                                    <span>{t("orders.action.cancel", "Batalkan Pesanan")}</span>
+                                                                </button>
+                                                            </>
+                                                        )}
+
+                                                        {/* Special Action: Request Cancellation if Processing/Paid */}
+                                                        {/* Special Action: Waiting for Approval */}
+                                                         {order.cancellation_status === "pending" && (
+                                                             <button
+                                                                 disabled
+                                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 border border-slate-200 bg-slate-50 px-4 py-2 rounded-xl cursor-not-allowed"
+                                                             >
+                                                                 <Clock size={14} className="animate-pulse text-amber-500" />
+                                                                 <span>{t("orders.action.waiting_cancel", "Menunggu Persetujuan Pembatalan")}</span>
+                                                             </button>
+                                                         )}
+
+                                                          {order.cancellation_status === "rejected" && (
+                                                              <button
+                                                                  disabled
+                                                                  className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-400 border border-rose-200 bg-rose-50 px-4 py-2 rounded-xl cursor-not-allowed"
+                                                              >
+                                                                  <X size={14} className="text-rose-500" />
+                                                                  <span>{t("orders.action.cancel_rejected", "Pengajuan Pembatalan Ditolak")}</span>
+                                                              </button>
+                                                          )}
+
+                                                         {(order.status === "processing" || (order.status === "pending" && order.payment_status === "paid")) && order.cancellation_status !== "pending" && order.cancellation_status !== "rejected" && (
                                                             <button
-                                                                onClick={() => handlePayNow(order)}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-4 py-2 rounded-xl shadow-md transition-all active:scale-[0.98]"
+                                                                onClick={() => openCancelModal(order.id)}
+                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all active:scale-[0.98]"
                                                             >
-                                                                <CreditCard size={14} />
-                                                                <span>{t("orders.action.pay", "Bayar Sekarang")}</span>
+                                                                <X size={14} />
+                                                                <span>{t("orders.action.request_cancel", "Ajukan Pembatalan")}</span>
                                                             </button>
                                                         )}
 
@@ -480,77 +621,66 @@ export default function OrderHistoryPage({ orders = [] }) {
                     </div>
                 </div>
             </div>
-
-            {/* Payment instructions modal */}
+            {/* Cancellation Reason Modal */}
             <AnimatePresence>
-                {showPaymentModal && selectedOrderForPayment && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                        {/* Backdrop */}
+                {isCancelModalOpen && (
+                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowPaymentModal(false)}
-                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-                        />
-
-                        {/* Modal Body */}
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 relative z-10 text-slate-700"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            className="bg-white border border-slate-100 rounded-3xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
                         >
-                            <button
-                                onClick={() => setShowPaymentModal(false)}
-                                className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-
-                            <h3 className="text-base font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
-                                <CreditCard className="text-amber-500" size={20} />
-                                <span>Metode Pembayaran</span>
-                            </h3>
-
-                            <div className="mt-4 text-xs space-y-4">
-                                <div className="p-3 bg-amber-50 border border-amber-100 text-amber-800 rounded-2xl flex gap-2">
-                                    <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-                                    <p>Silakan selesaikan pembayaran Anda sebesar <strong>{formatPrice(selectedOrderForPayment.total_amount)}</strong> ke nomor rekening di bawah ini.</p>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Bank Transfer</p>
-                                        <div className="mt-2 flex justify-between items-center font-bold">
-                                            <span className="text-blue-950 font-mono text-sm">Bank BCA: 1234567890</span>
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 mt-1">Atas Nama: PT Fayyfir Global Indonesia</p>
-                                    </div>
-
-                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
-                                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">Saudi Arabia Transfer</p>
-                                        <div className="mt-2 flex justify-between items-center font-bold">
-                                            <span className="text-blue-950 font-mono text-sm">Al Rajhi Bank: 987654321</span>
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 mt-1">Atas Nama: Fayyfir Trading Est.</p>
-                                    </div>
-                                </div>
-
-                                <div className="pt-2">
-                                    <p className="text-slate-500 leading-relaxed mb-3">Setelah melakukan transfer, silakan kirimkan bukti pembayaran kepada admin kami melalui WhatsApp dengan menekan tombol di bawah.</p>
-
-                                    <a
-                                        href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Admin, saya telah melakukan transfer untuk invoice ${selectedOrderForPayment.invoice_number} sebesar ${formatPrice(selectedOrderForPayment.total_amount)}. Berikut bukti transfernya.`)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 px-4 rounded-2xl shadow-lg shadow-emerald-100 hover:from-emerald-500 hover:to-emerald-400 transition-all text-center"
-                                    >
-                                        <MessageCircle size={16} />
-                                        <span>Kirim Bukti Transfer via WA</span>
-                                    </a>
-                                </div>
+                            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 className="font-bold text-base text-slate-950">
+                                    {t("orders.cancel_title", "Alasan Pembatalan Pesanan")}
+                                </h3>
+                                <button
+                                    onClick={closeCancelModal}
+                                    className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                                >
+                                    <X size={18} />
+                                </button>
                             </div>
+
+                            <form onSubmit={handleCancelSubmit} className="p-5 space-y-4">
+                                <p className="text-xs text-slate-500">
+                                    {t("orders.cancel_desc", "Silakan masukkan alasan mengapa Anda ingin membatalkan pesanan ini. Untuk pesanan yang sudah dibayar, pengajuan Anda akan ditinjau oleh admin.")}
+                                </p>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                        {t("orders.cancel_reason_label", "Alasan Pembatalan")}
+                                    </label>
+                                    <textarea
+                                        rows={4}
+                                        value={cancelReason}
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                        placeholder={t("orders.cancel_reason_placeholder", "Contoh: Ingin mengubah alamat pengiriman, salah memilih varian, dll.")}
+                                        className="w-full border border-slate-200 rounded-2xl text-xs outline-none p-3.5 focus:border-blue-500 bg-slate-50/30 focus:bg-white transition"
+                                        maxLength={1000}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={closeCancelModal}
+                                        className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-2xl text-xs transition"
+                                    >
+                                        {t("common.cancel", "Batal")}
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingCancel}
+                                        className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs transition"
+                                    >
+                                        {isSubmittingCancel ? t("common.submitting", "Mengirim...") : t("orders.cancel_submit", "Kirim Pengajuan")}
+                                    </button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}

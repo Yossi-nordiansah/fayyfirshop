@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 import { Link } from "@inertiajs/react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
-
 /**
  * ProductCard Component - Fayyfir Shop Premium Edition
  */
 const ProductCard = ({
+    id,
+    product,
     slug,
     title,
     price = 0, // Prop baru untuk nominal harga (angka murni, misal: 150000)
@@ -39,7 +40,6 @@ const ProductCard = ({
         }
         return price;
     }, [price, variants]);
-
     const showNew = is_new || status === "new";
     const showBestSeller = is_best_seller || status === "best-seller";
 
@@ -179,15 +179,14 @@ const ProductCard = ({
                             </span>
                         </div>
 
-                        {/* Premium Cart Button */}
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => e.preventDefault()}
-                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors duration-300 shadow-sm"
+                        {/* Premium Cart Button - Bubbles up to parent Product details Link */}
+                        <motion.div
+                            whileTap={{ scale: 0.95 }}
+                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors duration-300 shadow-sm cursor-pointer"
                             aria-label="Add to cart"
                         >
                             <ShoppingCart size={14} />
-                        </motion.button>
+                        </motion.div>
                     </div>
                 </div>
             </motion.div>

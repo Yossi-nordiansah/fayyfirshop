@@ -29,17 +29,145 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|in:pending,processing,shipped,completed,cancelled',
             'payment_status' => 'required|in:unpaid,paid,expired,refunded',
+            'cancellation_status' => 'nullable|in:pending,approved,rejected',
+            'cancellation_reason' => 'nullable|string|max:1000',
         ]);
 
-        $order = Order::findOrFail($id);
-        $order->update([
-            'status' => $request->status,
+        $order = Order::with('items')->findOrFail($id);
+        $oldStatus = $order->status;
+        $newStatus = $request->status;
+
+        $updateData = [
+            'status' => $newStatus,
             'payment_status' => $request->payment_status,
-        ]);
+        ];
+
+        if ($newStatus === 'cancelled') {
+            $updateData['cancellation_status'] = 'approved';
+            if ($request->filled('cancellation_reason')) {
+                $updateData['cancellation_reason'] = $request->cancellation_reason;
+            }
+        } else {
+            if ($request->has('cancellation_status')) {
+                $updateData['cancellation_status'] = $request->cancellation_status;
+            }
+            if ($request->has('cancellation_reason')) {
+                $updateData['cancellation_reason'] = $request->cancellation_reason;
+            }
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $oldStatus, $newStatus, $updateData) {
+            $order->update($updateData);
+
+            if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+                $order->restoreStock();
+            }
+        });
 
         return redirect()
             ->route('backoffice.orders')
             ->with('status', 'Order status updated successfully.');
+    }
+
+    public function requestCancellation(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        $order = Order::with('items')->findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Check if already cancelled, completed or shipped
+        if ($order->status === 'cancelled' || $order->status === 'completed' || $order->status === 'shipped') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan tidak dapat dibatalkan karena sudah dikirim, selesai, atau dibatalkan.'
+            ], 422);
+        }
+
+        // Unpaid or paid orders now both queue for admin approval
+        $order->update([
+            'cancellation_status' => 'pending',
+            'cancellation_reason' => $request->reason,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengajuan pembatalan berhasil dikirim dan sedang menunggu persetujuan admin.'
+        ]);
+    }
+
+    public function approveCancellation($id)
+    {
+        // Check backoffice permission
+        if (!auth()->check() || !in_array(auth()->user()->role, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+
+        $order = Order::with('items')->findOrFail($id);
+
+        if ($order->cancellation_status !== 'pending') {
+            return redirect()
+                ->route('backoffice.orders')
+                ->with('status', 'Error: Order does not have a pending cancellation request.');
+        }
+
+        try {
+            if ($order->payment_details && isset($order->payment_details['midtrans_order_id'])) {
+                try {
+                    \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                    \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                    \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                } catch (\Exception $cancelEx) {
+                    // Ignore
+                }
+            }
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                $order->restoreStock();
+                $order->update([
+                    'status' => 'cancelled',
+                    'payment_status' => $order->payment_status === 'paid' ? 'refunded' : 'expired',
+                    'cancellation_status' => 'approved',
+                ]);
+            });
+
+            return redirect()
+                ->route('backoffice.orders')
+                ->with('status', 'Cancellation request approved. Order is cancelled and stock is restored.');
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('backoffice.orders')
+                ->with('status', 'Error approving cancellation: ' . $e->getMessage());
+        }
+    }
+
+    public function rejectCancellation($id)
+    {
+        // Check backoffice permission
+        if (!auth()->check() || !in_array(auth()->user()->role, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+
+        $order = Order::findOrFail($id);
+
+        if ($order->cancellation_status !== 'pending') {
+            return redirect()
+                ->route('backoffice.orders')
+                ->with('status', 'Error: Order does not have a pending cancellation request.');
+        }
+
+        $order->update([
+            'cancellation_status' => 'rejected'
+        ]);
+
+        return redirect()
+            ->route('backoffice.orders')
+            ->with('status', 'Cancellation request rejected.');
     }
 
     public function createBiteshipShipment(Request $request, $id)
@@ -172,280 +300,8 @@ class OrderController extends Controller
         ->latest('id')
         ->get();
 
-        // If no orders are found in DB, populate dummy orders for testing as requested by user.
-        if ($orders->isEmpty()) {
-            $orders = $this->getDummyOrders();
-        }
-
         return Inertia::render('orders/OrderHistoryPage', [
             'orders' => $orders
-        ]);
-    }
-
-    private function getDummyOrders()
-    {
-        $userId = auth()->id();
-
-        return collect([
-            // 1. Pending / Unpaid Order
-            [
-                'id' => 99991,
-                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY1',
-                'user_id' => $userId,
-                'store_branch_id' => 1,
-                'subtotal' => 155000.00,
-                'discount_amount' => 0.00,
-                'shipping_cost' => 12000.00,
-                'total_amount' => 167000.00,
-                'shipping_courier' => 'J&T',
-                'shipping_service' => 'EZ',
-                'tracking_number' => null,
-                'shipping_address' => 'Jl. Merdeka No. 45, Gambir, Jakarta Pusat, DKI Jakarta 10110',
-                'status' => 'pending',
-                'payment_status' => 'unpaid',
-                'notes' => 'Tolong dikemas dengan bubble wrap tebal ya.',
-                'created_at' => now()->subHours(2)->toIso8601String(),
-                'store_branch' => [
-                    'id' => 1,
-                    'name' => 'Gudang Utama Jakarta',
-                    'code' => 'ID',
-                ],
-                'items' => [
-                    [
-                        'id' => 101,
-                        'order_id' => 99991,
-                        'product_id' => 1,
-                        'product_variant_id' => 10,
-                        'quantity' => 1,
-                        'price' => 155000.00,
-                        'product' => [
-                            'id' => 1,
-                            'title' => 'Fayyfir Signature Perfume',
-                            'name_translations' => [
-                                'indonesia' => 'Fayyfir Parfum Khas',
-                                'english' => 'Fayyfir Signature Perfume',
-                                'arabic' => 'عطر فيفير المميز'
-                            ],
-                            'images' => [
-                                ['id' => 1, 'image_path' => '/images/default-perfume.png']
-                            ]
-                        ],
-                        'variant' => [
-                            'id' => 10,
-                            'name' => '50 ml',
-                            'name_translations' => [
-                                'indonesia' => '50 ml',
-                                'english' => '50 ml',
-                                'arabic' => '٥٠ مل'
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            // 2. Paid / Processing Order
-            [
-                'id' => 99992,
-                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY2',
-                'user_id' => $userId,
-                'store_branch_id' => 1,
-                'subtotal' => 380000.00,
-                'discount_amount' => 0.00,
-                'shipping_cost' => 22000.00,
-                'total_amount' => 402000.00,
-                'shipping_courier' => 'SICEPAT',
-                'shipping_service' => 'REG',
-                'tracking_number' => null,
-                'shipping_address' => 'Jl. Diponegoro No. 12, Tegalsari, Surabaya, Jawa Timur 60264',
-                'status' => 'processing',
-                'payment_status' => 'paid',
-                'notes' => null,
-                'created_at' => now()->subDays(1)->toIso8601String(),
-                'store_branch' => [
-                    'id' => 1,
-                    'name' => 'Gudang Utama Jakarta',
-                    'code' => 'ID',
-                ],
-                'items' => [
-                    [
-                        'id' => 102,
-                        'order_id' => 99992,
-                        'product_id' => 2,
-                        'product_variant_id' => 11,
-                        'quantity' => 2,
-                        'price' => 190000.00,
-                        'product' => [
-                            'id' => 2,
-                            'title' => 'Arabic Oud Al-Majed',
-                            'name_translations' => [
-                                'indonesia' => 'Oud Arab Al-Majed',
-                                'english' => 'Arabic Oud Al-Majed',
-                                'arabic' => 'عود الماجد العربي'
-                            ],
-                            'images' => [
-                                ['id' => 2, 'image_path' => '/images/default-oud.png']
-                            ]
-                        ],
-                        'variant' => [
-                            'id' => 11,
-                            'name' => '100 ml',
-                            'name_translations' => [
-                                'indonesia' => '100 ml',
-                                'english' => '100 ml',
-                                'arabic' => '١٠٠ مل'
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            // 3. Shipped / In Delivery Order
-            [
-                'id' => 99993,
-                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY3',
-                'user_id' => $userId,
-                'store_branch_id' => 1,
-                'subtotal' => 290000.00,
-                'discount_amount' => 0.00,
-                'shipping_cost' => 15000.00,
-                'total_amount' => 305000.00,
-                'shipping_courier' => 'JNE',
-                'shipping_service' => 'REG',
-                'tracking_number' => 'JNETEST123456789',
-                'shipping_address' => 'Komp. Pondok Indah Blok A-5, Kebayoran Lama, Jakarta Selatan, DKI Jakarta 12310',
-                'status' => 'shipped',
-                'payment_status' => 'paid',
-                'notes' => 'Kirim sore hari ya kalau bisa.',
-                'created_at' => now()->subDays(2)->toIso8601String(),
-                'store_branch' => [
-                    'id' => 1,
-                    'name' => 'Gudang Utama Jakarta',
-                    'code' => 'ID',
-                ],
-                'items' => [
-                    [
-                        'id' => 103,
-                        'order_id' => 99993,
-                        'product_id' => 3,
-                        'product_variant_id' => null,
-                        'quantity' => 1,
-                        'price' => 290000.00,
-                        'product' => [
-                            'id' => 3,
-                            'title' => 'Premium Bakhoor Burner',
-                            'name_translations' => [
-                                'indonesia' => 'Pembakar Bakhoor Premium',
-                                'english' => 'Premium Bakhoor Burner',
-                                'arabic' => 'مبخرة بخور فاخرة'
-                            ],
-                            'images' => [
-                                ['id' => 3, 'image_path' => '/images/default-burner.png']
-                            ]
-                        ],
-                        'variant' => null
-                    ]
-                ]
-            ],
-            // 4. Completed Order
-            [
-                'id' => 99994,
-                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY4',
-                'user_id' => $userId,
-                'store_branch_id' => 1,
-                'subtotal' => 85000.00,
-                'discount_amount' => 0.00,
-                'shipping_cost' => 9000.00,
-                'total_amount' => 94000.00,
-                'shipping_courier' => 'Anteraja',
-                'shipping_service' => 'REG',
-                'tracking_number' => 'ANTRJ1234567890',
-                'shipping_address' => 'Jl. Kemang Raya No. 88, Mampang Prapatan, Jakarta Selatan, DKI Jakarta 12730',
-                'status' => 'completed',
-                'payment_status' => 'paid',
-                'notes' => null,
-                'created_at' => now()->subDays(5)->toIso8601String(),
-                'store_branch' => [
-                    'id' => 1,
-                    'name' => 'Gudang Utama Jakarta',
-                    'code' => 'ID',
-                ],
-                'items' => [
-                    [
-                        'id' => 104,
-                        'order_id' => 99994,
-                        'product_id' => 4,
-                        'product_variant_id' => 12,
-                        'quantity' => 1,
-                        'price' => 85000.00,
-                        'product' => [
-                            'id' => 4,
-                            'title' => 'Organic Jasmine Aromatic Oil',
-                            'name_translations' => [
-                                'indonesia' => 'Minyak Aromatik Melati Organik',
-                                'english' => 'Organic Jasmine Aromatic Oil',
-                                'arabic' => 'زيت الياسمين العضوي العطري'
-                            ],
-                            'images' => [
-                                ['id' => 4, 'image_path' => '/images/default-jasmine.png']
-                            ]
-                        ],
-                        'variant' => [
-                            'id' => 12,
-                            'name' => '10 ml',
-                            'name_translations' => [
-                                'indonesia' => '10 ml',
-                                'english' => '10 ml',
-                                'arabic' => '١٠ مل'
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            // 5. Cancelled Order
-            [
-                'id' => 99995,
-                'invoice_number' => 'INV-' . date('Ymd') . '-DUMMY5',
-                'user_id' => $userId,
-                'store_branch_id' => 1,
-                'subtotal' => 110000.00,
-                'discount_amount' => 0.00,
-                'shipping_cost' => 12000.00,
-                'total_amount' => 122000.00,
-                'shipping_courier' => 'TIKI',
-                'shipping_service' => 'REG',
-                'tracking_number' => null,
-                'shipping_address' => 'Jl. Sudirman Kav. 21, Setiabudi, Jakarta Selatan, DKI Jakarta 12920',
-                'status' => 'cancelled',
-                'payment_status' => 'unpaid',
-                'notes' => null,
-                'created_at' => now()->subDays(10)->toIso8601String(),
-                'store_branch' => [
-                    'id' => 1,
-                    'name' => 'Gudang Utama Jakarta',
-                    'code' => 'ID',
-                ],
-                'items' => [
-                    [
-                        'id' => 105,
-                        'order_id' => 99995,
-                        'product_id' => 5,
-                        'product_variant_id' => null,
-                        'quantity' => 1,
-                        'price' => 110000.00,
-                        'product' => [
-                            'id' => 5,
-                            'title' => 'Pure Amber Incense',
-                            'name_translations' => [
-                                'indonesia' => 'Dupa Amber Murni',
-                                'english' => 'Pure Amber Incense',
-                                'arabic' => 'بخور العنبر النقي'
-                            ],
-                            'images' => [
-                                ['id' => 5, 'image_path' => '/images/default-amber.png']
-                            ]
-                        ],
-                        'variant' => null
-                    ]
-                ]
-            ]
         ]);
     }
 
@@ -496,6 +352,68 @@ class OrderController extends Controller
             'order' => $order,
             'trackingLogs' => $trackingLogs,
         ]);
+    }
+
+    public function getPaymentToken($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan ini sudah dibayar atau dibatalkan.'
+            ], 422);
+        }
+
+        if (!empty($order->payment_token)) {
+            return response()->json([
+                'success' => true,
+                'snap_token' => $order->payment_token
+            ]);
+        }
+
+        try {
+            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
+            $user = auth()->user();
+            $nameParts = explode(' ', trim($user->name));
+            $firstName = $nameParts[0];
+            $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $order->invoice_number,
+                    'gross_amount' => (int) $order->total_amount,
+                ],
+                'customer_details' => [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $user->email,
+                    'phone' => $user->phone ?: '08111222333',
+                ],
+                'notification_url' => url('/checkout/midtrans-callback'),
+            ];
+
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+            $order->update(['payment_token' => $snapToken]);
+
+            return response()->json([
+                'success' => true,
+                'snap_token' => $snapToken
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate payment token: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     private function parseWeight($variant, $product)

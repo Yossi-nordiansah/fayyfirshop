@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'backoffice.auth' => \App\Http\Middleware\EnsureBackofficeAuthenticated::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            '/checkout/midtrans-callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

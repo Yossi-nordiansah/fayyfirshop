@@ -2,11 +2,12 @@ import React from "react";
 import { Link } from "@inertiajs/react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
-
 /**
  * ProductCard Component - Fayyfir Shop Premium Edition
  */
 const ProductCard = ({
+    id,
+    product,
     slug,
     title,
     price = 0, // Prop baru untuk nominal harga (angka murni, misal: 150000)
@@ -38,7 +39,6 @@ const ProductCard = ({
         }
         return price;
     }, [price, variants]);
-
     const showNew = is_new || status === "new";
     const showBestSeller = is_best_seller || status === "best-seller";
 
@@ -174,17 +174,13 @@ const ProductCard = ({
                             </span>
                         </div>
 
-                        {/* Premium Cart Button */}
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                            }}
-                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-300 shadow-sm active:scale-90"
+                        {/* Premium Cart Button - Bubbles up to parent Product details Link */}
+                        <div
+                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all duration-300 shadow-sm cursor-pointer active:scale-95"
                             aria-label="Add to cart"
                         >
                             <ShoppingCart size={14} />
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>

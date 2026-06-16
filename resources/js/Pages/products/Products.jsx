@@ -735,6 +735,8 @@ export default function Products({ category = null, subCategory = null, products
                                                 layout
                                             >
                                                 <CardProduct
+                                                    id={product.id}
+                                                    product={product}
                                                     slug={product.slug}
                                                     title={product.title}
                                                     price={product.price}

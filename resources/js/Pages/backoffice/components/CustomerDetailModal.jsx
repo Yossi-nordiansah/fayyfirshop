@@ -1,21 +1,23 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, User, Mail, Phone, Calendar, Globe2 } from 'lucide-react';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
-const getCountryName = (code) => {
-    if (!code) return 'Indonesia';
+const getCountryName = (code, t) => {
+    if (!code) return t('backoffice.customer.country.id', 'Indonesia');
     const upperCode = code.toUpperCase();
     const map = {
-        'ID': 'Indonesia',
-        'MY': 'Malaysia',
-        'SA': 'Arab Saudi',
-        'US': 'Amerika Serikat',
-        'SG': 'Singapura',
+        'ID': t('backoffice.customer.country.id', 'Indonesia'),
+        'MY': t('backoffice.customer.country.my', 'Malaysia'),
+        'SA': t('backoffice.customer.country.sa', 'Arab Saudi'),
+        'US': t('backoffice.customer.country.us', 'Amerika Serikat'),
+        'SG': t('backoffice.customer.country.sg', 'Singapura'),
     };
     return map[upperCode] || upperCode;
 };
 
 export default function CustomerDetailModal({ show = false, customer, onClose }) {
+    const { t } = useLanguage();
     if (!customer) return null;
 
     const formatDate = (dateStr) => {
@@ -45,8 +47,8 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                             <div className="flex items-center gap-3">
                                 <User className="w-6 h-6" />
                                 <div>
-                                    <h3 className="text-lg font-extrabold">Detail Profil Pelanggan</h3>
-                                    <p className="text-xs text-blue-200">Informasi lengkap akun customer</p>
+                                    <h3 className="text-lg font-extrabold">{t('backoffice.customer.detail_modal.title', 'Detail Profil Pelanggan')}</h3>
+                                    <p className="text-xs text-blue-200">{t('backoffice.customer.detail_modal.subtitle', 'Informasi lengkap akun customer')}</p>
                                 </div>
                             </div>
                             <button
@@ -76,7 +78,7 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                                     <h4 className="text-lg font-black text-blue-950 leading-tight">{customer.name}</h4>
                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span>Akun Aktif</span>
+                                        <span>{t('backoffice.customer.detail_modal.active_account', 'Akun Aktif')}</span>
                                     </span>
                                 </div>
                             </div>
@@ -84,47 +86,47 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                             {/* Information Fields */}
                             <div className="space-y-3">
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">ID Customer</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.customer_id', 'ID Customer')}</span>
                                     <span className="text-sm font-semibold text-slate-700 col-span-2">#{customer.id}</span>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Email</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.email', 'Email')}</span>
                                     <span className="text-sm font-semibold text-slate-700 col-span-2 flex items-center gap-1.5">
                                         <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                                         {customer.email || '-'}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Telepon</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.phone', 'Telepon')}</span>
                                     <span className="text-sm font-semibold text-slate-700 col-span-2 flex items-center gap-1.5">
                                         <Phone className="w-4 h-4 text-slate-400 shrink-0" />
                                         {customer.phone || '-'}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Alamat</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.address', 'Alamat')}</span>
                                     <span className="text-sm font-semibold text-slate-600 col-span-2">
-                                        Jl. Jenderal Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190
+                                        {t('backoffice.customer.detail_modal.mock_address', 'Jl. Jenderal Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190')}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Negara</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.country', 'Negara')}</span>
                                     <span className="text-sm font-semibold text-slate-700 col-span-2 flex items-center gap-1.5 capitalize">
                                         <Globe2 className="w-4 h-4 text-slate-400 shrink-0" />
-                                        <span>{getCountryName(customer.country)}</span>
+                                        <span>{getCountryName(customer.country, t)}</span>
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Bergabung</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.joined', 'Bergabung')}</span>
                                     <span className="text-sm font-semibold text-slate-700 col-span-2 flex items-center gap-1.5">
                                         <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                                         {formatDate(customer.created_at)}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Catatan</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.notes', 'Catatan')}</span>
                                     <span className="text-xs font-semibold text-slate-500 col-span-2 italic">
-                                        Pelanggan prioritas terdaftar dengan aktivitas transaksi belanja berkala di Fayyfir Shop.
+                                        {t('backoffice.customer.detail_modal.priority_notes', 'Pelanggan prioritas terdaftar dengan aktivitas transaksi belanja berkala di Fayyfir Shop.')}
                                     </span>
                                 </div>
                             </div>
@@ -136,7 +138,7 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                                 onClick={onClose}
                                 className="rounded-lg bg-blue-950 hover:bg-blue-900 text-white font-bold px-5 py-2.5 text-sm active:scale-[0.98] transition shadow-md"
                             >
-                                Tutup
+                                {t('backoffice.customer.button.close', 'Tutup')}
                             </button>
                         </div>
                     </motion.div>

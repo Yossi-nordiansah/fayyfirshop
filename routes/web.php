@@ -163,6 +163,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('backoffice.orders');
     Route::patch('/orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('backoffice.orders.update-status');
     Route::post('/orders/{order}/biteship-shipment', [OrderController::class, 'createBiteshipShipment'])->name('backoffice.orders.biteship-shipment');
+    Route::post('/orders/{order}/approve-cancellation', [OrderController::class, 'approveCancellation'])->name('backoffice.orders.approve-cancellation');
+    Route::post('/orders/{order}/reject-cancellation', [OrderController::class, 'rejectCancellation'])->name('backoffice.orders.reject-cancellation');
 
     Route::get('/review', function () {
         return Inertia::render('backoffice/menu/Reviews');
@@ -217,6 +219,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.store-branches.destroy');
 });
 
+Route::post('/checkout/midtrans-callback', [CheckoutController::class, 'midtransCallback'])->name('checkout.midtrans-callback');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -229,8 +233,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/apply-voucher', [CheckoutController::class, 'applyVoucher'])->name('checkout.apply-voucher');
     Route::post('/checkout/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.place-order');
     Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout/payment/{id}', [CheckoutController::class, 'payment'])->name('checkout.payment');
+    Route::post('/checkout/payment/{id}/change', [CheckoutController::class, 'changePaymentMethod'])->name('checkout.payment.change');
+    Route::post('/checkout/payment/{id}/pay-card', [CheckoutController::class, 'payCreditCard'])->name('checkout.payment.pay-card');
+    Route::post('/checkout/payment/{id}/cancel', [CheckoutController::class, 'cancelOrder'])->name('checkout.payment.cancel');
     Route::get('/orders', [OrderController::class, 'userOrders'])->name('orders.index');
+    Route::post('/orders/{order}/payment-token', [OrderController::class, 'getPaymentToken'])->name('orders.payment-token');
     Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');
+    Route::post('/orders/{order}/cancel-request', [OrderController::class, 'requestCancellation'])->name('orders.cancel-request');
 });
 
 require __DIR__ . '/auth.php';

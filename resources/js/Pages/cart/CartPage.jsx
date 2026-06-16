@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Head, Link, usePage } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     ArrowLeft,
     Check,
@@ -16,21 +16,29 @@ import Navbar from "@/Components/Navbar";
 import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
-const CART_KEY = "fayyfir_cart";
-
 export default function CartPage() {
     const { t, locale } = useLanguage(); // Ambil t dan locale aktif
     const { auth } = usePage().props;
     const user = auth?.user;
+
+    const cartKey = user ? `fayyfir_cart_${user.id}` : "fayyfir_cart";
+    const checkoutKey = user ? `fayyfir_checkout_${user.id}` : "fayyfir_checkout";
+
     const [cartItems, setCartItems] = useState([]);
+    const [checkedKeys, setCheckedKeys] = useState([]);
+
+    const getItemKey = (item) =>
+        `${item.id}-${item.variantId || "base"}-${item.color || "none"}-${item.size || "none"}`;
 
     useEffect(() => {
-        setCartItems(JSON.parse(localStorage.getItem(CART_KEY) || "[]"));
-    }, []);
+        const items = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        setCartItems(items);
+        setCheckedKeys([]);
+    }, [user]);
 
     const saveCart = (nextCart) => {
         setCartItems(nextCart);
-        localStorage.setItem(CART_KEY, JSON.stringify(nextCart));
+        localStorage.setItem(cartKey, JSON.stringify(nextCart));
         window.dispatchEvent(new Event("fayyfir-cart-updated"));
     };
 
@@ -61,25 +69,65 @@ export default function CartPage() {
     };
 
     const removeItem = (index) => {
-        saveCart(cartItems.filter((_, itemIndex) => itemIndex !== index));
+        const itemToRemove = cartItems[index];
+        const nextCart = cartItems.filter((_, itemIndex) => itemIndex !== index);
+        saveCart(nextCart);
+        setCheckedKeys(checkedKeys.filter(k => k !== getItemKey(itemToRemove)));
     };
 
     const clearCart = () => {
         saveCart([]);
+        setCheckedKeys([]);
+    };
+
+    const toggleCheckItem = (item) => {
+        const key = getItemKey(item);
+        if (checkedKeys.includes(key)) {
+            setCheckedKeys(checkedKeys.filter(k => k !== key));
+        } else {
+            setCheckedKeys([...checkedKeys, key]);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (checkedKeys.length === cartItems.length) {
+            setCheckedKeys([]);
+        } else {
+            setCheckedKeys(cartItems.map(getItemKey));
+        }
+    };
+
+    const removeSelectedItems = () => {
+        const nextCart = cartItems.filter(item => !checkedKeys.includes(getItemKey(item)));
+        saveCart(nextCart);
+        setCheckedKeys([]);
+    };
+
+    const handleCheckout = () => {
+        const checkoutItems = cartItems.filter(item => checkedKeys.includes(getItemKey(item)));
+        if (checkoutItems.length === 0) return;
+
+        localStorage.setItem(checkoutKey, JSON.stringify(checkoutItems));
+        router.visit('/checkout');
     };
 
     const subtotal = useMemo(
         () =>
-            cartItems.reduce(
-                (total, item) => total + (item.price || 0) * (item.quantity || 0),
-                0,
-            ),
-        [cartItems],
+            cartItems
+                .filter(item => checkedKeys.includes(getItemKey(item)))
+                .reduce(
+                    (total, item) => total + (item.price || 0) * (item.quantity || 0),
+                    0,
+                ),
+        [cartItems, checkedKeys],
     );
 
     const itemCount = useMemo(
-        () => cartItems.reduce((total, item) => total + (item.quantity || 0), 0),
-        [cartItems],
+        () =>
+            cartItems
+                .filter(item => checkedKeys.includes(getItemKey(item)))
+                .reduce((total, item) => total + (item.quantity || 0), 0),
+        [cartItems, checkedKeys],
     );
 
     return (
@@ -171,15 +219,57 @@ export default function CartPage() {
                             ) : (
                                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
                                     <div className="space-y-4">
+                                        {/* Select All & Actions */}
+                                        <div className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-100 rounded-2xl">
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={toggleSelectAll}
+                                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${checkedKeys.length === cartItems.length && cartItems.length > 0
+                                                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                                                        : "border-zinc-300 hover:border-blue-400 bg-white"
+                                                        }`}
+                                                >
+                                                    {checkedKeys.length === cartItems.length && cartItems.length > 0 && (
+                                                        <Check size={14} strokeWidth={3} />
+                                                    )}
+                                                </button>
+                                                <span className="text-sm font-bold text-zinc-700">
+                                                    {t("cart.select_all", "Pilih Semua")} ({checkedKeys.length}/{cartItems.length})
+                                                </span>
+                                            </div>
+
+                                            {checkedKeys.length > 0 && (
+                                                <button
+                                                    onClick={removeSelectedItems}
+                                                    className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+                                                >
+                                                    {t("cart.remove_selected", "Hapus Terpilih")}
+                                                </button>
+                                            )}
+                                        </div>
+
                                         <AnimatePresence initial={false}>
                                             {cartItems.map((item, index) => (
                                                 <motion.div
-                                                    key={`${item.id}-${item.variantId || "base"}-${item.color || "none"}-${item.size || "none"}`}
+                                                    key={getItemKey(item)}
                                                     initial={{ opacity: 0, y: 12 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, x: -20 }}
-                                                    className="grid grid-cols-[88px_1fr] gap-4 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm sm:grid-cols-[112px_1fr_auto]"
+                                                    className="grid grid-cols-[auto_88px_1fr] gap-3 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm sm:grid-cols-[auto_112px_1fr_auto] sm:gap-4 items-center"
                                                 >
+                                                    {/* Checkbox */}
+                                                    <div className="flex items-center justify-center pr-1 sm:pr-2">
+                                                        <button
+                                                            onClick={() => toggleCheckItem(item)}
+                                                            className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${checkedKeys.includes(getItemKey(item))
+                                                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                                                                : "border-zinc-300 hover:border-blue-400 bg-white"
+                                                                }`}
+                                                        >
+                                                            {checkedKeys.includes(getItemKey(item)) && <Check size={14} strokeWidth={3} />}
+                                                        </button>
+                                                    </div>
+
                                                     <Link href={`/product/${item.slug}`} className="block overflow-hidden rounded-xl bg-zinc-100">
                                                         <img
                                                             src={item.image || "/images/default-product.png"}
@@ -203,12 +293,20 @@ export default function CartPage() {
                                                             href={`/product/${item.slug}`}
                                                             className="block mt-2 text-base font-bold truncate transition-colors text-zinc-900 hover:text-blue-700"
                                                         >
-                                                            {item.title}
+                                                            {item.title_translations?.[locale] || item.title}
                                                         </Link>
 
                                                         <div className="flex flex-wrap mt-1 text-xs gap-x-3 gap-y-1 text-zinc-500">
-                                                            {item.color && <span>{t("cart.color_label", "Warna")}: <strong>{item.color}</strong></span>}
-                                                            {item.size && <span>{t("cart.size_label", "Ukuran")}: <strong>{item.size}</strong></span>}
+                                                            {item.variantNameTranslations?.[locale] || item.variantName ? (
+                                                                <span>{t("cart.variant_label", "Varian")}: <strong>{item.variantNameTranslations?.[locale] || item.variantName}</strong></span>
+                                                            ) : (
+                                                                item.color && <span>{t("cart.color_label", "Warna")}: <strong>{item.color}</strong></span>
+                                                            )}
+                                                            {item.subVariantNameTranslations?.[locale] || item.subVariantName ? (
+                                                                <span>{t("cart.sub_variant_label", "Sub Varian")}: <strong>{item.subVariantNameTranslations?.[locale] || item.subVariantName}</strong></span>
+                                                            ) : (
+                                                                item.size && <span>{t("cart.size_label", "Ukuran")}: <strong>{item.size}</strong></span>
+                                                            )}
                                                             {item.sku && <span>SKU: {item.sku}</span>}
                                                         </div>
 
@@ -241,7 +339,7 @@ export default function CartPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center justify-between col-span-2 pt-4 border-t border-zinc-100 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
+                                                    <div className="flex items-center justify-between col-span-3 pt-4 border-t border-zinc-100 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
                                                         <p className="text-sm font-semibold text-zinc-500 sm:hidden">
                                                             {t("cart.subtotal", "Subtotal")}
                                                         </p>
@@ -279,10 +377,14 @@ export default function CartPage() {
                                                 {formatPrice(subtotal)}
                                             </span>
                                         </div>
-                                        <Link href="/checkout" className="flex items-center justify-center w-full gap-2 px-5 py-4 mt-6 text-sm font-bold text-white transition-colors shadow-lg rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 shadow-blue-900/20 hover:from-blue-800 hover:to-blue-700">
+                                        <button
+                                            onClick={handleCheckout}
+                                            disabled={checkedKeys.length === 0}
+                                            className="flex items-center justify-center w-full gap-2 px-5 py-4 mt-6 text-sm font-bold text-white transition-colors shadow-lg rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 shadow-blue-900/20 hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
                                             <Check size={17} />
                                             {t("cart.checkout", "Checkout")}
-                                        </Link>
+                                        </button>
                                         <p className="mt-3 text-xs text-center text-zinc-400">
                                             {t("cart.checkout_note", "Checkout akan memakai item yang ada di keranjang ini.")}
                                         </p>

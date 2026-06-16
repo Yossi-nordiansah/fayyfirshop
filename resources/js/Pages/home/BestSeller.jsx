@@ -62,6 +62,8 @@ const BestSeller = ({ products = [] }) => {
                             {products.map((product) => (
                                 <div key={product.id} className="md:px-2 px-0">
                                     <ProductCard
+                                        id={product.id}
+                                        product={product}
                                         slug={product.slug}
                                         title={product.name_translations?.[locale] || product.title}
                                         price={product.price}
@@ -80,7 +82,8 @@ const BestSeller = ({ products = [] }) => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:px-16 px-8 max-w-7xl mx-auto">
                             {products.map((product) => (
                                 <ProductCard
-                                    key={product.id}
+                                    id={product.id}
+                                    product={product}
                                     slug={product.slug}
                                     title={product.name_translations?.[locale] || product.title}
                                     price={product.price}

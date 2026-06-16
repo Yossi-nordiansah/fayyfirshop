@@ -298,7 +298,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                                     <ArrowUpDown className="w-3.5 h-3.5 inline mr-1" />
-                                    Urutkan:
+                                    {t('backoffice.customer.sort.label', 'Urutkan:')}
                                 </span>
                                 <div className="relative">
                                     <select
@@ -306,11 +306,11 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                         onChange={(e) => setSortBy(e.target.value)}
                                         className="appearance-none bg-blue-50/50 border border-blue-100 rounded-lg pl-3 pr-10 py-2 text-sm font-semibold text-blue-950 focus:outline-none focus:border-blue-900 transition"
                                     >
-                                        <option value="newest">Paling Baru Terdaftar</option>
-                                        <option value="alphabetical-asc">Abjad A - Z</option>
-                                        <option value="alphabetical-desc">Abjad Z - A</option>
-                                        <option value="most-orders">Paling Sering Beli (Frekuensi)</option>
-                                        <option value="highest-spent">Total Pembelian Tertinggi</option>
+                                        <option value="newest">{t('backoffice.customer.sort.option.newest', 'Paling Baru Terdaftar')}</option>
+                                        <option value="alphabetical-asc">{t('backoffice.customer.sort.option.alphabetical_asc', 'Abjad A - Z')}</option>
+                                        <option value="alphabetical-desc">{t('backoffice.customer.sort.option.alphabetical_desc', 'Abjad Z - A')}</option>
+                                        <option value="most-orders">{t('backoffice.customer.sort.option.most_orders', 'Paling Sering Beli (Frekuensi)')}</option>
+                                        <option value="highest-spent">{t('backoffice.customer.sort.option.highest_spent', 'Total Pembelian Tertinggi')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -322,19 +322,19 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                 <table className="min-w-full divide-y divide-blue-50">
                                     <thead className="bg-blue-50/40">
                                         <tr className="text-xs font-bold tracking-wider text-left text-blue-800 uppercase border-b border-blue-100">
-                                            <th className="px-6 py-4">Customer</th>
-                                            <th className="px-6 py-4">Kontak</th>
-                                            <th className="px-6 py-4 text-center">Frekuensi Order</th>
-                                            <th className="px-6 py-4 text-right">Total Belanja</th>
-                                            <th className="px-6 py-4 text-center">Bergabung</th>
-                                            <th className="px-6 py-4 text-right">Aksi</th>
+                                            <th className="px-6 py-4">{t('backoffice.customer.table.customer', 'Customer')}</th>
+                                            <th className="px-6 py-4">{t('backoffice.customer.table.contact', 'Kontak')}</th>
+                                            <th className="px-6 py-4 text-center">{t('backoffice.customer.table.orders_count', 'Frekuensi Order')}</th>
+                                            <th className="px-6 py-4 text-right">{t('backoffice.customer.table.total_spent', 'Total Belanja')}</th>
+                                            <th className="px-6 py-4 text-center">{t('backoffice.customer.table.joined', 'Bergabung')}</th>
+                                            <th className="px-6 py-4 text-right">{t('backoffice.customer.table.action', 'Aksi')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-sm divide-y divide-blue-50 text-slate-700">
                                         {filteredAndSortedCustomers.length === 0 ? (
                                             <tr>
                                                 <td colSpan={6} className="px-6 py-16 text-center text-slate-400 font-medium bg-slate-50/10">
-                                                    Tidak ada customer yang ditemukan.
+                                                    {t('backoffice.customer.empty_state', 'Tidak ada customer yang ditemukan.')}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -358,7 +358,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                                     <span>{customer.name}</span>
                                                                     <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-1.5 py-0.5 rounded border border-blue-100 uppercase flex items-center gap-0.5 shrink-0">
                                                                         <Globe2 className="w-3 h-3 text-blue-500 shrink-0" />
-                                                                        <span>{customer.country || 'ID'}</span>
+                                                                        <span>{t(`backoffice.customer.country.${(customer.country || 'ID').toLowerCase()}`, customer.country || 'ID')}</span>
                                                                     </span>
                                                                 </div>
                                                                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">ID: #{customer.id}</div>
@@ -380,7 +380,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                     <td className="px-6 py-4 text-center">
                                                         <span className={`inline-flex items-center gap-1 font-bold text-sm px-2.5 py-1 rounded-full ${customer.orders_count > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-400'}`}>
                                                             <ShoppingBag className="w-3.5 h-3.5" />
-                                                            <span>{customer.orders_count || 0}x Order</span>
+                                                            <span>{t('backoffice.customer.table.order_count_value', '{count}x Order').replace('{count}', customer.orders_count || 0)}</span>
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right font-extrabold text-blue-950">
@@ -394,21 +394,21 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                             {/* Detail Button */}
                                                             <button
                                                                 onClick={() => setCustomerForDetail(customer)}
-                                                                title="Lihat Detail Customer"
+                                                                title={t('backoffice.customer.tooltip.view_detail', 'Lihat Detail Customer')}
                                                                 className="inline-flex items-center justify-center text-slate-700 bg-white border border-slate-200 rounded-lg h-9 px-3 gap-1.5 hover:bg-slate-50 active:scale-[0.98] transition font-bold text-xs"
                                                             >
                                                                 <Eye className="w-4 h-4 text-slate-500" />
-                                                                <span>Detail</span>
+                                                                <span>{t('backoffice.customer.button.view_detail', 'Detail')}</span>
                                                             </button>
 
                                                             {/* Statistics Button */}
                                                             <button
                                                                 onClick={() => handleOpenStats(customer)}
-                                                                title="Lihat Statistik Belanja"
+                                                                title={t('backoffice.customer.tooltip.view_stats', 'Lihat Statistik Belanja')}
                                                                 className="inline-flex items-center justify-center text-blue-700 bg-white border border-blue-100 rounded-lg h-9 px-3 gap-1.5 hover:bg-blue-50 active:scale-[0.98] transition font-bold text-xs"
                                                             >
                                                                 <BarChart3 className="w-4 h-4" />
-                                                                <span>Statistik</span>
+                                                                <span>{t('backoffice.customer.button.view_stats', 'Statistik')}</span>
                                                             </button>
 
                                                             {/* Give Voucher Button */}
@@ -418,17 +418,17 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                                     setSelectedVoucherId('');
                                                                     setVoucherErrors({});
                                                                 }}
-                                                                title="Beri Voucher secara Manual"
+                                                                title={t('backoffice.customer.tooltip.give_voucher', 'Beri Voucher secara Manual')}
                                                                 className="inline-flex items-center justify-center text-emerald-700 bg-white border border-emerald-100 rounded-lg h-9 px-3 gap-1.5 hover:bg-emerald-50 active:scale-[0.98] transition font-bold text-xs"
                                                             >
                                                                 <Gift className="w-4 h-4" />
-                                                                <span>Beri Voucher</span>
+                                                                <span>{t('backoffice.customer.button.give_voucher', 'Beri Voucher')}</span>
                                                             </button>
 
                                                             {/* Delete Button */}
                                                             <button
                                                                 onClick={() => setCustomerToDelete(customer)}
-                                                                title="Hapus Customer"
+                                                                title={t('backoffice.customer.tooltip.delete', 'Hapus Customer')}
                                                                 className="inline-flex items-center justify-center text-rose-600 bg-white border border-rose-100 rounded-lg h-9 w-9 hover:bg-rose-50 active:scale-[0.98] transition"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -463,8 +463,8 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                         <Gift className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-extrabold text-blue-950">Beri Voucher Manual</h3>
-                                        <p className="text-xs text-slate-500">Berikan reward ke {customerForVoucher.name}</p>
+                                        <h3 className="text-base font-extrabold text-blue-950">{t('backoffice.customer.modal.give_voucher_title', 'Beri Voucher Manual')}</h3>
+                                        <p className="text-xs text-slate-500">{t('backoffice.customer.modal.give_voucher_subtitle', 'Berikan reward ke {name}').replace('{name}', customerForVoucher.name)}</p>
                                     </div>
                                 </div>
                                 <button
@@ -478,11 +478,11 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                             <form onSubmit={handleAssignVoucher} className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                                        Daftar Voucher Aktif
+                                        {t('backoffice.customer.modal.give_voucher_list_label', 'Daftar Voucher Aktif')}
                                     </label>
                                     {vouchers.length === 0 ? (
                                         <div className="text-sm text-slate-400 py-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-center">
-                                            Tidak ada voucher aktif yang tersedia untuk dibagikan.
+                                            {t('backoffice.customer.modal.no_active_vouchers', 'Tidak ada voucher aktif yang tersedia untuk dibagikan.')}
                                         </div>
                                     ) : (
                                         <div className="relative">
@@ -494,7 +494,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                 }}
                                                 className="w-full appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-10 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-900 transition"
                                             >
-                                                <option value="">-- Pilih Voucher --</option>
+                                                <option value="">{t('backoffice.customer.modal.select_voucher_placeholder', '-- Pilih Voucher --')}</option>
                                                 {vouchers.map(v => (
                                                     <option key={v.id} value={v.id}>
                                                         {v.code} - {v.name}
@@ -518,14 +518,14 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                         onClick={() => setCustomerForVoucher(null)}
                                         className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
                                     >
-                                        Batal
+                                        {t('backoffice.customer.button.cancel', 'Batal')}
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isAssigningVoucher || vouchers.length === 0}
                                         className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 text-sm active:scale-[0.98] transition disabled:opacity-50"
                                     >
-                                        {isAssigningVoucher ? 'Memproses...' : 'Kirim Voucher'}
+                                        {isAssigningVoucher ? t('backoffice.customer.button.processing', 'Memproses...') : t('backoffice.customer.button.send_voucher', 'Kirim Voucher')}
                                     </button>
                                 </div>
                             </form>

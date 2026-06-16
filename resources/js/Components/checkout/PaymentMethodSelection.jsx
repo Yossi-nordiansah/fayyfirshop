@@ -1,52 +1,224 @@
-import React from "react";
-import { CreditCard } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CreditCard, Wallet, QrCode, Store, Landmark, Info, ChevronDown, ChevronUp } from "lucide-react";
+
+// Robust Logo Component with elegant fallback
+const PaymentLogo = ({ logo, name, altText }) => {
+    const [hasError, setHasError] = useState(!logo);
+
+    if (hasError) {
+        const isOvo = name.toLowerCase() === "ovo";
+        const badgeBg = isOvo
+            ? "bg-purple-700 text-white border-purple-800"
+            : "bg-slate-100 text-slate-700 border-slate-200";
+        return (
+            <span className={`font-black text-[9px] px-2 py-0.5 rounded-md tracking-wider border select-none ${badgeBg}`}>
+                {name}
+            </span>
+        );
+    }
+
+    return (
+        <img
+            src={logo}
+            alt={altText || name}
+            onError={() => setHasError(true)}
+            className="h-5 sm:h-5.5 max-w-[48px] object-contain shrink-0"
+        />
+    );
+};
 
 export default function PaymentMethodSelection({
     t,
     paymentMethod,
     setPaymentMethod
 }) {
+    const categories = [
+        {
+            id: "e_wallet",
+            title: t("checkout.payment.e_wallet", "E-Wallet"),
+            icon: <Wallet className="text-indigo-500" size={15} />,
+            methods: [
+                { id: "gopay", name: "GoPay", desc: "Bayar menggunakan aplikasi Gojek", logo: "/images/payment/gopay.svg" },
+                { id: "shopeepay", name: "ShopeePay", desc: "Bayar menggunakan aplikasi Shopee", logo: "/images/payment/shopeepay.svg" },
+                { id: "ovo", name: "OVO", desc: "Bayar menggunakan aplikasi OVO", logo: "/images/payment/ovo.svg" },
+                { id: "dana", name: "DANA", desc: "Bayar menggunakan aplikasi DANA", logo: "/images/payment/dana.svg" }
+            ]
+        },
+        {
+            id: "qris",
+            title: t("checkout.payment.qris", "QRIS"),
+            icon: <QrCode className="text-teal-500" size={15} />,
+            methods: [
+                { id: "qris", name: "QRIS", desc: "Scan QR menggunakan aplikasi e-wallet", logo: "/images/payment/qris.svg" }
+            ]
+        },
+        {
+            id: "virtual_account",
+            title: t("checkout.payment.virtual_account", "Virtual Account (Verifikasi Otomatis)"),
+            icon: <Landmark className="text-blue-500" size={15} />,
+            methods: [
+                { id: "bca_va", name: "BCA Virtual Account", desc: "Transfer Virtual Account BCA", logo: "/images/payment/bca.svg" },
+                { id: "bri_va", name: "BRI Virtual Account", desc: "Transfer Virtual Account BRI", logo: "/images/payment/bri.svg" },
+                { id: "bni_va", name: "BNI Virtual Account", desc: "Transfer Virtual Account BNI", logo: "/images/payment/bni.svg" },
+                { id: "mandiri_va", name: "Mandiri Bill Payment", desc: "Transfer Mandiri Bill Payment", logo: "/images/payment/mandiri.svg" },
+                { id: "permata_va", name: "Permata Virtual Account", desc: "Transfer Virtual Account Permata", logo: "/images/payment/permata.svg" },
+                { id: "cimb_va", name: "CIMB Niaga Virtual Account", desc: "Transfer Virtual Account CIMB Niaga", logo: "/images/payment/cimb.svg" },
+                { id: "seabank_va", name: "SeaBank Virtual Account", desc: "Transfer Virtual Account SeaBank", logo: "/images/payment/seabank.svg" },
+                { id: "danamon_va", name: "Danamon Virtual Account", desc: "Transfer Virtual Account Danamon", logo: "/images/payment/danamon.svg" },
+                { id: "bsi_va", name: "BSI Virtual Account", desc: "Transfer Virtual Account BSI", logo: "/images/payment/bsi.svg" },
+                { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: "Transfer Virtual Account Bank Saqu", logo: "/images/payment/saqu.svg" }
+            ]
+        },
+        {
+            id: "card",
+            title: t("checkout.payment.credit_card", "Credit / Debit Card"),
+            icon: <CreditCard className="text-amber-500" size={15} />,
+            methods: [
+                { 
+                    id: "credit_card", 
+                    name: "Credit / Debit Card", 
+                    desc: "Visa • Mastercard • JCB • Amex • UnionPay", 
+                    isCard: true 
+                }
+            ]
+        },
+        {
+            id: "retail",
+            title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
+            icon: <Store className="text-rose-500" size={15} />,
+            methods: [
+                { id: "alfamart", name: "Alfamart", desc: "Bayar di gerai Alfamart terdekat", logo: "/images/payment/alfamart.svg" },
+                { id: "indomaret", name: "Indomaret", desc: "Bayar di gerai Indomaret terdekat", logo: "/images/payment/indomaret.svg" }
+            ]
+        }
+    ];
+
+    // Accordion state to collapse/expand payment categories.
+    // Expands the category containing the currently selected method by default.
+    const [expandedCategory, setExpandedCategory] = useState(() => {
+        for (const cat of categories) {
+            if (cat.methods.some(m => m.id === paymentMethod)) {
+                return cat.id;
+            }
+        }
+        return "virtual_account";
+    });
+
+    const toggleCategory = (catId) => {
+        setExpandedCategory(prev => prev === catId ? null : catId);
+    };
+
+    // Auto-expand category if paymentMethod is changed from outside (e.g. initial load or parent update)
+    useEffect(() => {
+        for (const cat of categories) {
+            if (cat.methods.some(m => m.id === paymentMethod)) {
+                if (expandedCategory !== cat.id) {
+                    setExpandedCategory(cat.id);
+                }
+                break;
+            }
+        }
+    }, [paymentMethod]);
+
     return (
-        <section className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl">
-            <h2 className="text-base font-extrabold text-slate-900 pb-4 mb-4 border-b border-slate-100 flex items-center gap-2">
-                <CreditCard className="text-amber-500" size={18} />
-                {t("checkout.payment_section", "Metode Pembayaran")}
+        <section className="p-4 bg-white border border-slate-100 shadow-sm rounded-3xl space-y-3">
+            <h2 className="text-xs font-extrabold text-slate-900 pb-2 border-b border-slate-100 flex items-center gap-2">
+                <CreditCard className="text-blue-900" size={16} />
+                {t("checkout.payment_section", "Pilih Metode Pembayaran")}
             </h2>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-                <button
-                    type="button"
-                    onClick={() => setPaymentMethod("bank_transfer")}
-                    className={`flex items-center gap-3 p-4 border rounded-2xl text-left transition-all ${paymentMethod === 'bank_transfer'
-                        ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        }`}
-                >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'bank_transfer' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
-                        {paymentMethod === 'bank_transfer' && <div className="w-2 h-2 rounded-full bg-white" />}
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold">Transfer Bank Manual</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Konfirmasi manual lewat WhatsApp</p>
-                    </div>
-                </button>
+            <div className="space-y-2.5">
+                {categories.map((category) => {
+                    const isExpanded = expandedCategory === category.id;
+                    return (
+                        <div key={category.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/10">
+                            {/* Accordion Trigger Header */}
+                            <button
+                                type="button"
+                                onClick={() => toggleCategory(category.id)}
+                                className="w-full px-3.5 py-2.5 flex justify-between items-center bg-white hover:bg-slate-50/30 border-b border-slate-100 transition-colors"
+                            >
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    {category.icon}
+                                    <span>{category.title}</span>
+                                </span>
+                                {isExpanded ? (
+                                    <ChevronUp size={13} className="text-slate-400" />
+                                ) : (
+                                    <ChevronDown size={13} className="text-slate-400" />
+                                )}
+                            </button>
 
-                {/* <button
-                    type="button"
-                    onClick={() => setPaymentMethod("cod")}
-                    className={`flex items-center gap-3 p-4 border rounded-2xl text-left transition-all ${paymentMethod === 'cod'
-                        ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                        }`}
-                >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${paymentMethod === 'cod' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
-                        {paymentMethod === 'cod' && <div className="w-2 h-2 rounded-full bg-white" />}
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold">Cash on Delivery (COD)</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Bayar tunai di tempat saat barang sampai</p>
-                    </div>
-                </button> */}
+                            {/* Dropdown Content */}
+                            {isExpanded && (
+                                <div className="p-2.5 bg-white grid gap-2 sm:grid-cols-2 animate-in fade-in duration-200">
+                                    {category.methods.map((method) => {
+                                        const isSelected = paymentMethod === method.id;
+                                        return (
+                                            <button
+                                                key={method.id}
+                                                type="button"
+                                                onClick={() => setPaymentMethod(method.id)}
+                                                className={`flex items-center gap-2.5 p-2 border rounded-xl text-left transition-all ${
+                                                    isSelected
+                                                        ? "border-blue-900 bg-blue-50/20 text-blue-950 shadow-xs ring-1 ring-blue-900"
+                                                        : "border-slate-150 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/30"
+                                                }`}
+                                            >
+                                                {/* Smaller Radio Checklist */}
+                                                <div
+                                                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                                                        isSelected
+                                                            ? "border-blue-900 bg-blue-900"
+                                                            : "border-slate-300 bg-white"
+                                                    }`}
+                                                >
+                                                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                </div>
+                                                
+                                                <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-[11.5px] font-bold text-slate-800 truncate leading-snug">
+                                                            {method.name}
+                                                        </h4>
+                                                        <p className="text-[9.5px] text-slate-400 mt-0.5 leading-tight truncate">
+                                                            {method.desc}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    {/* Method Logo with Fallback */}
+                                                    <div className="shrink-0">
+                                                        {method.isCard ? (
+                                                            <div className="flex gap-0.5 items-center bg-slate-50 p-0.5 border border-slate-100 rounded-lg shrink-0 scale-90 origin-right">
+                                                                <img src="/images/payment/visa.svg" alt="Visa" className="h-3 object-contain" />
+                                                                <img src="/images/payment/mastercard.svg" alt="MC" className="h-3 object-contain" />
+                                                                <img src="/images/payment/jcb.svg" alt="JCB" className="h-3 object-contain" />
+                                                                <img src="/images/payment/amex.svg" alt="Amex" className="h-3 object-contain" />
+                                                                <img src="/images/payment/unionpay.svg" alt="UP" className="h-3 object-contain" />
+                                                            </div>
+                                                        ) : (
+                                                            <PaymentLogo logo={method.logo} name={method.name} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-2xl flex gap-2 text-[9.5px] text-slate-500 leading-normal font-medium">
+                <Info size={13} className="text-blue-900 shrink-0 mt-0.5" />
+                <p>
+                    {t(
+                        "checkout.payment.info",
+                        "Untuk kartu kredit/debit, detail kartu dimasukkan dengan aman di halaman pembayaran setelah Anda menekan tombol 'Buat Pesanan'."
+                    )}
+                </p>
             </div>
         </section>
     );

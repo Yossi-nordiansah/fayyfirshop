@@ -19,7 +19,6 @@ import PaymentMethodSelection from "@/Components/checkout/PaymentMethodSelection
 import OrderNotes from "@/Components/checkout/OrderNotes";
 import OrderSummary from "@/Components/checkout/OrderSummary";
 
-const CART_KEY = "fayyfir_cart";
 
 export default function CheckoutPage({ user, storeBranches, userVouchers = [] }) {
     const { t, locale } = useLanguage();
@@ -61,14 +60,15 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
     const [selectedRate, setSelectedRate] = useState(null);
 
     // Order/Payment details
-    const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+    const [paymentMethod, setPaymentMethod] = useState("bca_va");
     const [notes, setNotes] = useState("");
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
     // Load Cart Items and Check Branch Stock levels
     useEffect(() => {
-        const items = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+        const checkoutKey = user ? `fayyfir_checkout_${user.id}` : "fayyfir_checkout";
+        const items = JSON.parse(localStorage.getItem(checkoutKey) || "[]");
         setCartItems(items);
 
         if (items.length === 0) {
@@ -94,7 +94,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
                             return item;
                         });
                         setCartItems(updatedItems);
-                        localStorage.setItem(CART_KEY, JSON.stringify(updatedItems));
+                        localStorage.setItem(checkoutKey, JSON.stringify(updatedItems));
                     }
 
                     if (res.data.stocks) {
@@ -432,20 +432,39 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
         axios.post(route('checkout.place-order'), payload)
             .then(res => {
                 if (res.data && res.data.success) {
-                    // Clear Cart
-                    localStorage.removeItem(CART_KEY);
-                    window.dispatchEvent(new Event("fayyfir-cart-updated"));
-                    // Redirect to success page
-                    router.visit(route('checkout.success', res.data.order.id));
+                    const clearCartAndRedirect = (orderId) => {
+                        const cartKey = user ? `fayyfir_cart_${user.id}` : "fayyfir_cart";
+                        const checkoutKey = user ? `fayyfir_checkout_${user.id}` : "fayyfir_checkout";
+
+                        // Remove purchased items from the main cart
+                        const mainCart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+                        const updatedMainCart = mainCart.filter(item =>
+                            !cartItems.some(purchasedItem =>
+                                purchasedItem.id === item.id &&
+                                purchasedItem.variantId === item.variantId &&
+                                purchasedItem.color === item.color &&
+                                purchasedItem.size === item.size
+                            )
+                        );
+                        localStorage.setItem(cartKey, JSON.stringify(updatedMainCart));
+
+                        // Clear the checkout items
+                        localStorage.removeItem(checkoutKey);
+
+                        window.dispatchEvent(new Event("fayyfir-cart-updated"));
+                        // Redirect to custom payment details page
+                        router.visit(route('checkout.payment', orderId));
+                    };
+
+                    clearCartAndRedirect(res.data.order.id);
                 } else {
                     setErrorMsg(res.data.message || "Gagal membuat pesanan.");
+                    setIsPlacingOrder(false);
                 }
             })
             .catch(err => {
                 console.error(err);
                 setErrorMsg(err.response?.data?.message || "Terjadi kesalahan saat memproses pesanan Anda.");
-            })
-            .finally(() => {
                 setIsPlacingOrder(false);
             });
     };
@@ -552,6 +571,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
                         {/* Right Column: Order Summary & Pay */}
                         <OrderSummary
                             t={t}
+                            locale={locale}
                             cartItems={cartItems}
                             selectedBranch={selectedBranch}
                             selectedRate={selectedRate}

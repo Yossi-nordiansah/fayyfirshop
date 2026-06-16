@@ -791,7 +791,8 @@ class CheckoutController extends Controller
                     'shipping_address' => $request->shipping_address,
                     'notes' => $request->notes,
                     'status' => 'pending',
-                    'payment_status' => ($request->payment_method === 'cod') ? 'unpaid' : 'paid', // Bank Transfer is mock paid
+                    'payment_status' => 'unpaid',
+                    'payment_method' => $request->payment_method,
                 ]);
 
                 // Track and apply manual voucher usage
@@ -903,14 +904,24 @@ class CheckoutController extends Controller
                     }
                 }
 
+                if ($request->payment_method !== 'cod') {
+                    try {
+                        $details = $this->chargeMidtrans($order, $request->payment_method);
+                        $order->payment_details = $details;
+                        $order->save();
+                    } catch (\Throwable $midtransEx) {
+                        throw new \Exception("Midtrans Error: " . $midtransEx->getMessage());
+                    }
+                }
+
                 return $order;
             });
 
             return response()->json([
                 'success' => true,
-                'order' => $order
+                'order' => $order,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to place order: ' . $e->getMessage()
@@ -1178,5 +1189,390 @@ class CheckoutController extends Controller
         }
 
         return 1; // Default fallback to 1 to avoid division by zero
+    }
+
+    public function midtransCallback(Request $request)
+    {
+        $serverKey = config('services.midtrans.server_key');
+        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+        
+        if ($hashed !== $request->signature_key) {
+            return response()->json(['message' => 'Invalid signature'], 403);
+        }
+
+        $parts = explode('-', $request->order_id);
+        $invoiceNumber = implode('-', array_slice($parts, 0, 3));
+        $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
+        
+        if (!$order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $transactionStatus = $request->transaction_status;
+        $type = $request->payment_type;
+        $fraud = $request->fraud_status;
+
+        $paymentStatus = 'unpaid';
+        $status = $order->status;
+
+        if ($transactionStatus == 'capture') {
+            if ($type == 'credit_card') {
+                if ($fraud == 'challenge') {
+                    $paymentStatus = 'unpaid';
+                    $status = 'pending';
+                } else {
+                    $paymentStatus = 'paid';
+                    $status = 'processing';
+                }
+            } else {
+                $paymentStatus = 'paid';
+                $status = 'processing';
+            }
+        } else if ($transactionStatus == 'settlement') {
+            $paymentStatus = 'paid';
+            $status = 'processing';
+        } else if ($transactionStatus == 'pending') {
+            $paymentStatus = 'unpaid';
+            $status = 'pending';
+        } else if ($transactionStatus == 'deny' || $transactionStatus == 'expire' || $transactionStatus == 'cancel') {
+            $paymentStatus = 'expired';
+            if ($order->status !== 'cancelled') {
+                $status = 'cancelled';
+                DB::transaction(function () use ($order) {
+                    $order->restoreStock();
+                });
+            } else {
+                $status = 'cancelled';
+            }
+        }
+
+        $details = $order->payment_details;
+        if (is_array($details)) {
+            $details['transaction_status'] = $transactionStatus;
+            $order->payment_details = $details;
+        }
+
+        $order->update([
+            'payment_status' => $paymentStatus,
+            'status' => $status
+        ]);
+
+        return response()->json(['message' => 'Callback handled successfully']);
+    }
+
+    public function payment($id)
+    {
+        $order = Order::with(['items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return Inertia::render('checkout/PaymentPage', [
+            'order' => $order,
+            'midtransClientKey' => config('services.midtrans.client_key'),
+            'isProduction' => config('services.midtrans.is_production'),
+        ]);
+    }
+
+    public function changePaymentMethod(Request $request, $id)
+    {
+        $request->validate([
+            'payment_method' => 'required|string',
+            'phone_number' => 'nullable|string',
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan ini sudah dibayar atau dibatalkan.'
+            ], 422);
+        }
+
+        try {
+            if ($order->payment_details && isset($order->payment_details['midtrans_order_id'])) {
+                try {
+                    \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                    \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                    \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                } catch (\Exception $cancelEx) {
+                    // Ignore cancel error if transaction not found or already cancelled on Midtrans side
+                }
+            }
+
+            $details = $this->chargeMidtrans($order, $request->payment_method, null, $request->phone_number);
+            $order->update([
+                'payment_method' => $request->payment_method,
+                'payment_details' => $details,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'order' => $order->load(['items.product', 'items.variant', 'storeBranch']),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah metode pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function payCreditCard(Request $request, $id)
+    {
+        $request->validate([
+            'token_id' => 'required|string',
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan ini sudah dibayar atau dibatalkan.'
+            ], 422);
+        }
+
+        try {
+            $details = $this->chargeMidtrans($order, 'credit_card', $request->token_id);
+            $order->update([
+                'payment_details' => $details,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'order' => $order->load(['items.product', 'items.variant', 'storeBranch']),
+                'redirect_url' => $details['redirect_url'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pembayaran kartu gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function cancelOrder($id)
+    {
+        $order = Order::with('items')->findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan ini sudah dibayar atau dibatalkan.'
+            ], 422);
+        }
+
+        try {
+            $order->update([
+                'cancellation_status' => 'pending',
+                'cancellation_reason' => 'Dibatalkan oleh customer dari halaman pembayaran.'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pengajuan pembatalan berhasil dikirim dan sedang menunggu persetujuan admin.'
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengajukan pembatalan pesanan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function chargeMidtrans($order, $paymentMethod, $cardToken = null, $customPhone = null)
+    {
+        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+        \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+        \Midtrans\Config::$isSanitized = true;
+        \Midtrans\Config::$is3ds = true;
+
+        $user = $order->user;
+        $nameParts = explode(' ', trim($user->name));
+        $firstName = $nameParts[0];
+        $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+
+        $midtransOrderId = $order->invoice_number . '-' . time();
+
+        $params = [
+            'transaction_details' => [
+                'order_id' => $midtransOrderId,
+                'gross_amount' => (int) $order->total_amount,
+            ],
+            'customer_details' => [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $user->email,
+                'phone' => $user->phone ?: '08111222333',
+            ],
+            'notification_url' => url('/checkout/midtrans-callback'),
+        ];
+
+        switch ($paymentMethod) {
+            case 'qris':
+            case 'dana':
+                $params['payment_type'] = 'qris';
+                break;
+            case 'bca_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'bca'];
+                break;
+            case 'bri_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'bri'];
+                break;
+            case 'bni_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'bni'];
+                break;
+            case 'permata_va':
+            case 'seabank_va':
+            case 'danamon_va':
+            case 'saqu_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'permata'];
+                break;
+            case 'cimb_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'cimb'];
+                break;
+            case 'bsi_va':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => 'bsi'];
+                break;
+            case 'mandiri_va':
+                $params['payment_type'] = 'echannel';
+                $params['echannel'] = [
+                    'bill_info1' => 'Payment:',
+                    'bill_info2' => 'Order Payment'
+                ];
+                break;
+            case 'gopay':
+                $params['payment_type'] = 'gopay';
+                break;
+            case 'shopeepay':
+                $params['payment_type'] = 'shopeepay';
+                $params['shopeepay'] = [
+                    'callback_url' => url('/checkout/payment/' . $order->id)
+                ];
+                break;
+            case 'ovo':
+                $params['payment_type'] = 'ovo';
+                if ($customPhone) {
+                    // Clean and charge
+                    $phone = $customPhone;
+                    $phone = preg_replace('/[^0-9+]/', '', $phone);
+                    if (str_starts_with($phone, '+62')) {
+                        $phone = '0' . substr($phone, 3);
+                    } elseif (str_starts_with($phone, '62')) {
+                        $phone = '0' . substr($phone, 2);
+                    }
+                    $params['ovo'] = [
+                        'payer_phone_number' => $phone
+                    ];
+                } else {
+                    return [
+                        'midtrans_order_id' => $midtransOrderId,
+                        'transaction_status' => 'pending'
+                    ];
+                }
+                break;
+            case 'alfamart':
+                $params['payment_type'] = 'cstore';
+                $params['cstore'] = ['store' => 'alfamart'];
+                break;
+            case 'indomaret':
+                $params['payment_type'] = 'cstore';
+                $params['cstore'] = ['store' => 'indomaret'];
+                break;
+            case 'credit_card':
+                $params['payment_type'] = 'credit_card';
+                if ($cardToken) {
+                    $params['credit_card'] = [
+                        'token_id' => $cardToken,
+                        'secure' => true,
+                    ];
+                } else {
+                    return [
+                        'midtrans_order_id' => $midtransOrderId,
+                        'transaction_status' => 'pending'
+                    ];
+                }
+                break;
+            default:
+                throw new \Exception("Unsupported payment method: " . $paymentMethod);
+        }
+
+        $response = \Midtrans\CoreApi::charge($params);
+        
+        $details = [
+            'midtrans_order_id' => $midtransOrderId,
+            'transaction_status' => $response->transaction_status ?? 'pending',
+        ];
+
+        if (in_array($paymentMethod, ['qris', 'dana', 'gopay', 'shopeepay'])) {
+            $details['qr_string'] = $response->qr_string ?? null;
+            if (isset($response->actions)) {
+                foreach ($response->actions as $action) {
+                    $actionName = is_array($action) ? ($action['name'] ?? null) : ($action->name ?? null);
+                    $actionUrl = is_array($action) ? ($action['url'] ?? null) : ($action->url ?? null);
+                    if (in_array($actionName, ['generate-qr-code', 'generate-qr-code-v2', 'generate_qr_code'])) {
+                        $details['qr_url'] = $actionUrl;
+                    } elseif (in_array($actionName, ['deeplink-redirect', 'deeplink_redirect', 'deeplink-redirection', 'deeplink_redirection'])) {
+                        $details['deeplink'] = $actionUrl;
+                    }
+                }
+            }
+
+            // Generate DANA universal app-redirect link dynamically using QRIS string
+            if ($paymentMethod === 'dana' && !empty($details['qr_string'])) {
+                $details['deeplink'] = 'https://link.dana.id/qr/' . $details['qr_string'];
+            }
+
+            $details['expiry_time'] = $response->expiry_time ?? null;
+        } elseif (str_contains($paymentMethod, '_va')) {
+            if (in_array($paymentMethod, ['permata_va', 'seabank_va', 'danamon_va', 'saqu_va'])) {
+                $details['va_number'] = $response->permata_va_number ?? null;
+                $details['bank'] = 'permata';
+            } else {
+                $vaNumbers = $response->va_numbers ?? [];
+                $details['va_number'] = !empty($vaNumbers) ? ($vaNumbers[0]->va_number ?? null) : null;
+                $details['bank'] = !empty($vaNumbers) ? ($vaNumbers[0]->bank ?? str_replace('_va', '', $paymentMethod)) : str_replace('_va', '', $paymentMethod);
+            }
+            $details['expiry_time'] = $response->expiry_time ?? null;
+        } elseif ($paymentMethod === 'mandiri_va') {
+            $details['bill_key'] = $response->bill_key ?? null;
+            $details['biller_code'] = $response->biller_code ?? null;
+            $details['expiry_time'] = $response->expiry_time ?? null;
+        } elseif ($paymentMethod === 'ovo') {
+            $details['expiry_time'] = $response->expiry_time ?? null;
+            if (isset($phone)) {
+                $details['ovo_phone'] = $phone;
+            }
+        } elseif (in_array($paymentMethod, ['alfamart', 'indomaret'])) {
+            $details['payment_code'] = $response->payment_code ?? null;
+            $details['store'] = $response->store ?? $paymentMethod;
+            $details['expiry_time'] = $response->expiry_time ?? null;
+        } elseif ($paymentMethod === 'credit_card') {
+            $details['redirect_url'] = $response->redirect_url ?? null;
+            $details['expiry_time'] = $response->expiry_time ?? null;
+        }
+
+        return $details;
     }
 }
