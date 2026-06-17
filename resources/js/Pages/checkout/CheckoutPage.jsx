@@ -19,7 +19,6 @@ import PaymentMethodSelection from "@/Components/checkout/PaymentMethodSelection
 import OrderNotes from "@/Components/checkout/OrderNotes";
 import OrderSummary from "@/Components/checkout/OrderSummary";
 
-
 export default function CheckoutPage({ user, storeBranches, userVouchers = [] }) {
     const { t, locale } = useLanguage();
     const isRtl = locale === 'arabic';

@@ -1,6 +1,6 @@
 import React from "react";
 import { Head, Link } from "@inertiajs/react";
-import { Truck, MapPin, Calendar, Clock, ShoppingBag, ArrowLeft, Package, User } from "lucide-react";
+import { Truck, MapPin, Calendar, Clock, ShoppingBag, ArrowLeft, Package, User, Store } from "lucide-react";
 import { motion } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
 import Navbar from "@/Components/Navbar";
@@ -87,47 +87,8 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                     </div>
 
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-[1fr_300px]">
-                        {/* Left Column: Tracking logs & Stepper */}
+                        {/* Left Column: Tracking logs */}
                         <div className="space-y-6">
-                            {/* Visual Progress Stepper */}
-                            <section className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl">
-                                <h3 className="text-sm font-extrabold text-slate-900 mb-6 uppercase tracking-wider text-slate-400">Status Pesanan</h3>
-
-                                {isCancelled ? (
-                                    <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-2xl text-center text-xs font-semibold">
-                                        Pesanan ini telah dibatalkan (Cancelled).
-                                    </div>
-                                ) : (
-                                    <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4">
-                                        {/* Mobile Line */}
-                                        <div className="absolute left-[15px] md:left-0 top-0 bottom-0 md:bottom-auto md:top-[15px] md:left-[5%] md:right-[5%] h-full md:h-1 w-0.5 md:w-[90%] bg-slate-100 z-0">
-                                            <div
-                                                className="h-full md:h-full bg-blue-700 transition-all duration-500"
-                                                style={{
-                                                    height: window.innerWidth < 768 ? `${(activeStep / 3) * 100}%` : 'auto',
-                                                    width: window.innerWidth >= 768 ? `${(activeStep / 3) * 100}%` : 'auto',
-                                                }}
-                                            />
-                                        </div>
-
-                                        {/* Steps */}
-                                        {fallbackTimeline.map((step, idx) => {
-                                            const isDone = activeStep >= idx;
-                                            return (
-                                                <div key={idx} className="relative z-10 flex md:flex-col items-center md:text-center gap-4 md:gap-2 flex-1 w-full md:w-auto">
-                                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs transition-all ${isDone ? 'bg-blue-900 border-blue-900 text-white shadow-md shadow-blue-200' : 'bg-white border-slate-200 text-slate-400'}`}>
-                                                        {isDone ? <CheckIcon size={12} /> : idx + 1}
-                                                    </div>
-                                                    <div className="text-left md:text-center">
-                                                        <h4 className={`text-xs font-bold ${isDone ? 'text-blue-950' : 'text-slate-400'}`}>{step.title}</h4>
-                                                        {step.date && <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(step.date)}</p>}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </section>
 
                             {/* Shipment Logs Timeline */}
                             <section className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl">
@@ -233,7 +194,13 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                                         <MapPin size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <span className="text-slate-400">Alamat Pengiriman</span>
-                                            <p className="text-slate-600 mt-1 leading-normal">{order.shipping_address}</p>
+                                            {order.user?.address ? (
+                                                <p className="text-slate-600 mt-1 leading-normal">
+                                                    {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
+                                                </p>
+                                            ) : (
+                                                <p className="text-slate-600 mt-1 leading-normal">{order.shipping_address}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

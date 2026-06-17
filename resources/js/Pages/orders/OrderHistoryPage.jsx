@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import axios from "axios";
 import {
@@ -9,6 +9,7 @@ import {
     CreditCard,
     ChevronDown,
     ChevronUp,
+    ChevronRight,
     MessageCircle,
     ExternalLink,
     AlertCircle,
@@ -26,8 +27,10 @@ import MainLayout from "@/Layouts/MainLayout";
 import Navbar from "@/Components/Navbar";
 import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
+import OrderCard from "@/Components/orders/OrderCard";
+import CancelOrderModal from "@/Components/orders/CancelOrderModal";
 
-export default function OrderHistoryPage({ orders = [] }) {
+export default function OrderHistoryPage({ orders = [], midtransClientKey, isProduction }) {
     const { t, locale } = useLanguage();
     const isRtl = locale === 'arabic';
 
@@ -143,6 +146,71 @@ export default function OrderHistoryPage({ orders = [] }) {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
     };
 
+    const touchStartX = React.useRef(0);
+    const touchStartY = React.useRef(0);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+        if (Math.abs(deltaX) > 80 && Math.abs(deltaY) < 40) {
+            const tabIndex = tabs.findIndex(tab => tab.id === activeTab);
+            if (deltaX < 0) {
+                // Swipe Left -> Next Tab
+                if (tabIndex < tabs.length - 1) {
+                    setActiveTab(tabs[tabIndex + 1].id);
+                    setExpandedOrderId(null);
+                }
+            } else {
+                // Swipe Right -> Previous Tab
+                if (tabIndex > 0) {
+                    setActiveTab(tabs[tabIndex - 1].id);
+                    setExpandedOrderId(null);
+                }
+            }
+        }
+    };
+
+    const getEstimatedArrival = (order) => {
+        const courier = order.shipping_courier ? order.shipping_courier.toLowerCase() : "";
+        let durationText = t("orders.duration.regular", "2-3 Hari Kerja");
+        if (courier.includes("instant") || courier.includes("sameday")) {
+            durationText = t("orders.duration.sameday", "1 Hari (Sameday/Instant)");
+        } else if (courier.includes("cargo") || courier.includes("trucking")) {
+            durationText = t("orders.duration.cargo", "4-7 Hari Kerja");
+        }
+        
+        if (order.updated_at) {
+            try {
+                const shipDate = new Date(order.updated_at);
+                const minDays = (courier.includes("cargo") || courier.includes("trucking")) ? 4 : 2;
+                const maxDays = (courier.includes("cargo") || courier.includes("trucking")) ? 7 : 3;
+                
+                const minDate = new Date(shipDate.getTime() + minDays * 24 * 60 * 60 * 1000);
+                const maxDate = new Date(shipDate.getTime() + maxDays * 24 * 60 * 60 * 1000);
+                
+                const formatOptions = { day: 'numeric', month: 'short' };
+                const minDateStr = minDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : "en-US", formatOptions);
+                const maxDateStr = maxDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : "en-US", formatOptions);
+                
+                return `${minDateStr} - ${maxDateStr} (${durationText})`;
+            } catch (err) {
+                return durationText;
+            }
+        }
+        return durationText;
+    };
+
+    const getWhatsAppReviewUrl = (order) => {
+        const text = `Halo Admin Fayyfir Shop, saya ingin memberikan ulasan/nilai untuk pesanan saya:\n\n*No. Invoice:* ${order.invoice_number}\n\nPesanan saya sangat memuaskan!`;
+        return `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`;
+    };
+
     const getStatusStyle = (status, paymentStatus, cancellationStatus) => {
         if (cancellationStatus === "pending") {
             return {
@@ -201,23 +269,62 @@ export default function OrderHistoryPage({ orders = [] }) {
     };
 
     const handlePayNow = (order) => {
+        const triggerSnapPay = (snapToken) => {
+            window.snap.pay(snapToken, {
+                onSuccess: function (result) {
+                    router.reload();
+                },
+                onPending: function (result) {
+                    router.reload();
+                },
+                onError: function (result) {
+                    alert(t("orders.payment_failed", "Pembayaran gagal. Silakan coba lagi."));
+                },
+                onClose: function () {
+                    router.reload();
+                }
+            });
+        };
+
+        const loadSnapAndPay = (snapToken) => {
+            if (window.snap) {
+                triggerSnapPay(snapToken);
+                return;
+            }
+
+            // Load Snap script dynamically
+            const scriptId = "midtrans-snap-script";
+            let script = document.getElementById(scriptId);
+
+            if (!script) {
+                script = document.createElement("script");
+                script.src = isProduction
+                    ? "https://app.midtrans.com/snap/snap.js"
+                    : "https://app.sandbox.midtrans.com/snap/snap.js";
+                script.id = scriptId;
+                script.setAttribute("data-client-key", midtransClientKey);
+                script.async = true;
+
+                script.onload = () => {
+                    triggerSnapPay(snapToken);
+                };
+                script.onerror = () => {
+                    alert("Gagal memuat sistem pembayaran Midtrans. Coba lagi.");
+                };
+
+                document.body.appendChild(script);
+            } else {
+                // If script tag exists but window.snap is not yet initialized
+                script.onload = () => {
+                    triggerSnapPay(snapToken);
+                };
+            }
+        };
+
         axios.post(route('orders.payment-token', order.id))
             .then(res => {
                 if (res.data && res.data.snap_token) {
-                    window.snap.pay(res.data.snap_token, {
-                        onSuccess: function (result) {
-                            router.reload();
-                        },
-                        onPending: function (result) {
-                            router.reload();
-                        },
-                        onError: function (result) {
-                            alert(t("orders.payment_failed", "Pembayaran gagal. Silakan coba lagi."));
-                        },
-                        onClose: function () {
-                            router.reload();
-                        }
-                    });
+                    loadSnapAndPay(res.data.snap_token);
                 } else {
                     alert(res.data.message || "Gagal mendapatkan token pembayaran.");
                 }
@@ -266,7 +373,7 @@ export default function OrderHistoryPage({ orders = [] }) {
             <Head title={`${t("orders.title", "Pesanan Saya")} - Fayyfir Shop`} />
             <Navbar alwaysSolid={true} />
 
-            <div className="min-h-screen bg-slate-50 pb-10 pt-28" dir={isRtl ? "rtl" : "ltr"}>
+            <div className="min-h-screen bg-slate-100 pb-10 pt-28" dir={isRtl ? "rtl" : "ltr"}>
                 <div className="mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
@@ -321,7 +428,11 @@ export default function OrderHistoryPage({ orders = [] }) {
                     </div>
 
                     {/* Orders List Container */}
-                    <div className="space-y-4">
+                    <div 
+                        className="space-y-4 min-h-[450px]"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                    >
                         <AnimatePresence mode="wait">
                             {filteredOrders.length > 0 ? (
                                 <motion.div
@@ -332,264 +443,22 @@ export default function OrderHistoryPage({ orders = [] }) {
                                     transition={{ duration: 0.2 }}
                                     className="space-y-4"
                                 >
-                                    {filteredOrders.map((order) => {
-                                        const statusInfo = getStatusStyle(order.status, order.payment_status, order.cancellation_status);
-                                        const isExpanded = expandedOrderId === order.id;
-
-                                        return (
-                                            <div
-                                                key={order.id}
-                                                className="bg-white border border-slate-100 shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-shadow"
-                                            >
-                                                {/* Card Header */}
-                                                <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                                        <div className="font-mono font-bold text-xs bg-white border border-slate-200 text-blue-950 px-3 py-1 rounded-xl shadow-xs">
-                                                            {order.invoice_number}
-                                                        </div>
-                                                        <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                                                            <Calendar size={12} />
-                                                            <span>{formatDate(order.created_at)}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
-                                                            <Store size={12} className="text-blue-700" />
-                                                            <span>{order.store_branch?.name || "-"}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`inline-flex items-center gap-1 px-3 py-1 text-[10px] font-black border uppercase rounded-full ${statusInfo.bg}`}>
-                                                            {statusInfo.icon}
-                                                            <span>{statusInfo.label}</span>
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Card Content (Main items brief) */}
-                                                <div className="p-5">
-                                                    <div className="space-y-4">
-                                                        {order.items.map((item, idx) => (
-                                                            <div key={idx} className="flex gap-4">
-                                                                {/* Image thumbnail placeholder */}
-                                                                <div className="w-16 h-16 bg-slate-100 rounded-xl border border-slate-100 flex items-center justify-center flex-shrink-0">
-                                                                    {item.product?.images && item.product.images.length > 0 ? (
-                                                                        (() => {
-                                                                            const primaryImg = item.product.images.find(img => !!img.is_primary && img.is_primary !== '0' && img.is_primary !== 0) || item.product.images[0];
-                                                                            const src = primaryImg.image_path.startsWith("http") || primaryImg.image_path.startsWith("/")
-                                                                                ? primaryImg.image_path
-                                                                                : `/storage/${primaryImg.image_path}`;
-                                                                            return (
-                                                                                <img
-                                                                                    src={src}
-                                                                                    alt={item.product.title}
-                                                                                    className="max-w-full max-h-full object-contain rounded-xl"
-                                                                                />
-                                                                            );
-                                                                        })()
-                                                                    ) : (
-                                                                        <Package className="text-slate-400" size={24} />
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Item Details */}
-                                                                <div className="flex-1 min-w-0">
-                                                                    <h4 className="text-sm font-bold text-slate-900 truncate">
-                                                                        {getLocalizedValue(item.product?.name_translations, item.product?.title)}
-                                                                    </h4>
-                                                                    {item.variant && (
-                                                                        <p className="text-xs text-slate-500 mt-0.5">
-                                                                            Varian: {getLocalizedValue(item.variant.name_translations, item.variant.name)}
-                                                                        </p>
-                                                                    )}
-                                                                    <p className="text-xs text-slate-400 mt-1">
-                                                                        {item.quantity} x {formatPrice(item.price)}
-                                                                    </p>
-                                                                </div>
-
-                                                                {/* Subtotal Item */}
-                                                                <div className="text-right text-xs font-black text-slate-900 self-center">
-                                                                    {formatPrice(item.price * item.quantity)}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Card Expandable Details Accordion */}
-                                                <AnimatePresence>
-                                                    {isExpanded && (
-                                                        <motion.div
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: "auto", opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={{ duration: 0.25 }}
-                                                            className="overflow-hidden border-t border-slate-100 bg-slate-50/20"
-                                                        >
-                                                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-600">
-                                                                {/* Left: Shipping destination details */}
-                                                                <div className="space-y-4">
-                                                                    <div>
-                                                                        <h5 className="font-bold text-slate-900 flex items-center gap-1.5 mb-2">
-                                                                            <MapPin size={14} className="text-blue-700" />
-                                                                            <span>Alamat Pengiriman</span>
-                                                                        </h5>
-                                                                        <p className="leading-relaxed bg-white border border-slate-100 p-3 rounded-2xl">
-                                                                            {order.shipping_address}
-                                                                        </p>
-                                                                    </div>
-
-                                                                    {order.notes && (
-                                                                        <div>
-                                                                            <h5 className="font-bold text-slate-900 mb-1">Catatan Pesanan</h5>
-                                                                            <p className="italic text-slate-500 bg-white border border-slate-100 p-3 rounded-2xl">
-                                                                                "{order.notes}"
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
-                                                                    {order.cancellation_reason && (
-                                                                        <div className="mt-3">
-                                                                            <h5 className="font-bold text-slate-900 mb-1">Alasan Pembatalan</h5>
-                                                                            <p className="text-rose-600 bg-rose-50/50 border border-rose-100 p-3 rounded-2xl">
-                                                                                "{order.cancellation_reason}"
-                                                                                {order.cancellation_status && (
-                                                                                    <span className="block text-[10px] text-slate-400 mt-1 uppercase font-bold">
-                                                                                        Status Pengajuan: {order.cancellation_status}
-                                                                                    </span>
-                                                                                )}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Right: Payment details */}
-                                                                <div className="space-y-4">
-                                                                    <div>
-                                                                        <h5 className="font-bold text-slate-900 flex items-center gap-1.5 mb-3">
-                                                                            <DollarSign size={14} className="text-blue-700" />
-                                                                            <span>Rincian Pembayaran</span>
-                                                                        </h5>
-                                                                        <div className="bg-white border border-slate-100 p-4 rounded-2xl space-y-2">
-                                                                            <div className="flex justify-between">
-                                                                                <span>Subtotal</span>
-                                                                                <span className="font-bold text-slate-800">{formatPrice(order.subtotal)}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between">
-                                                                                <span>Ongkos Kirim ({order.shipping_courier})</span>
-                                                                                <span className="font-bold text-slate-800">{formatPrice(order.shipping_cost)}</span>
-                                                                            </div>
-                                                                            {order.discount_amount > 0 && (
-                                                                                <div className="flex justify-between text-emerald-600">
-                                                                                    <span>Diskon</span>
-                                                                                    <span>-{formatPrice(order.discount_amount)}</span>
-                                                                                </div>
-                                                                            )}
-                                                                            <div className="flex justify-between pt-2 border-t border-slate-100 font-extrabold text-sm text-slate-900">
-                                                                                <span>Total Pembayaran</span>
-                                                                                <span className="text-blue-900 font-black">{formatPrice(order.total_amount)}</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-
-                                                {/* Card Footer (Totals & Actions) */}
-                                                <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-slate-400">{t("orders.total", "Total Belanja")}:</span>
-                                                        <span className="text-base font-black text-blue-950">{formatPrice(order.total_amount)}</span>
-                                                    </div>
-
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        {/* Toggle Details Button */}
-                                                        <button
-                                                            onClick={() => toggleExpand(order.id)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-950 px-3.5 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-                                                        >
-                                                            <span>{t("orders.action.details", "Detail")}</span>
-                                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                                        </button>
-
-                                                        {/* WhatsApp Admin button */}
-                                                        <a
-                                                            href={getWhatsAppUrl(order)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 px-3.5 py-2 border border-emerald-100 hover:border-emerald-200 rounded-xl bg-emerald-50/50 hover:bg-emerald-50 transition-colors"
-                                                        >
-                                                            <MessageCircle size={14} />
-                                                            <span>{t("orders.action.contact", "Hubungi Admin")}</span>
-                                                        </a>
-
-                                                        {/* Special Actions: Pay Now, Change Method, Cancel if Unpaid */}
-                                                        {order.payment_status === "unpaid" && order.status === "pending" && order.cancellation_status !== "pending" && (
-                                                            <>
-                                                                <Link
-                                                                    href={route('checkout.payment', order.id)}
-                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-4 py-2 rounded-xl shadow-md transition-all active:scale-[0.98]"
-                                                                >
-                                                                    <CreditCard size={14} />
-                                                                    <span>{t("orders.action.pay", "Bayar Sekarang")}</span>
-                                                                </Link>
-                                                                <button
-                                                                    onClick={() => openCancelModal(order.id)}
-                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all active:scale-[0.98]"
-                                                                >
-                                                                    <X size={14} />
-                                                                    <span>{t("orders.action.cancel", "Batalkan Pesanan")}</span>
-                                                                </button>
-                                                            </>
-                                                        )}
-
-                                                        {/* Special Action: Request Cancellation if Processing/Paid */}
-                                                        {/* Special Action: Waiting for Approval */}
-                                                         {order.cancellation_status === "pending" && (
-                                                             <button
-                                                                 disabled
-                                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 border border-slate-200 bg-slate-50 px-4 py-2 rounded-xl cursor-not-allowed"
-                                                             >
-                                                                 <Clock size={14} className="animate-pulse text-amber-500" />
-                                                                 <span>{t("orders.action.waiting_cancel", "Menunggu Persetujuan Pembatalan")}</span>
-                                                             </button>
-                                                         )}
-
-                                                          {order.cancellation_status === "rejected" && (
-                                                              <button
-                                                                  disabled
-                                                                  className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-400 border border-rose-200 bg-rose-50 px-4 py-2 rounded-xl cursor-not-allowed"
-                                                              >
-                                                                  <X size={14} className="text-rose-500" />
-                                                                  <span>{t("orders.action.cancel_rejected", "Pengajuan Pembatalan Ditolak")}</span>
-                                                              </button>
-                                                          )}
-
-                                                         {(order.status === "processing" || (order.status === "pending" && order.payment_status === "paid")) && order.cancellation_status !== "pending" && order.cancellation_status !== "rejected" && (
-                                                            <button
-                                                                onClick={() => openCancelModal(order.id)}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all active:scale-[0.98]"
-                                                            >
-                                                                <X size={14} />
-                                                                <span>{t("orders.action.request_cancel", "Ajukan Pembatalan")}</span>
-                                                            </button>
-                                                        )}
-
-                                                        {/* Special Action: Track Order if Shipped */}
-                                                        {order.status === "shipped" && (
-                                                            <Link
-                                                                href={route('orders.track', order.id)}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-2 rounded-xl shadow-md transition-all active:scale-[0.98]"
-                                                            >
-                                                                <span>{t("orders.track", "Lacak Pengiriman")}</span>
-                                                                <ExternalLink size={14} />
-                                                            </Link>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {filteredOrders.map((order) => (
+                                        <OrderCard
+                                            key={order.id}
+                                            order={order}
+                                            isExpanded={expandedOrderId === order.id}
+                                            onToggle={toggleExpand}
+                                            onOpenCancelModal={openCancelModal}
+                                            formatPrice={formatPrice}
+                                            formatDate={formatDate}
+                                            getLocalizedValue={getLocalizedValue}
+                                            getEstimatedArrival={getEstimatedArrival}
+                                            getWhatsAppUrl={getWhatsAppUrl}
+                                            getWhatsAppReviewUrl={getWhatsAppReviewUrl}
+                                            getStatusStyle={getStatusStyle}
+                                        />
+                                    ))}
                                 </motion.div>
                             ) : (
                                 <motion.div
@@ -623,67 +492,14 @@ export default function OrderHistoryPage({ orders = [] }) {
             </div>
             {/* Cancellation Reason Modal */}
             <AnimatePresence>
-                {isCancelModalOpen && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-white border border-slate-100 rounded-3xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
-                        >
-                            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <h3 className="font-bold text-base text-slate-950">
-                                    {t("orders.cancel_title", "Alasan Pembatalan Pesanan")}
-                                </h3>
-                                <button
-                                    onClick={closeCancelModal}
-                                    className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleCancelSubmit} className="p-5 space-y-4">
-                                <p className="text-xs text-slate-500">
-                                    {t("orders.cancel_desc", "Silakan masukkan alasan mengapa Anda ingin membatalkan pesanan ini. Untuk pesanan yang sudah dibayar, pengajuan Anda akan ditinjau oleh admin.")}
-                                </p>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                        {t("orders.cancel_reason_label", "Alasan Pembatalan")}
-                                    </label>
-                                    <textarea
-                                        rows={4}
-                                        value={cancelReason}
-                                        onChange={(e) => setCancelReason(e.target.value)}
-                                        placeholder={t("orders.cancel_reason_placeholder", "Contoh: Ingin mengubah alamat pengiriman, salah memilih varian, dll.")}
-                                        className="w-full border border-slate-200 rounded-2xl text-xs outline-none p-3.5 focus:border-blue-500 bg-slate-50/30 focus:bg-white transition"
-                                        maxLength={1000}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={closeCancelModal}
-                                        className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-2xl text-xs transition"
-                                    >
-                                        {t("common.cancel", "Batal")}
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmittingCancel}
-                                        className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-2xl text-xs transition"
-                                    >
-                                        {isSubmittingCancel ? t("common.submitting", "Mengirim...") : t("orders.cancel_submit", "Kirim Pengajuan")}
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
+                <CancelOrderModal
+                    isOpen={isCancelModalOpen}
+                    onClose={closeCancelModal}
+                    onSubmit={handleCancelSubmit}
+                    cancelReason={cancelReason}
+                    setCancelReason={setCancelReason}
+                    isSubmitting={isSubmittingCancel}
+                />
             </AnimatePresence>
 
             <Footer />

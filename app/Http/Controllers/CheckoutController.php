@@ -931,7 +931,7 @@ class CheckoutController extends Controller
 
     public function success($id)
     {
-        $order = Order::with(['items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
+        $order = Order::with(['user', 'items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
 
         if ($order->user_id !== auth()->id()) {
             abort(403);

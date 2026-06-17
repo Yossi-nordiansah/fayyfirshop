@@ -225,6 +225,38 @@ class OrderController extends Controller
 
         $apiKey = env('BITESHIP_API_KEY');
 
+        $courier = strtolower($order->shipping_courier);
+        $service = strtolower($order->shipping_service);
+
+        // Normalize courier company name for Biteship
+        if ($courier === 'j&t') {
+            $courier = 'jnt';
+        } elseif ($courier === 'pos indonesia') {
+            $courier = 'pos';
+        }
+
+        // Map service name to Biteship courier_type code
+        $courierType = $service;
+        if (str_contains($service, 'reguler') || str_contains($service, 'regular')) {
+            if ($courier === 'jnt') {
+                $courierType = 'ez'; // J&T regular is 'ez'
+            } else {
+                $courierType = 'reg';
+            }
+        } elseif (str_contains($service, 'jne trucking') || str_contains($service, 'trucking') || str_contains($service, 'jtr')) {
+            $courierType = 'jtr';
+        } elseif (str_contains($service, 'pos reguler')) {
+            $courierType = 'reg';
+        } elseif (str_contains($service, 'ez')) {
+            $courierType = 'ez';
+        } elseif (str_contains($service, 'yes')) {
+            $courierType = 'yes';
+        } elseif (str_contains($service, 'oke')) {
+            $courierType = 'oke';
+        } elseif (str_contains($service, 'gokil')) {
+            $courierType = 'gokil';
+        }
+
         try {
             $response = Http::withHeaders([
                 'authorization' => $apiKey,
@@ -239,8 +271,8 @@ class OrderController extends Controller
                 'destination_contact_phone' => $user->phone ?: '08123456789',
                 'destination_address' => $order->shipping_address,
                 'destination_area_id' => $user->area_id,
-                'courier_company' => strtolower($order->shipping_courier),
-                'courier_type' => strtolower($order->shipping_service),
+                'courier_company' => $courier,
+                'courier_type' => $courierType,
                 'delivery_type' => 'now',
                 'items' => $biteshipItems
             ]);
@@ -292,6 +324,7 @@ class OrderController extends Controller
     public function userOrders()
     {
         $orders = Order::with([
+            'user',
             'items.product.images',
             'items.variant',
             'storeBranch'
@@ -301,13 +334,15 @@ class OrderController extends Controller
         ->get();
 
         return Inertia::render('orders/OrderHistoryPage', [
-            'orders' => $orders
+            'orders' => $orders,
+            'midtransClientKey' => config('services.midtrans.client_key'),
+            'isProduction' => config('services.midtrans.is_production'),
         ]);
     }
 
     public function trackOrder($id)
     {
-        $order = Order::with(['items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
+        $order = Order::with(['user', 'items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
 
         // Check permission: either the order belongs to the user or the user is admin
         if ($order->user_id !== auth()->id() && !in_array(auth()->user()->role, ['admin', 'super_admin'])) {

@@ -4,7 +4,7 @@ import axios from "axios";
 import {
     Clock, Copy, ExternalLink, RefreshCw, AlertTriangle,
     CheckCircle2, CreditCard, Landmark, QrCode, Store, ShieldAlert,
-    HelpCircle, ChevronDown, ChevronUp, Check, X, Wallet
+    HelpCircle, ChevronDown, ChevronUp, Check, X, Wallet, MessageCircle, ArrowLeft
 } from "lucide-react";
 
 // Local helper component for showing payment logo in payment method changer popup
@@ -105,6 +105,26 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
 
         return () => clearInterval(timer);
     }, [order]);
+
+    // Polling status pembayaran dari server setiap 5 detik jika statusnya belum dibayar
+    useEffect(() => {
+        if (order.payment_status !== "unpaid" || order.status !== "pending") {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            router.reload({ only: ["order"] });
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [order.payment_status, order.status]);
+
+    // Redirect otomatis ke halaman sukses jika status berubah menjadi paid
+    useEffect(() => {
+        if (order.payment_status === "paid") {
+            router.visit(route("checkout.success", order.id));
+        }
+    }, [order.payment_status, order.id]);
 
     // Load Midtrans JS SDK for Credit Card tokenization
     useEffect(() => {
@@ -327,6 +347,24 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8" dir={isRtl ? "rtl" : "ltr"}>
+            {/* Header with Back Button */}
+            <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
+                <button
+                    onClick={() => router.visit(route('orders.index'))}
+                    className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200 shadow-xs shrink-0"
+                >
+                    <ArrowLeft size={18} className={isRtl ? "rotate-180" : ""} />
+                </button>
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
+                        {t("payment.title", "Detail Pembayaran")}
+                    </h1>
+                    <p className="mt-1 text-[10px] sm:text-xs text-slate-500">
+                        {t("payment.subtitle", "Selesaikan transaksi Anda menggunakan metode pembayaran yang dipilih.")}
+                    </p>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Left Column: Payment Summary Cards */}
@@ -334,31 +372,31 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
 
                     {/* Expiry Banner */}
                     {order.payment_status === "unpaid" && order.status === "pending" && (
-                        <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-3xl flex items-center justify-between shadow-xs">
-                            <div className="flex items-center gap-3">
-                                <Clock className="text-amber-600 animate-pulse" size={24} />
+                        <div className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
+                                <Clock className="text-amber-600 animate-pulse shrink-0 w-5 h-5 sm:w-6 sm:h-6" />
                                 <div>
-                                    <h3 className="font-extrabold text-amber-950 text-sm">
+                                    <h3 className="font-extrabold text-amber-950 text-xs sm:text-sm">
                                         {t("payment.expiry_title", "Batas Waktu Pembayaran")}
                                     </h3>
-                                    <p className="text-xs text-amber-800 mt-0.5">
+                                    <p className="text-[10px] sm:text-xs text-amber-800/80 mt-0.5">
                                         {t("payment.expiry_desc", "Selesaikan pembayaran Anda sebelum waktu habis.")}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="text-right">
+                            <div className="text-right self-end sm:self-auto">
                                 {timeLeft ? (
-                                    <div className="flex gap-1 text-sm font-black text-amber-950">
-                                        <span className="bg-amber-950 text-amber-100 px-2 py-1 rounded-lg">
+                                    <div className="flex gap-0.5 sm:gap-1 text-xs sm:text-sm font-black text-amber-950">
+                                        <span className="bg-amber-950 text-amber-100 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg">
                                             {String(timeLeft.hours).padStart(2, "0")}
                                         </span>
                                         <span>:</span>
-                                        <span className="bg-amber-950 text-amber-100 px-2 py-1 rounded-lg">
+                                        <span className="bg-amber-950 text-amber-100 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg">
                                             {String(timeLeft.minutes).padStart(2, "0")}
                                         </span>
                                         <span>:</span>
-                                        <span className="bg-amber-950 text-amber-100 px-2 py-1 rounded-lg">
+                                        <span className="bg-amber-950 text-amber-100 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg">
                                             {String(timeLeft.seconds).padStart(2, "0")}
                                         </span>
                                     </div>
@@ -393,7 +431,7 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
                             <div className="space-y-4 text-center">
                                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl inline-block max-w-sm w-full mx-auto">
                                     <span className="text-xs text-slate-400 font-bold tracking-wider block uppercase">NOMOR VIRTUAL ACCOUNT</span>
-                                    <span className="text-2xl font-black text-blue-950 font-mono tracking-wider block mt-2 select-all">
+                                    <span className="lg:text-2xl font-black text-blue-950 font-mono tracking-wider block mt-2 select-all">
                                         {details.va_number}
                                     </span>
                                 </div>
@@ -814,15 +852,15 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
                     </div>
 
                     {/* Action Panel */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
 
                         {/* Change Method Action */}
                         {order.payment_status === "unpaid" && order.status === "pending" && (
                             <button
                                 onClick={() => setIsChangingMethod(true)}
-                                className="w-full py-4 border-2 border-dashed border-blue-900/40 text-blue-950 font-black text-xs rounded-2xl hover:bg-blue-50/50 hover:border-blue-900 transition flex items-center justify-center gap-2"
+                                className="w-full py-3 border border-dashed border-blue-900/40 text-blue-950 font-bold text-xs rounded-xl hover:bg-blue-50/50 hover:border-blue-900 transition flex items-center justify-center gap-1.5 shadow-xs"
                             >
-                                <RefreshCw size={14} className="text-blue-900" />
+                                <RefreshCw size={13} className="text-blue-900" />
                                 <span>Ubah Metode Pembayaran</span>
                             </button>
                         )}
@@ -834,25 +872,11 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full py-4 border border-emerald-100 bg-emerald-50/20 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 transition font-black text-xs rounded-2xl flex items-center justify-center gap-2"
+                            className="w-full py-3 border border-emerald-100 bg-emerald-50/20 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 transition font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs"
                         >
-                            <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.863-9.864.001-2.637-1.03-5.115-2.905-6.99C16.554 1.876 14.079 1.84 11.47 1.84c-5.437 0-9.863 4.42-9.866 9.865-.001 1.702.463 3.36 1.34 4.8l-.943 3.443 3.528-.925c1.428.844 2.9 1.258 4.417 1.259z" />
-                            </svg>
+                            <img src="/images/icons/whatsapp.svg" alt="WhatsApp" className="w-3.5 h-3.5 object-contain shrink-0" />
                             <span>Butuh Bantuan? Hubungi Admin</span>
                         </a>
-
-                        {/* Cancel Order Action */}
-                        {order.payment_status === "unpaid" && order.status === "pending" && (
-                            <button
-                                onClick={handleCancelOrder}
-                                disabled={isCancelling}
-                                className="w-full py-4 text-rose-600 hover:bg-rose-50/50 hover:text-rose-700 transition font-black text-xs rounded-2xl flex items-center justify-center gap-2"
-                            >
-                                <X size={14} />
-                                <span>{isCancelling ? "Membatalkan..." : "Batalkan Pesanan"}</span>
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -903,15 +927,15 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
                                                                 disabled={isSelected || loadingChange}
                                                                 onClick={() => handleMethodChange(method.id)}
                                                                 className={`flex items-center gap-2.5 p-2.5 border rounded-xl text-left transition-all ${isSelected
-                                                                        ? "border-blue-900 bg-blue-50/20 text-blue-950 shadow-xs ring-1 ring-blue-900 cursor-not-allowed opacity-90"
-                                                                        : "border-slate-150 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/30"
+                                                                    ? "border-blue-900 bg-blue-50/20 text-blue-950 shadow-xs ring-1 ring-blue-900 cursor-not-allowed opacity-90"
+                                                                    : "border-slate-150 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/30"
                                                                     }`}
                                                             >
                                                                 {/* Radio Checklist style */}
                                                                 <div
                                                                     className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected
-                                                                            ? "border-blue-900 bg-blue-900"
-                                                                            : "border-slate-300 bg-white"
+                                                                        ? "border-blue-900 bg-blue-900"
+                                                                        : "border-slate-300 bg-white"
                                                                         }`}
                                                                 >
                                                                     {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}

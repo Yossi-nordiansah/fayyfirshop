@@ -263,15 +263,28 @@ export default function Orders({ orders = [], status }) {
                                                          </td>
                                                      )}
                                                      <td className="p-4">{getPaymentBadge(order.payment_status)}</td>
-                                                    <td className="p-4 text-center">
-                                                        <button
-                                                            onClick={() => handleOpenDetail(order)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition"
-                                                        >
-                                                            <Eye size={12} />
-                                                            <span>Details</span>
-                                                        </button>
-                                                    </td>
+                                                     <td className="p-4 text-center">
+                                                         <div className="flex items-center justify-center gap-1.5">
+                                                             <button
+                                                                 onClick={() => handleOpenDetail(order)}
+                                                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition"
+                                                             >
+                                                                 <Eye size={12} />
+                                                                 <span>Details</span>
+                                                             </button>
+                                                             {order.tracking_number && (
+                                                                 <a
+                                                                     href={route('orders.track', order.id)}
+                                                                     target="_blank"
+                                                                     rel="noopener noreferrer"
+                                                                     className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 rounded-lg font-bold transition border border-indigo-100"
+                                                                 >
+                                                                     <Truck size={12} />
+                                                                     <span>Track</span>
+                                                                 </a>
+                                                             )}
+                                                         </div>
+                                                     </td>
                                                 </tr>
                                             ))
                                         )}
@@ -345,16 +358,31 @@ export default function Orders({ orders = [], status }) {
                                                 <span className="text-slate-400 block">Courier Service</span>
                                                 <strong className="text-slate-800 uppercase">{selectedOrder.shipping_courier} - {selectedOrder.shipping_service}</strong>
                                             </div>
-                                            <div>
-                                                <span className="text-slate-400 block">Address Details</span>
-                                                <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address}</p>
-                                            </div>
-                                            {selectedOrder.tracking_number && (
-                                                <div className="pt-2 border-t border-slate-200/80">
-                                                    <span className="text-slate-400 block">Airwaybill (AWB)</span>
-                                                    <strong className="text-blue-950 font-mono">{selectedOrder.tracking_number}</strong>
-                                                </div>
-                                            )}
+                                             <div>
+                                                 <span className="text-slate-400 block">Address Details</span>
+                                                 {selectedOrder.user?.address ? (
+                                                     <p className="text-slate-600 mt-0.5 leading-normal">
+                                                         {selectedOrder.user.address}, Kec. {selectedOrder.user.district}, {selectedOrder.user.city}, {selectedOrder.user.province} {selectedOrder.user.postal_code}
+                                                     </p>
+                                                 ) : (
+                                                     <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address}</p>
+                                                 )}
+                                             </div>
+                                             {selectedOrder.tracking_number && (
+                                                 <div className="pt-2 border-t border-slate-200/80 space-y-2">
+                                                     <div>
+                                                         <span className="text-slate-400 block">Airwaybill (AWB)</span>
+                                                         <strong className="text-blue-950 font-mono">{selectedOrder.tracking_number}</strong>
+                                                     </div>
+                                                     <a
+                                                         href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                                         className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
+                                                     >
+                                                         <Truck size={12} />
+                                                         <span>Lacak Pengiriman</span>
+                                                     </a>
+                                                 </div>
+                                             )}
                                         </div>
                                     </div>
 

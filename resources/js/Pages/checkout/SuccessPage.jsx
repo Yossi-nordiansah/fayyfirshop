@@ -92,11 +92,21 @@ export default function SuccessPage({ order }) {
                                 </div>
                             </div>
 
-                            <div className="flex gap-2.5 pt-3 border-t border-slate-100">
+                            <div className="flex gap-2.5 pt-3 border-t border-slate-100 text-left">
                                 <MapPin className="text-slate-400 w-4 h-4 mt-0.5 flex-shrink-0" />
                                 <div>
                                     <h4 className="font-bold text-slate-900">Alamat Tujuan</h4>
-                                    <p className="mt-0.5 text-slate-500 leading-relaxed">{order.shipping_address}</p>
+                                    {order.user?.address ? (
+                                        <div className="mt-1 text-slate-500 leading-relaxed">
+                                            <p className="font-bold text-slate-800">{order.user.receiver_name || order.user.name}</p>
+                                            <p className="font-mono text-[10px]">{order.user.phone || '-'}</p>
+                                            <p className="mt-0.5">
+                                                {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="mt-0.5 text-slate-500 leading-relaxed">{order.shipping_address}</p>
+                                    )}
                                 </div>
                             </div>
 
