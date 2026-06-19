@@ -183,14 +183,13 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
 
     // Financial Formatting
     const formatPrice = (value) => {
-        const currencyCode = locale === "indonesia" ? "IDR" : "SAR";
-        const formatterLocale = locale === "indonesia" ? "id-ID-u-nu-latn" : locale === "arabic" ? "ar-SA-u-nu-latn" : "en-US-u-nu-latn";
-
-        return new Intl.NumberFormat(formatterLocale, {
-            style: "currency",
-            currency: currencyCode,
+        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
+        const formattedNumber = new Intl.NumberFormat("id-ID", {
             minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(value || 0);
+
+        return `${currencySymbol} ${formattedNumber}`;
     };
 
     const formatNumber = (value) =>
@@ -255,10 +254,17 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
             let itemWeight = item.weight;
             if (itemWeight === undefined || itemWeight === null || itemWeight === 0) {
                 const textToParse = String(item.size || item.title || '');
-                const matches = textToParse.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i);
+                const matches = textToParse.match(/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|pcs)?/i);
                 if (matches) {
-                    const value = parseFloat(matches[1]);
+                    let valueStr = matches[1];
                     const unit = matches[2] ? matches[2].toLowerCase() : '';
+                    
+                    const isKgOrL = ['kg', 'kilogram', 'l'].includes(unit);
+                    if (!isKgOrL && /\.\d{3}$/.test(valueStr)) {
+                        valueStr = valueStr.replace('.', '');
+                    }
+                    
+                    const value = parseFloat(valueStr);
                     if (unit === 'kg' || unit === 'kilogram') {
                         itemWeight = Math.round(value * 1000);
                     } else if (['g', 'gr', 'gram'].includes(unit)) {
@@ -476,7 +482,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
             <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen pb-20 font-sans bg-slate-50 pt-28">
-                <div className="px-4 mx-auto w-full sm:px-6 lg:px-8">
+                <div className="px-2 mx-auto w-full sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
                         <Link href="/cart" className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200">

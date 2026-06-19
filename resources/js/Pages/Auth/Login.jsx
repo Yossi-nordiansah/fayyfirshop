@@ -5,8 +5,13 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import AuthStatusModal from '@/Components/AuthStatusModal';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 export default function Login({ status, canResetPassword }) {
+    const { t } = useLanguage();
+    const [showFailureModal, setShowFailureModal] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -18,12 +23,23 @@ export default function Login({ status, canResetPassword }) {
 
         post(route('login'), {
             onFinish: () => reset('password'),
+            onError: () => {
+                setShowFailureModal(true);
+            }
         });
     };
 
     return (
         <GuestLayout>
             <Head title="Log in" />
+
+            <AuthStatusModal
+                isOpen={showFailureModal}
+                onClose={() => setShowFailureModal(false)}
+                type="error"
+                title={t('auth.status.login_fail_title', 'Login Gagal')}
+                message={t('auth.status.login_fail_message', 'Email atau password salah. Silakan periksa kembali detail login Anda.')}
+            />
 
             {status && (
                 <div className="mb-4 text-sm font-medium text-green-600">

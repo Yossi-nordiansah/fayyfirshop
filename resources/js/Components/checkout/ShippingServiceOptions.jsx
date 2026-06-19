@@ -11,7 +11,36 @@ const getCourierLogo = (courierName) => {
     if (name.includes("pos")) return "/images/couriers/pos.png";
     if (name.includes("anteraja") || name.includes("anter aja")) return "/images/couriers/anteraja.png";
     if (name.includes("tiki")) return "/images/couriers/tiki.png";
+    if (name.includes("ninja")) return "/images/couriers/ninja.png";
+    if (name.includes("gojek") || name.includes("gosend")) return "/images/couriers/gojek.png";
+    if (name.includes("grab")) return "/images/couriers/grab.png";
+    if (name.includes("lion")) return "/images/couriers/lion.png";
+    if (name.includes("idexpress") || name.includes("id express")) return "/images/couriers/idexpress.png";
+    if (name.includes("paxel")) return "/images/couriers/paxel.png";
+    if (name.includes("lalamove")) return "/images/couriers/lalamove.png";
+    if (name.includes("wahana")) return "/images/couriers/wahana.png";
     return null;
+};
+
+const CourierLogo = ({ courierName, logoPath }) => {
+    const [hasError, setHasError] = React.useState(!logoPath);
+
+    return (
+        hasError ? (
+            <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200/50 flex-shrink-0">
+                {courierName}
+            </span>
+        ) : (
+            <div className="w-14 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-100 p-1.5 shadow-sm flex-shrink-0">
+                <img
+                    src={logoPath}
+                    alt={courierName}
+                    onError={() => setHasError(true)}
+                    className="max-w-full max-h-full object-contain"
+                />
+            </div>
+        )
+    );
 };
 
 export default function ShippingServiceOptions({
@@ -24,7 +53,7 @@ export default function ShippingServiceOptions({
     formatPrice
 }) {
     return (
-        <section className="p-6 bg-white border border-slate-100 shadow-xl shadow-slate-100/40 rounded-3xl">
+        <section className="p-2 md:p-6 bg-white border border-slate-100 shadow-xl shadow-slate-100/40 rounded-3xl">
             {/* Header Section */}
             <h2 className="text-sm md:text-base font-extrabold text-slate-900 pb-4 mb-5 border-b border-slate-100 flex items-center gap-2.5">
                 <div className="p-1.5 bg-amber-50 rounded-xl border border-amber-100">
@@ -93,26 +122,17 @@ export default function ShippingServiceOptions({
                                         key={idx}
                                         type="button"
                                         onClick={() => setSelectedRate(rate)}
-                                        className={`p-4 border rounded-2xl text-left transition-all duration-300 flex items-center justify-between ${isSelected
-                                                ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-md ring-1 ring-blue-600/50'
-                                                : 'border-slate-100 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/40'
+                                        className={`p-2 md:p-4 border rounded-2xl text-left transition-all duration-300 flex items-center justify-between ${isSelected
+                                            ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-md ring-1 ring-blue-600/50'
+                                            : 'border-slate-100 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/40'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             {/* Logo Wrapper */}
-                                            {logoPath ? (
-                                                <div className="w-14 h-9 flex items-center justify-center bg-white rounded-xl border border-slate-100 p-1.5 shadow-sm flex-shrink-0">
-                                                    <img
-                                                        src={logoPath}
-                                                        alt={rate.courier_name}
-                                                        className="max-w-full max-h-full object-contain"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <span className="text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200/50 flex-shrink-0">
-                                                    {rate.courier_name}
-                                                </span>
-                                            )}
+                                            <CourierLogo
+                                                courierName={rate.courier_name}
+                                                logoPath={logoPath}
+                                            />
 
                                             {/* Service Details */}
                                             <div>

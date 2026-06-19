@@ -644,11 +644,11 @@ export default function Products({ category = null, subCategory = null, products
                                                 :{" "}
                                                 {activeCategoryInfo
                                                     ? activeCategoryInfo.name_translations?.[locale] ||
-                                                      activeCategoryInfo.name ||
-                                                      t(
-                                                          activeCategoryInfo.translationKey,
-                                                          activeCategoryInfo.name,
-                                                      )
+                                                    activeCategoryInfo.name ||
+                                                    t(
+                                                        activeCategoryInfo.translationKey,
+                                                        activeCategoryInfo.name,
+                                                    )
                                                     : selectedCat}
                                             </span>
                                             <button
@@ -669,11 +669,11 @@ export default function Products({ category = null, subCategory = null, products
                                                 {t("filter.sub", "Sub")}:{" "}
                                                 {activeSubcategoryInfo
                                                     ? activeSubcategoryInfo.name_translations?.[locale] ||
-                                                      activeSubcategoryInfo.name ||
-                                                      t(
-                                                          activeSubcategoryInfo.translationKey,
-                                                          activeSubcategoryInfo.name,
-                                                      )
+                                                    activeSubcategoryInfo.name ||
+                                                    t(
+                                                        activeSubcategoryInfo.translationKey,
+                                                        activeSubcategoryInfo.name,
+                                                    )
                                                     : selectedSub}
                                             </span>
                                             <button
@@ -681,7 +681,7 @@ export default function Products({ category = null, subCategory = null, products
                                                     handleCategorySelect(
                                                         selectedCat,
                                                         null,
-                                                     )
+                                                    )
                                                 }
                                                 className="hover:text-amber-900"
                                             >

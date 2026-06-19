@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
-function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPay }) {
+function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPay, t }) {
     const [timeLeft, setTimeLeft] = useState("");
 
     useEffect(() => {
@@ -52,9 +52,9 @@ function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPa
             return `Bank ${paymentDetails.bank.toUpperCase()}`;
         }
         if (paymentMethod === "cod") {
-            return "COD (Bayar di Tempat)";
+            return t('orders.payment_method.cod'); // "COD (Bayar di Tempat)" / "COD (Cash on Delivery)"
         }
-        return paymentMethod ? paymentMethod.toUpperCase().replace("_VA", " VA") : "Metode Transfer";
+        return paymentMethod ? paymentMethod.toUpperCase().replace("_VA", " VA") : t('orders.payment_method.transfer');
     };
 
     return (
@@ -66,7 +66,11 @@ function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPa
             className="mt-2.5 flex items-center justify-between p-3 px-3.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-slate-800 cursor-pointer hover:bg-blue-100/60 transition-colors"
         >
             <div className="flex items-center gap-1.5">
-                <span>Bayar dalam <strong className="text-blue-900 font-mono font-bold">{timeLeft || "23:59:59"}</strong> dengan {getPaymentName()}</span>
+                <span>
+                    {t('orders.pay_within')}{" "}
+                    <strong className="text-blue-900 font-mono font-bold">{timeLeft || "23:59:59"}</strong>{" "}
+                    {t('orders.with_method')} {getPaymentName()}
+                </span>
             </div>
             <ChevronRight className="w-4 h-4 text-blue-900 shrink-0" />
         </div>
@@ -116,12 +120,12 @@ export default function OrderCard({
 
                 <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold uppercase tracking-wider ${order.payment_status === "unpaid" && order.status === "pending"
-                            ? "text-blue-900"
-                            : order.status === "cancelled"
-                                ? "text-rose-600"
-                                : order.status === "completed"
-                                    ? "text-emerald-600"
-                                    : "text-blue-600"
+                        ? "text-blue-900"
+                        : order.status === "cancelled"
+                            ? "text-rose-600"
+                            : order.status === "completed"
+                                ? "text-emerald-600"
+                                : "text-blue-600"
                         }`}>
                         {statusInfo.label}
                     </span>
@@ -160,7 +164,7 @@ export default function OrderCard({
                             </h4>
                             {item.variant && (
                                 <p className="text-[10px] text-slate-500 mt-1">
-                                    Varian: {getLocalizedValue(item.variant.name_translations, item.variant.name)}
+                                    {t('orders.variant')}: {getLocalizedValue(item.variant.name_translations, item.variant.name)}
                                 </p>
                             )}
                         </div>
@@ -177,7 +181,7 @@ export default function OrderCard({
                     <div className="mt-3 flex items-center gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-2xl text-xs text-blue-800">
                         <Truck size={14} className="text-blue-700 shrink-0" />
                         <span>
-                            <strong>Estimasi Tiba:</strong> {getEstimatedArrival(order)}
+                            <strong>{t('orders.est_arrival')}:</strong> {getEstimatedArrival(order)}
                         </span>
                     </div>
                 )}
@@ -197,13 +201,13 @@ export default function OrderCard({
                     </span>
                     <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-xl font-medium max-w-[200px]">
                         <MapPin size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">Penerima: {order.user?.receiver_name || order.user?.name || '-'}</span>
+                        <span className="truncate">{t('orders.receiver')}: {order.user?.receiver_name || order.user?.name || '-'}</span>
                     </span>
                 </div>
 
                 {/* Total payment */}
                 <div className="flex items-center gap-1.5 ml-auto">
-                    <span>Total {order.items.reduce((sum, item) => sum + item.quantity, 0)} produk:</span>
+                    <span>{t('orders.total_products', 'Total {count} produk:').replace('{count}', order.items.reduce((sum, item) => sum + item.quantity, 0))}</span>
                     <span className="text-sm md:text-base font-bold text-blue-900">
                         {formatPrice(order.total_amount)}
                     </span>
@@ -216,6 +220,7 @@ export default function OrderCard({
                     expiryTime={order.payment_details?.expiry_time}
                     paymentMethod={order.payment_method}
                     paymentDetails={order.payment_details}
+                    t={t}
                     onClickPay={(e) => {
                         e.stopPropagation();
                         router.visit(route('checkout.payment', order.id));
@@ -233,7 +238,7 @@ export default function OrderCard({
                         }}
                         className="hidden md:inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 px-3 py-1.5 border border-slate-300 rounded-lg transition-all select-none"
                     >
-                        <span>{isExpanded ? "Sembunyikan Detail" : "Detail Pesanan"}</span>
+                        <span>{isExpanded ? t('orders.action.hide_detail') : t('orders.action.show_detail')}</span>
                         <ChevronDown size={14} className={`transform transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                     </button>
                 </div>
@@ -249,7 +254,7 @@ export default function OrderCard({
                                 className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50/50 px-3.5 py-1.5 border border-slate-300 rounded-lg transition-all"
                             >
                                 <MessageCircle size={13} className="shrink-0 text-slate-500" />
-                                <span>Hubungi Admin</span>
+                                <span>{t('orders.action.contact_admin')}</span>
                             </a>
                             <Link
                                 href={route('checkout.payment', order.id)}
@@ -257,7 +262,7 @@ export default function OrderCard({
                                 className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-5 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                             >
                                 <CreditCard size={13} className="shrink-0" />
-                                <span>Bayar</span>
+                                <span>{t('orders.action.pay')}</span>
                             </Link>
                         </>
                     )}
@@ -272,7 +277,7 @@ export default function OrderCard({
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50/50 px-3.5 py-1.5 border border-slate-300 rounded-lg transition-all"
                         >
                             <MessageCircle size={13} className="shrink-0 text-slate-500" />
-                            <span>Hubungi Admin</span>
+                            <span>{t('orders.action.contact_admin')}</span>
                         </a>
                     )}
 
@@ -283,7 +288,7 @@ export default function OrderCard({
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                         >
-                            <span>Lacak Pengiriman</span>
+                            <span>{t('orders.action.track_shipping')}</span>
                             <ExternalLink size={13} className="shrink-0" />
                         </a>
                     )}
@@ -297,7 +302,7 @@ export default function OrderCard({
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                         >
-                            <span>Nilai</span>
+                            <span>{t('orders.action.review')}</span>
                         </a>
                     )}
 
@@ -308,7 +313,7 @@ export default function OrderCard({
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                         >
-                            <span>Belanja Lagi</span>
+                            <span>{t('orders.action.shop_again')}</span>
                         </Link>
                     )}
                 </div>
@@ -331,22 +336,22 @@ export default function OrderCard({
                                 {/* Mobile-only Order Metadata Block */}
                                 <div className="grid grid-cols-2 gap-2 bg-slate-50/50 border border-slate-100 p-3 rounded-xl md:hidden shadow-xs">
                                     <div className="col-span-2 pb-1.5 border-b border-slate-100 flex justify-between items-center">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Info Invoice</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t('orders.invoice_info')}</span>
                                         <strong className="text-blue-950 font-mono text-xs">{order.invoice_number}</strong>
                                     </div>
                                     <div>
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Tanggal Pesan</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('orders.order_date')}</span>
                                         <span className="text-slate-700 font-semibold">{formatDate(order.created_at)}</span>
                                     </div>
                                     <div>
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Gudang Pengirim</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('orders.shipping_warehouse')}</span>
                                         <span className="text-slate-700 font-semibold">{order.store_branch?.name || "-"}</span>
                                     </div>
                                 </div>
                                 <div>
                                     <h5 className="font-bold text-slate-900 flex items-center gap-1 mb-1">
                                         <MapPin size={12} className="text-blue-700" />
-                                        <span>Alamat Pengiriman</span>
+                                        <span>{t('orders.shipping_address')}</span>
                                     </h5>
                                     <div className="leading-relaxed bg-slate-50/30 border border-slate-100 p-2.5 rounded-xl text-slate-600">
                                         {order.user?.address ? (
@@ -365,7 +370,7 @@ export default function OrderCard({
 
                                 {order.notes && (
                                     <div>
-                                        <h5 className="font-bold text-slate-900 mb-1">Catatan Pesanan</h5>
+                                        <h5 className="font-bold text-slate-900 mb-1">{t('orders.order_notes')}</h5>
                                         <p className="italic text-slate-500 bg-slate-50/30 border border-slate-100 p-2.5 rounded-xl">
                                             "{order.notes}"
                                         </p>
@@ -373,12 +378,12 @@ export default function OrderCard({
                                 )}
                                 {order.cancellation_reason && (
                                     <div>
-                                        <h5 className="font-bold text-slate-900 mb-1">Alasan Pembatalan</h5>
+                                        <h5 className="font-bold text-slate-900 mb-1">{t('orders.cancel_reason')}</h5>
                                         <p className="text-rose-600 bg-rose-50/30 border border-rose-100 p-2.5 rounded-xl">
                                             "{order.cancellation_reason}"
                                             {order.cancellation_status && (
                                                 <span className="block text-[9px] text-slate-400 mt-1 uppercase font-bold">
-                                                    Status Pengajuan: {order.cancellation_status}
+                                                    {t('orders.cancel_status')}: {order.cancellation_status}
                                                 </span>
                                             )}
                                         </p>
@@ -391,25 +396,25 @@ export default function OrderCard({
                                 <div>
                                     <h5 className="font-bold text-slate-900 flex items-center gap-1 mb-1">
                                         <DollarSign size={12} className="text-blue-700" />
-                                        <span>Rincian Pembayaran</span>
+                                        <span>{t('orders.payment_details')}</span>
                                     </h5>
                                     <div className="bg-slate-50/30 border border-slate-100 p-3 rounded-xl space-y-1.5">
                                         <div className="flex justify-between">
-                                            <span>Subtotal</span>
+                                            <span>{t('orders.subtotal')}</span>
                                             <span className="font-semibold text-slate-800">{formatPrice(order.subtotal)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>Ongkos Kirim ({order.shipping_courier})</span>
+                                            <span>{t('orders.shipping_cost')} ({order.shipping_courier})</span>
                                             <span className="font-semibold text-slate-800">{formatPrice(order.shipping_cost)}</span>
                                         </div>
                                         {order.discount_amount > 0 && (
                                             <div className="flex justify-between text-emerald-600">
-                                                <span>Diskon</span>
+                                                <span>{t('orders.discount')}</span>
                                                 <span>-{formatPrice(order.discount_amount)}</span>
                                             </div>
                                         )}
                                         <div className="flex justify-between pt-1.5 border-t border-slate-100 font-bold text-xs text-slate-900">
-                                            <span>Total Pembayaran</span>
+                                            <span>{t('orders.total_payment')}</span>
                                             <span className="text-blue-900 font-extrabold">{formatPrice(order.total_amount)}</span>
                                         </div>
                                     </div>
@@ -421,12 +426,12 @@ export default function OrderCard({
                                         <>
                                             {order.cancellation_status === "pending" && (
                                                 <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg">
-                                                    Menunggu Persetujuan Pembatalan
+                                                    {t('orders.cancel_awaiting')}
                                                 </span>
                                             )}
                                             {order.cancellation_status === "rejected" && (
                                                 <span className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-lg">
-                                                    Pengajuan Pembatalan Ditolak
+                                                    {t('orders.cancel_rejected')}
                                                 </span>
                                             )}
                                             {order.cancellation_status !== "pending" && order.cancellation_status !== "rejected" && order.cancellation_status !== "approved" && (
@@ -437,7 +442,7 @@ export default function OrderCard({
                                                     }}
                                                     className="text-xs font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
                                                 >
-                                                    Ajukan Pembatalan
+                                                    {t('orders.action.request_cancel')}
                                                 </button>
                                             )}
                                         </>

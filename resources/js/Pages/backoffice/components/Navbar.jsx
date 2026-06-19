@@ -2,6 +2,8 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { Bell, ChevronDown, Globe, LogOut, User, Package, Languages } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import { useState, useEffect } from 'react';
+import AuthStatusModal from '@/Components/AuthStatusModal';
+import LogoutConfirmModal from '@/Components/LogoutConfirmModal';
 
 const translateNotification = (notif, locale, t) => {
     if (notif.type === 'stock') {
@@ -73,6 +75,7 @@ export default function Navbar() {
     const { locale, setLocale, t } = useLanguage();
     const user = auth?.user;
     const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
     useEffect(() => {
@@ -119,6 +122,7 @@ export default function Navbar() {
         languages.find((language) => language.code === locale) ?? languages[0];
 
     return (
+        <>
         <header className="sticky top-0 z-30 flex items-center justify-between h-20 px-6 bg-white/95 backdrop-blur-md border-b shadow-sm border-blue-900/10">
             <div>
                 <p className="text-sm font-medium text-blue-600">
@@ -292,20 +296,29 @@ export default function Navbar() {
                                         {user.name}
                                     </p>
                                 </div>
-                                <Link
-                                    href="/logout"
-                                    method="post"
-                                    as="button"
+                                <button
+                                    onClick={() => {
+                                        setShowAccountDropdown(false);
+                                        setShowLogoutConfirm(true);
+                                    }}
                                     className="flex items-center w-full gap-3 px-4 py-3 text-sm text-left text-red-600 transition-all duration-200 hover:bg-red-50"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     {t('nav.account.logout', 'Sign Out')}
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+            <AuthStatusModal />
+            <LogoutConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                t={t}
+                isAdmin={true}
+            />
         </header>
+        </>
     );
 }

@@ -99,6 +99,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
+            'flash' => [
+                'login_status' => $request->session()->get('login_status'),
+                'logout_status' => $request->session()->get('logout_status'),
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
             'notifications' => $notifications,
             'activePromoTickers' => fn () => \Illuminate\Support\Facades\Schema::hasTable('promo_tickers')
                 ? \App\Models\PromoTicker::where('is_active', true)->orderBy('sort_order')->get()

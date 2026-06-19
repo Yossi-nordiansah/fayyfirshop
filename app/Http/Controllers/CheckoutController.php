@@ -203,7 +203,7 @@ class CheckoutController extends Controller
                 ])->post('https://api.biteship.com/v1/rates/couriers', [
                     'origin_area_id' => $originBranch->area_id ?: 'IDNP6IDNC148IDND843IDZ12270', // fallback to Pesanggrahan if empty
                     'destination_area_id' => $destinationAreaId,
-                    'couriers' => 'jne,jnt,sicepat,tiki,pos,anteraja',
+                    'couriers' => 'jne,jnt,sicepat,tiki,pos,anteraja,ninja,gojek,grab,wahana',
                     'items' => $biteshipItems
                 ]);
 
@@ -985,11 +985,18 @@ class CheckoutController extends Controller
                     }
                 }
 
-                preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
+                preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|pcs)?/i', $textToParse, $matches);
 
                 if (!empty($matches)) {
-                    $value = (float) $matches[1];
+                    $value_str = $matches[1];
                     $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+
+                    $isKgOrL = in_array($unit, ['kg', 'kilogram', 'l']) || in_array($unitName, ['kg', 'kilogram', 'l']);
+                    if (!$isKgOrL && preg_match('/\.\d{3}$/', $value_str)) {
+                        $value_str = str_replace('.', '', $value_str);
+                    }
+
+                    $value = (float) $value_str;
 
                     if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram' || $unitName === 'kg') {
                         return (int) ($value * 1000);
@@ -1010,10 +1017,18 @@ class CheckoutController extends Controller
         // 3. Fallback to product title parsing
         if ($product) {
             $textToParse = $product->title;
-            preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i', $textToParse, $matches);
+            preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g)?/i', $textToParse, $matches);
             if (!empty($matches)) {
-                $value = (float) $matches[1];
+                $value_str = $matches[1];
                 $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                
+                $isKg = in_array($unit, ['kg', 'kilogram']);
+                if (!$isKg && preg_match('/\.\d{3}$/', $value_str)) {
+                    $value_str = str_replace('.', '', $value_str);
+                }
+                
+                $value = (float) $value_str;
+                
                 if ($unit === 'kg' || $unit === 'kilogram') {
                     return (int) ($value * 1000);
                 }
@@ -1182,10 +1197,17 @@ class CheckoutController extends Controller
         $textToParse = $variant->name; // e.g., "50 ml" or "Merah (50 ml)"
 
         // Match a number in the string (possibly in parentheses, e.g. "Merah (50 ml)")
-        preg_match('/(\d+(?:\.\d+)?)/', $textToParse, $matches);
+        preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|liter|pcs)?/i', $textToParse, $matches);
 
         if (!empty($matches)) {
-            return (float) $matches[1];
+            $value_str = $matches[1];
+            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+            
+            $isLargeUnit = in_array($unit, ['kg', 'kilogram', 'l', 'liter']);
+            if (!$isLargeUnit && preg_match('/\.\d{3}$/', $value_str)) {
+                $value_str = str_replace('.', '', $value_str);
+            }
+            return (float) $value_str;
         }
 
         return 1; // Default fallback to 1 to avoid division by zero
@@ -1542,6 +1564,24 @@ class CheckoutController extends Controller
             // Generate DANA universal app-redirect link dynamically using QRIS string
             if ($paymentMethod === 'dana' && !empty($details['qr_string'])) {
                 $details['deeplink'] = 'https://link.dana.id/qr/' . $details['qr_string'];
+            }
+
+            // GoPay direct app-to-app deep link
+            if ($paymentMethod === 'gopay' && !empty($details['deeplink'])) {
+                $urlParts = explode('/', rtrim($details['deeplink'], '/'));
+                $token = end($urlParts);
+                if ($token) {
+                    $details['deeplink'] = 'gojek://gopay/merchanttransfer?ttoken=' . $token;
+                }
+            }
+
+            // ShopeePay direct app-to-app deep link
+            if ($paymentMethod === 'shopeepay' && !empty($details['deeplink'])) {
+                $urlParts = explode('/', rtrim($details['deeplink'], '/'));
+                $token = end($urlParts);
+                if ($token) {
+                    $details['deeplink'] = 'shopeeid://client/jumps/wallet/pay?token=' . $token;
+                }
             }
 
             $details['expiry_time'] = $response->expiry_time ?? null;

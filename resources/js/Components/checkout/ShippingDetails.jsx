@@ -2,9 +2,6 @@ import React from "react";
 
 export default function ShippingDetails({ selectedBranch, selectedRate, totalWeight, t }) {
     const formatWeight = (grams) => {
-        if (grams >= 1000) {
-            return `${(grams / 1000).toFixed(2)} kg`;
-        }
         return `${grams} ${t("checkout.summary.grams", "gram")}`;
     };
 

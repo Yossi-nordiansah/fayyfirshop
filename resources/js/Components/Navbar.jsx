@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import LoginModal from "./LoginModal";
 import TopVerticalTicker from "@/Pages/home/TopVerticalTicker";
+import AuthStatusModal from "./AuthStatusModal";
+import LogoutConfirmModal from "./LogoutConfirmModal";
 
 const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => {
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
@@ -29,6 +31,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     const [activeCategory, setActiveCategory] = useState(null);
     const [showAccountDropdown, setShowAccountDropdown] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [cartCount, setCartCount] = useState(0);
 
@@ -80,6 +83,9 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     }, [toast]);
 
     const { locale, setLocale, t } = useLanguage();
+    const isAr = locale === "arabic";
+    const fwBold = isAr ? "font-medium" : "font-bold";
+    const fwSemibold = isAr ? "font-medium" : "font-semibold";
 
     useEffect(() => {
         const key = user ? `fayyfir_cart_${user.id}` : "fayyfir_cart";
@@ -192,7 +198,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                             {/* Home */}
                             <Link
                                 href="/"
-                                className="relative text-xs font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
+                                className={`relative text-xs ${fwBold} tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group`}
                             >
                                 {t("nav.home", "Home")}
                                 <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
@@ -203,7 +209,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                 className="relative py-2 group"
                                 onMouseLeave={() => setActiveCategory(null)}
                             >
-                                <button className="flex items-center gap-1 relative text-xs font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300">
+                                <button className={`flex items-center gap-1 relative text-xs ${fwBold} tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300`}>
                                     {t("nav.product", "Products")}
                                     <ChevronDown size={14} className="transition-transform duration-300 group-hover:rotate-180" />
                                 </button>
@@ -277,7 +283,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                             {/* About */}
                             <Link
                                 href="/about"
-                                className="relative text-xs font-bold tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group"
+                                className={`relative text-xs ${fwBold} tracking-[0.2em] uppercase text-white hover:text-blue-500 transition-colors duration-300 group`}
                             >
                                 {t("nav.about", "About")}
                                 <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300 group-hover:w-full" />
@@ -292,7 +298,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                     className="flex items-center gap-1.5 text-white hover:text-blue-500 transition-all duration-300"
                                 >
                                     <Globe size={18} />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                                    <span className={`text-[10px] ${fwBold} uppercase tracking-widest`}>
                                         {languages.find((l) => l.code === locale)?.label}
                                     </span>
                                     <ChevronDown
@@ -311,7 +317,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                     setLocale(lang.code);
                                                 }}
                                                 className={`w-full flex items-center justify-between px-4 py-3 text-xs transition-colors ${locale === lang.code
-                                                    ? "text-blue-600 bg-blue-50 font-bold"
+                                                    ? `text-blue-600 bg-blue-50 ${fwBold}`
                                                     : "text-zinc-600 hover:bg-zinc-50"
                                                     }`}
                                             >
@@ -392,7 +398,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 {user ? (
                                                     <>
                                                         <div className="px-4 py-2 mb-1 border-b border-zinc-100">
-                                                            <p className="text-sm font-semibold truncate text-zinc-800">{user.name}</p>
+                                                            <p className={`text-sm ${fwSemibold} truncate text-zinc-800`}>{user.name}</p>
                                                         </div>
                                                         <Link
                                                             href="/profile"
@@ -422,15 +428,16 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                             <ShoppingBag size={16} className="text-zinc-400" />
                                                             {t("nav.account.orders", "Pesanan Saya")}
                                                         </Link>
-                                                        <Link
-                                                            href="/logout"
-                                                            method="post"
-                                                            as="button"
+                                                        <button
+                                                            onClick={() => {
+                                                                setShowAccountDropdown(false);
+                                                                setShowLogoutConfirm(true);
+                                                            }}
                                                             className="flex items-center w-full gap-3 px-4 py-3 text-sm text-left text-red-600 transition-all duration-200 hover:bg-red-50"
                                                         >
                                                             <LogOut size={16} />
                                                             {t("nav.account.logout", "Sign Out")}
-                                                        </Link>
+                                                        </button>
                                                     </>
                                                 ) : (
                                                     <button
@@ -490,18 +497,18 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                     <Link
                                         href="/"
                                         onClick={() => setIsOpen(false)}
-                                        className="block py-2 text-sm font-semibold tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400"
+                                        className={`block py-2 text-sm ${fwSemibold} tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400`}
                                     >
                                         {t("nav.home", "Home")}
                                     </Link>
 
                                     {/* Products (with Expandable Submenu) */}
-                                    <MobileProductsMenu productDropdown={productDropdown} t={t} setIsOpen={setIsOpen} />
+                                    <MobileProductsMenu productDropdown={productDropdown} t={t} setIsOpen={setIsOpen} fwSemibold={fwSemibold} />
 
                                     <Link
                                         href="/about"
                                         onClick={() => setIsOpen(false)}
-                                        className="block py-2 text-sm font-semibold tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400"
+                                        className={`block py-2 text-sm ${fwSemibold} tracking-wider uppercase transition-colors border-b border-white/5 hover:text-blue-400`}
                                     >
                                         {t("nav.about", "About Us")}
                                     </Link>
@@ -510,11 +517,11 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                 {/* User & Settings Section */}
                                 <div className="pt-4 space-y-4 border-t border-white/10">
                                     {/* Language Selector */}
-                                    <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} />
+                                    <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} fwBold={fwBold} fwSemibold={fwSemibold} />
 
                                     {/* Notifications */}
                                     <div className="flex items-center justify-between w-full py-2 transition-colors border-b border-white/5 text-white/80">
-                                        <span className="text-sm font-semibold tracking-wider uppercase">{t("nav.notifications", "Notifications")}</span>
+                                        <span className={`text-sm ${fwSemibold} tracking-wider uppercase`}>{t("nav.notifications", "Notifications")}</span>
                                         <Bell size={18} />
                                     </div>
 
@@ -534,14 +541,14 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                     className="object-cover border rounded-full w-9 h-9 border-white/10"
                                                 />
                                                 <div className="overflow-hidden">
-                                                    <p className="text-sm font-semibold truncate">{user.name}</p>
+                                                    <p className={`text-sm ${fwSemibold} truncate`}>{user.name}</p>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2">
                                                 <Link
                                                     href={route('orders.index')}
                                                     onClick={() => setIsOpen(false)}
-                                                    className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl"
+                                                    className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
                                                 >
                                                     <ShoppingBag size={14} />
                                                     {t("nav.account.orders", "Pesanan Saya")}
@@ -549,7 +556,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 <Link
                                                     href="/cart"
                                                     onClick={() => setIsOpen(false)}
-                                                    className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl"
+                                                    className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
                                                 >
                                                     <ShoppingCart size={14} />
                                                     {t("cart.title", "Keranjang Belanja")}
@@ -563,21 +570,21 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                     <Link
                                                         href="/profile"
                                                         onClick={() => setIsOpen(false)}
-                                                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider text-center uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl"
+                                                        className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider text-center uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
                                                     >
                                                         <User size={14} />
                                                         {t("nav.account.profile", "Profile")}
                                                     </Link>
-                                                    <Link
-                                                        href="/logout"
-                                                        method="post"
-                                                        as="button"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold tracking-wider text-red-400 uppercase transition-all bg-red-600/20 hover:bg-red-600/30 rounded-xl"
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsOpen(false);
+                                                            setShowLogoutConfirm(true);
+                                                        }}
+                                                        className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider text-red-400 uppercase transition-all bg-red-600/20 hover:bg-red-600/30 rounded-xl`}
                                                     >
                                                         <LogOut size={14} />
                                                         {t("nav.account.logout", "Sign Out")}
-                                                    </Link>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -587,7 +594,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 setIsOpen(false);
                                                 setShowLoginModal(true);
                                             }}
-                                            className="flex items-center justify-center w-full gap-2 py-3 text-xs font-bold tracking-widest text-white uppercase transition-all shadow-md bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 rounded-xl"
+                                            className={`flex items-center justify-center w-full gap-2 py-3 text-xs ${fwBold} tracking-widest text-white uppercase transition-all shadow-md bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 rounded-xl`}
                                         >
                                             <LogIn size={14} />
                                             {t("nav.account.login", "Sign In")}
@@ -604,6 +611,15 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                 isOpen={showLoginModal}
                 onClose={() => setShowLoginModal(false)}
                 t={t}
+            />
+
+            <AuthStatusModal />
+
+            <LogoutConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                t={t}
+                isAdmin={false}
             />
 
             {/* Event Promotion Popup Banner */}
@@ -680,7 +696,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
 };
 
 // Expandable Product Submenu for Mobile
-const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
+const MobileProductsMenu = ({ productDropdown, t, setIsOpen, fwSemibold }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState(null);
 
@@ -690,7 +706,7 @@ const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="flex items-center justify-between w-full py-2 transition-colors hover:text-blue-400"
             >
-                <span className="text-sm font-semibold tracking-wider uppercase">
+                <span className={`text-sm ${fwSemibold} tracking-wider uppercase`}>
                     {t("nav.product", "Products")}
                 </span>
                 <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -750,7 +766,7 @@ const MobileProductsMenu = ({ productDropdown, t, setIsOpen }) => {
 };
 
 // Expandable Language Selector for Mobile
-const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
+const MobileLanguageSelector = ({ languages, locale, setLocale, t, fwBold, fwSemibold }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
@@ -761,7 +777,7 @@ const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
             >
                 <div className="flex items-center gap-2">
                     <Globe size={18} />
-                    <span className="text-sm font-semibold tracking-wider uppercase">
+                    <span className={`text-sm ${fwSemibold} tracking-wider uppercase`}>
                         {t("nav.language", "Language")}: {languages.find((l) => l.code === locale)?.label}
                     </span>
                 </div>
@@ -785,7 +801,7 @@ const MobileLanguageSelector = ({ languages, locale, setLocale, t }) => {
                                     setIsExpanded(false);
                                 }}
                                 className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs transition-all ${locale === lang.code
-                                    ? "bg-blue-600/30 text-white font-bold border border-blue-500/30"
+                                    ? `bg-blue-600/30 text-white ${fwBold} border border-blue-500/30`
                                     : "bg-white/5 text-white/70 hover:bg-white/10"
                                     }`}
                             >

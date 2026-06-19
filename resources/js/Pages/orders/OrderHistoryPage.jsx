@@ -71,20 +71,19 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
             })
             .catch(err => {
                 setIsSubmittingCancel(false);
-                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembatalan.");
+                alert(err.response?.data?.message || t("orders.cancel_error", "Terjadi kesalahan saat memproses pembatalan."));
             });
     };
 
     // Helpers
     const formatPrice = (value) => {
-        const currencyCode = locale === "indonesia" ? "IDR" : "SAR";
-        const formatterLocale = locale === "indonesia" ? "id-ID-u-nu-latn" : locale === "arabic" ? "ar-SA-u-nu-latn" : "en-US-u-nu-latn";
-
-        return new Intl.NumberFormat(formatterLocale, {
-            style: "currency",
-            currency: currencyCode,
+        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
+        const formattedNumber = new Intl.NumberFormat("id-ID", {
             minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(value || 0);
+
+        return `${currencySymbol} ${formattedNumber}`;
     };
 
     const formatDate = (dateString) => {
@@ -184,20 +183,20 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
         } else if (courier.includes("cargo") || courier.includes("trucking")) {
             durationText = t("orders.duration.cargo", "4-7 Hari Kerja");
         }
-        
+
         if (order.updated_at) {
             try {
                 const shipDate = new Date(order.updated_at);
                 const minDays = (courier.includes("cargo") || courier.includes("trucking")) ? 4 : 2;
                 const maxDays = (courier.includes("cargo") || courier.includes("trucking")) ? 7 : 3;
-                
+
                 const minDate = new Date(shipDate.getTime() + minDays * 24 * 60 * 60 * 1000);
                 const maxDate = new Date(shipDate.getTime() + maxDays * 24 * 60 * 60 * 1000);
-                
+
                 const formatOptions = { day: 'numeric', month: 'short' };
-                const minDateStr = minDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : "en-US", formatOptions);
-                const maxDateStr = maxDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : "en-US", formatOptions);
-                
+                const minDateStr = minDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : locale === "arabic" ? "ar-SA" : "en-US", formatOptions);
+                const maxDateStr = maxDate.toLocaleDateString(locale === "indonesia" ? "id-ID" : locale === "arabic" ? "ar-SA" : "en-US", formatOptions);
+
                 return `${minDateStr} - ${maxDateStr} (${durationText})`;
             } catch (err) {
                 return durationText;
@@ -207,7 +206,8 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
     };
 
     const getWhatsAppReviewUrl = (order) => {
-        const text = `Halo Admin Fayyfir Shop, saya ingin memberikan ulasan/nilai untuk pesanan saya:\n\n*No. Invoice:* ${order.invoice_number}\n\nPesanan saya sangat memuaskan!`;
+        const titleText = t("orders.whatsapp.review_message", "Halo Admin Fayyfir Shop, saya ingin memberikan ulasan/nilai untuk pesanan saya:");
+        const text = `${titleText}\n\n*No. Invoice:* ${order.invoice_number}\n\n${t("orders.whatsapp.review_good", "Pesanan saya sangat memuaskan!")}`;
         return `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`;
     };
 
@@ -292,7 +292,6 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                 return;
             }
 
-            // Load Snap script dynamically
             const scriptId = "midtrans-snap-script";
             let script = document.getElementById(scriptId);
 
@@ -309,12 +308,11 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                     triggerSnapPay(snapToken);
                 };
                 script.onerror = () => {
-                    alert("Gagal memuat sistem pembayaran Midtrans. Coba lagi.");
+                    alert(t("orders.midtrans_load_failed", "Gagal memuat sistem pembayaran Midtrans. Coba lagi."));
                 };
 
                 document.body.appendChild(script);
             } else {
-                // If script tag exists but window.snap is not yet initialized
                 script.onload = () => {
                     triggerSnapPay(snapToken);
                 };
@@ -326,12 +324,12 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                 if (res.data && res.data.snap_token) {
                     loadSnapAndPay(res.data.snap_token);
                 } else {
-                    alert(res.data.message || "Gagal mendapatkan token pembayaran.");
+                    alert(res.data.message || t("orders.token_failed", "Gagal mendapatkan token pembayaran."));
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembayaran.");
+                alert(err.response?.data?.message || t("orders.payment_process_error", "Terjadi kesalahan saat memproses pembayaran."));
             });
     };
 
@@ -345,17 +343,23 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                 if (res.data.success) {
                     router.reload();
                 } else {
-                    alert(res.data.message || "Gagal membatalkan pesanan.");
+                    alert(res.data.message || t("orders.cancel_order_failed", "Gagal membatalkan pesanan."));
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembatalan.");
+                alert(err.response?.data?.message || t("orders.cancel_process_error", "Terjadi kesalahan saat memproses pembatalan."));
             });
     };
 
     const getWhatsAppUrl = (order) => {
-        const text = `Halo Admin Fayyfir Shop, saya ingin menanyakan perihal pesanan saya:\n\n*No. Invoice:* ${order.invoice_number}\n*Status:* ${order.status.toUpperCase()}\n*Total Pembayaran:* ${formatPrice(order.total_amount)}\n\nTerima kasih.`;
+        const titleText = t("orders.whatsapp.ask_message", "Halo Admin Fayyfir Shop, saya ingin menanyakan perihal pesanan saya:");
+        const invoiceLabel = t("orders.whatsapp.invoice", "No. Invoice");
+        const statusLabel = t("orders.whatsapp.status", "Status");
+        const paymentLabel = t("orders.whatsapp.payment", "Total Pembayaran");
+        const thanksText = t("orders.whatsapp.thanks", "Terima kasih.");
+
+        const text = `${titleText}\n\n*${invoiceLabel}:* ${order.invoice_number}\n*${statusLabel}:* ${order.status.toUpperCase()}\n*${paymentLabel}:* ${formatPrice(order.total_amount)}\n\n${thanksText}`;
         return `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`;
     };
 
@@ -428,7 +432,7 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                     </div>
 
                     {/* Orders List Container */}
-                    <div 
+                    <div
                         className="space-y-4 min-h-[450px]"
                         onTouchStart={handleTouchStart}
                         onTouchEnd={handleTouchEnd}
@@ -482,7 +486,7 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                                         className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-xs px-6 py-3 rounded-2xl shadow-lg hover:from-blue-800 hover:to-blue-700 transition-all active:scale-[0.98]"
                                     >
                                         <Package size={14} />
-                                        <span>Mulai Belanja</span>
+                                        <span>{t("orders.start_shopping", "Mulai Belanja")}</span>
                                     </Link>
                                 </motion.div>
                             )}

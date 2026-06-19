@@ -219,7 +219,11 @@ class OrderController extends Controller
                 'description' => $desc,
                 'value' => (int) $item->price,
                 'weight' => (int) ($weight * $item->quantity),
-                'quantity' => (int) $item->quantity
+                'quantity' => (int) $item->quantity,
+                'length' => 10,
+                'width' => 10,
+                'height' => 10,
+                'category' => 'general'
             ];
         }
 
@@ -255,27 +259,59 @@ class OrderController extends Controller
             $courierType = 'oke';
         } elseif (str_contains($service, 'gokil')) {
             $courierType = 'gokil';
+        } elseif (str_contains($service, 'same day') || str_contains($service, 'sameday')) {
+            $courierType = 'same_day';
+        } elseif (str_contains($service, 'instant')) {
+            $courierType = 'instant';
+        }
+
+        $payload = [
+            'shipper_contact_name' => $branch->name,
+            'shipper_contact_phone' => '081234567890', // fallback store phone
+            'origin_contact_name' => $branch->name,
+            'origin_contact_phone' => '081234567890',
+            'origin_address' => $branch->detail_address ?: ($branch->street . ', ' . $branch->city),
+            'origin_area_id' => $branch->area_id,
+            'destination_contact_name' => $user->receiver_name ?: $user->name,
+            'destination_contact_phone' => $user->phone ?: '08123456789',
+            'destination_address' => $order->shipping_address,
+            'destination_area_id' => $user->area_id,
+            'courier_company' => $courier,
+            'courier_type' => $courierType,
+            'delivery_type' => 'now',
+            'items' => $biteshipItems
+        ];
+
+        // Fetch coordinates and additional details for Gojek/Grab instant shipping
+        if (in_array($courier, ['gojek', 'grab'])) {
+            $originAddress = $branch->detail_address ?: ($branch->street . ', ' . $branch->city);
+            $destAddress = $order->shipping_address;
+
+            $originCoord = $this->resolveCoordinates($originAddress);
+            $destCoord = $this->resolveCoordinates($destAddress);
+
+            if ($originCoord) {
+                $payload['origin_coordinate'] = $originCoord;
+            }
+            if ($destCoord) {
+                $payload['destination_coordinate'] = $destCoord;
+            }
+
+            if ($branch->postal_code) {
+                $payload['origin_postal_code'] = (int) $branch->postal_code;
+            }
+            if ($user->postal_code) {
+                $payload['destination_postal_code'] = (int) $user->postal_code;
+            }
+
+            $payload['origin_note'] = $branch->detail_address ?: 'Ambil di Toko';
+            $payload['destination_note'] = $order->notes ?: 'Tiba di alamat pengiriman';
         }
 
         try {
             $response = Http::withHeaders([
                 'authorization' => $apiKey,
-            ])->post('https://api.biteship.com/v1/orders', [
-                'shipper_contact_name' => $branch->name,
-                'shipper_contact_phone' => '081234567890', // fallback store phone
-                'origin_contact_name' => $branch->name,
-                'origin_contact_phone' => '081234567890',
-                'origin_address' => $branch->detail_address ?: ($branch->street . ', ' . $branch->city),
-                'origin_area_id' => $branch->area_id,
-                'destination_contact_name' => $user->receiver_name ?: $user->name,
-                'destination_contact_phone' => $user->phone ?: '08123456789',
-                'destination_address' => $order->shipping_address,
-                'destination_area_id' => $user->area_id,
-                'courier_company' => $courier,
-                'courier_type' => $courierType,
-                'delivery_type' => 'now',
-                'items' => $biteshipItems
-            ]);
+            ])->post('https://api.biteship.com/v1/orders', $payload);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -494,11 +530,18 @@ class OrderController extends Controller
                     }
                 }
 
-                preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i', $textToParse, $matches);
+                preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|pcs)?/i', $textToParse, $matches);
 
                 if (!empty($matches)) {
-                    $value = (float) $matches[1];
+                    $value_str = $matches[1];
                     $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+
+                    $isKgOrL = in_array($unit, ['kg', 'kilogram', 'l']) || in_array($unitName, ['kg', 'kilogram', 'l']);
+                    if (!$isKgOrL && preg_match('/\.\d{3}$/', $value_str)) {
+                        $value_str = str_replace('.', '', $value_str);
+                    }
+
+                    $value = (float) $value_str;
 
                     if ($unit === 'kg' || $unit === 'kilogram' || $unitName === 'kilogram' || $unitName === 'kg') {
                         return (int) ($value * 1000);
@@ -519,10 +562,18 @@ class OrderController extends Controller
         // 3. Fallback to product title parsing
         if ($product) {
             $textToParse = $product->title;
-            preg_match('/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i', $textToParse, $matches);
+            preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g)?/i', $textToParse, $matches);
             if (!empty($matches)) {
-                $value = (float) $matches[1];
+                $value_str = $matches[1];
                 $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+                
+                $isKg = in_array($unit, ['kg', 'kilogram']);
+                if (!$isKg && preg_match('/\.\d{3}$/', $value_str)) {
+                    $value_str = str_replace('.', '', $value_str);
+                }
+                
+                $value = (float) $value_str;
+                
                 if ($unit === 'kg' || $unit === 'kilogram') {
                     return (int) ($value * 1000);
                 }
@@ -533,5 +584,29 @@ class OrderController extends Controller
         }
 
         return 1000; // Default to 1000g (1kg)
+    }
+
+    private function resolveCoordinates($address)
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'FayyfirShop/1.0 (contact@fayyfirshop.com)'
+            ])->get('https://nominatim.openstreetmap.org/search', [
+                'q' => $address,
+                'format' => 'json',
+                'limit' => 1,
+            ]);
+
+            if ($response->successful() && !empty($response->json())) {
+                $data = $response->json()[0];
+                return [
+                    'latitude' => (float)$data['lat'],
+                    'longitude' => (float)$data['lon'],
+                ];
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Coordinate resolution failed: ' . $e->getMessage());
+        }
+        return null;
     }
 }

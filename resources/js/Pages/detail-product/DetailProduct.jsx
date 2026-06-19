@@ -112,11 +112,18 @@ const parseCapacityJs = (variantName, parentUnit = null, activeVariant = null) =
     }
 
     // Match value and unit from variantName
-    const match = textToParse.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|liter|pcs|box|pack)?/i);
+    const match = textToParse.match(/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|liter|l|pcs|box|pack)?/i);
     if (!match) return 1;
 
-    const capacityValue = parseFloat(match[1]);
+    let valueStr = match[1];
     let capacityUnit = match[2] ? match[2].toLowerCase() : '';
+
+    const isLargeUnit = ['kg', 'kilogram', 'l', 'liter'].includes(capacityUnit);
+    if (!isLargeUnit && /\.\d{3}$/.test(valueStr)) {
+        valueStr = valueStr.replace('.', '');
+    }
+
+    const capacityValue = parseFloat(valueStr);
 
     // Fallback to activeVariant unit if available
     if (!capacityUnit && activeVariant && activeVariant.unit) {
@@ -184,10 +191,17 @@ const parseWeightJs = (variant, product) => {
             unitName = unitName.toLowerCase();
 
             // Match numbers and units
-            const matches = textToParse.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram|ml|l|pcs)?/i);
+            const matches = textToParse.match(/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|pcs)?/i);
             if (matches) {
-                const value = parseFloat(matches[1]);
+                let valueStr = matches[1];
                 const unit = matches[2] ? matches[2].toLowerCase() : '';
+
+                const isKgOrL = ['kg', 'kilogram', 'l'].includes(unit) || ['kg', 'kilogram', 'l'].includes(unitName);
+                if (!isKgOrL && /\.\d{3}$/.test(valueStr)) {
+                    valueStr = valueStr.replace('.', '');
+                }
+
+                const value = parseFloat(valueStr);
 
                 if (unit === 'kg' || unit === 'kilogram' || unitName === 'kilogram') {
                     return Math.round(value * 1000);
@@ -211,10 +225,17 @@ const parseWeightJs = (variant, product) => {
 
     // Fallback parsing from product title
     if (product && product.title) {
-        const matches = product.title.match(/(\d+(?:\.\d+)?)\s*(kg|g|gr|gram|kilogram)?/i);
+        const matches = product.title.match(/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g)?/i);
         if (matches) {
-            const value = parseFloat(matches[1]);
+            let valueStr = matches[1];
             const unit = matches[2] ? matches[2].toLowerCase() : '';
+            
+            const isKg = ['kg', 'kilogram'].includes(unit);
+            if (!isKg && /\.\d{3}$/.test(valueStr)) {
+                valueStr = valueStr.replace('.', '');
+            }
+            
+            const value = parseFloat(valueStr);
             if (unit === 'kg' || unit === 'kilogram') {
                 return Math.round(value * 1000);
             }
@@ -804,12 +825,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             setQuantity(quantity + 1);
     };
 
-    const formatPrice = (val) =>
-        new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
+    const formatPrice = (val) => {
+        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
+        const formattedNumber = new Intl.NumberFormat("id-ID", {
             minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(val);
+        return `${currencySymbol} ${formattedNumber}`;
+    };
 
     const renderStars = (rating) => {
         const parsedRating = parseFloat(rating) || 5.0;

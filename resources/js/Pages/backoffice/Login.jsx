@@ -1,9 +1,13 @@
 import { Head, useForm } from '@inertiajs/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
+import AuthStatusModal from '@/Components/AuthStatusModal';
+import { useLanguage } from '@/Contexts/LanguageContext';
 
 export default function Login({ status }) {
+    const { t } = useLanguage();
     const [showPassword, setShowPassword] = useState(false);
+    const [showFailureModal, setShowFailureModal] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -15,12 +19,27 @@ export default function Login({ status }) {
 
         post(route('backoffice.login.store'), {
             onFinish: () => reset('password'),
+            onError: () => {
+                setShowFailureModal(true);
+            }
         });
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 px-4 py-10">
             <Head title="Backoffice Login" />
+
+            <AuthStatusModal
+                isOpen={showFailureModal}
+                onClose={() => setShowFailureModal(false)}
+                type="error"
+                isAdmin={true}
+                title={t('auth.status.login_fail_title', 'Login Gagal')}
+                message={t('auth.status.login_fail_message', 'Email atau password salah. Silakan periksa kembali detail login Anda.')}
+            />
+
+            {/* This will automatically pick up flash.logout_status and show the logout success modal */}
+            <AuthStatusModal />
 
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
                 <div className="w-full max-w-md rounded-lg border border-white/15 bg-white p-8 shadow-2xl shadow-blue-950/30">

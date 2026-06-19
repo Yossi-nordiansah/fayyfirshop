@@ -11,14 +11,13 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
     const { t, locale } = useLanguage();
 
     const formatPrice = (value) => {
-        const currencyCode = locale === "indonesia" ? "IDR" : "SAR";
-        const formatterLocale = locale === "indonesia" ? "id-ID-u-nu-latn" : locale === "arabic" ? "ar-SA-u-nu-latn" : "en-US-u-nu-latn";
-
-        return new Intl.NumberFormat(formatterLocale, {
-            style: "currency",
-            currency: currencyCode,
+        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
+        const formattedNumber = new Intl.NumberFormat("id-ID", {
             minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(value || 0);
+
+        return `${currencySymbol} ${formattedNumber}`;
     };
 
     const formatDate = (dateString) => {

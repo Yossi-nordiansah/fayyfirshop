@@ -44,18 +44,17 @@ const ProductCard = ({
 
     // Helper formatting Rupiah IDN / Internasional sesuai Locale aktif
     const formatPrice = (value) => {
-        const currencySymbol = t("product.currency", "Rp");
+        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
 
         // Memformat angka menjadi ribuan (150000 -> 150.000)
         const formattedNumber = new Intl.NumberFormat(
-            locale === "ar" ? "ar-EG" : "id-ID",
+            "id-ID",
             {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
             },
         ).format(value);
 
-        // Jika bahasa arab, letakkan simbol mata uang di tempat yang sesuai konteks dir="ltr"
         return `${currencySymbol} ${formattedNumber}`;
     };
 

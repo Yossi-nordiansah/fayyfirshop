@@ -52,7 +52,6 @@ export default function WarehouseSelection({
                             <span className={`inline-block w-2 h-2 rounded-full ${hasAllStock ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                         </div>
                         <h3 className="mt-1 text-sm font-bold text-slate-800">{branch.name}</h3>
-                        <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">{fullAddress}</p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-bold self-start md:self-auto">
                         {hasAllStock ? (
@@ -104,8 +103,8 @@ export default function WarehouseSelection({
                             type="button"
                             onClick={() => setSelectedBranchId(branch.id)}
                             className={`p-4 border rounded-2xl text-left transition-all duration-300 flex flex-col justify-between h-full ${isSelected
-                                    ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                                ? 'border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm ring-1 ring-blue-600'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                                 }`}
                         >
                             <div>

@@ -45,6 +45,7 @@ class AuthenticatedSessionController extends Controller
             }
 
             $request->session()->regenerate();
+            $request->session()->flash('login_status', 'success_admin');
             return redirect()->intended(route('backoffice.dashboard', absolute: false));
         }
 
@@ -59,6 +60,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->flash('login_status', 'success_customer');
 
         if ($user && $user->role === 'customer') {
             return redirect()->intended(url()->previous());
@@ -81,9 +83,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         if (in_array($role, ['admin', 'super_admin'], true)) {
+            $request->session()->flash('logout_status', 'success_admin');
             return redirect()->route('backoffice.login');
         }
 
+        $request->session()->flash('logout_status', 'success_customer');
         return redirect('/');
     }
 }
