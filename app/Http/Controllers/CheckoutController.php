@@ -26,7 +26,7 @@ class CheckoutController extends Controller
 
         // Cek apakah user telah melengkapi data profil (untuk pengiriman)
         if ($user && (!$user->phone || !$user->address || !$user->city || !$user->postal_code || !$user->receiver_name)) {
-            return redirect()->route('register')->with('error', 'checkout.complete_profile_warning');
+            return redirect()->guest(route('register'))->with('error', 'checkout.complete_profile_warning');
         }
 
         $storeBranches = StoreBranch::where('is_active', true)->get();

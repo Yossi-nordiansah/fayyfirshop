@@ -112,7 +112,18 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
 
     // Filter Logic
     const filteredOrders = useMemo(() => {
-        return orders.filter(order => {
+        const isReviewed = (order) => {
+            return order.items.some(item => {
+                if (!item.product) return false;
+                return item.product.reviews && item.product.reviews.some(r => 
+                    Number(r.order_id) === Number(order.id) &&
+                    Number(r.product_id) === Number(item.product_id) &&
+                    (item.product_variant_id ? Number(r.product_variant_id) === Number(item.product_variant_id) : true)
+                );
+            });
+        };
+
+        const filtered = orders.filter(order => {
             if (activeTab === "all") return true;
             if (activeTab === "unpaid") {
                 return order.payment_status === "unpaid" && order.status === "pending";
@@ -130,6 +141,23 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                 return order.status === "cancelled";
             }
             return true;
+        });
+
+        return [...filtered].sort((a, b) => {
+            const aReviewed = isReviewed(a);
+            const bReviewed = isReviewed(b);
+
+            // Active/Action needed: status in progress OR completed but not yet reviewed
+            const aNeedsAction = (a.status !== 'completed' && a.status !== 'cancelled') || (a.status === 'completed' && !aReviewed);
+            const bNeedsAction = (b.status !== 'completed' && b.status !== 'cancelled') || (b.status === 'completed' && !bReviewed);
+
+            if (aNeedsAction && !bNeedsAction) return -1;
+            if (!aNeedsAction && bNeedsAction) return 1;
+
+            // Secondary sort: Sort by updated_at descending (most recently updated/status changed first)
+            const aTime = new Date(a.updated_at || a.created_at).getTime();
+            const bTime = new Date(b.updated_at || b.created_at).getTime();
+            return bTime - aTime;
         });
     }, [orders, activeTab]);
 

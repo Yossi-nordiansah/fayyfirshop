@@ -116,10 +116,10 @@ export default function SuccessPage({ order }) {
                         {/* Quick actions buttons */}
                         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
                             <Link
-                                href={route('orders.track', order.id)}
+                                href={route('orders.index', { tab: order.payment_status === 'paid' ? 'processing' : 'unpaid' })}
                                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-sm px-6 py-3.5 rounded-2xl shadow-lg hover:from-blue-800 hover:to-blue-700 transition-all active:scale-[0.98]"
                             >
-                                <span>{t("checkout.success.btn_track", "Lacak Pengiriman")}</span>
+                                <span>{t("orders.title", "Pesanan Saya")}</span>
                                 <ArrowRight size={16} />
                             </Link>
 
