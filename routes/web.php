@@ -10,6 +10,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ProductReviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,6 +24,12 @@ Route::get('/', function () {
         ->where('is_best_seller', true)
         ->get();
 
+    $reviews = \App\Models\ProductReview::with(['user', 'product'])
+        ->where('is_visible', true)
+        ->latest('id')
+        ->take(10)
+        ->get();
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -30,6 +37,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
         'newProducts' => $newProducts,
         'bestSellerProducts' => $bestSellerProducts,
+        'reviews' => $reviews,
     ]);
 });
 
@@ -45,7 +53,16 @@ Route::get('/products/{category?}', function ($category = null) {
 });
 
 Route::get('/product/{slug}', function ($slug) {
-    $product = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'variants.branchStocks', 'images'])
+    $product = \App\Models\Product::with([
+        'category',
+        'subCategory',
+        'variants.unit',
+        'variants.branchStocks',
+        'images',
+        'reviews' => function ($query) {
+            $query->where('is_visible', true)->with(['user', 'productVariant'])->latest('id');
+        }
+    ])
         ->where('slug', $slug)
         ->first();
 
@@ -166,9 +183,9 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::post('/orders/{order}/approve-cancellation', [OrderController::class, 'approveCancellation'])->name('backoffice.orders.approve-cancellation');
     Route::post('/orders/{order}/reject-cancellation', [OrderController::class, 'rejectCancellation'])->name('backoffice.orders.reject-cancellation');
 
-    Route::get('/review', function () {
-        return Inertia::render('backoffice/menu/Reviews');
-    })->name('backoffice.review');
+    Route::get('/review', [ProductReviewController::class, 'index'])->name('backoffice.review');
+    Route::patch('/review/{review}/toggle-visibility', [ProductReviewController::class, 'toggleVisibility'])->name('backoffice.review.toggle-visibility');
+    Route::delete('/review/{review}', [ProductReviewController::class, 'destroy'])->name('backoffice.review.destroy');
 
     Route::get('/admin', [AdminController::class, 'index'])->name('backoffice.admin');
     Route::get('/admin/create', [AdminController::class, 'create'])->name('backoffice.admin.create');
@@ -237,10 +254,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/payment/{id}/change', [CheckoutController::class, 'changePaymentMethod'])->name('checkout.payment.change');
     Route::post('/checkout/payment/{id}/pay-card', [CheckoutController::class, 'payCreditCard'])->name('checkout.payment.pay-card');
     Route::post('/checkout/payment/{id}/cancel', [CheckoutController::class, 'cancelOrder'])->name('checkout.payment.cancel');
+    Route::post('/checkout/payment/{id}/expire', [CheckoutController::class, 'expireOrder'])->name('checkout.payment.expire');
     Route::get('/orders', [OrderController::class, 'userOrders'])->name('orders.index');
     Route::post('/orders/{order}/payment-token', [OrderController::class, 'getPaymentToken'])->name('orders.payment-token');
     Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');
     Route::post('/orders/{order}/cancel-request', [OrderController::class, 'requestCancellation'])->name('orders.cancel-request');
+    Route::post('/orders/{order}/reviews', [ProductReviewController::class, 'store'])->name('orders.reviews.store');
 });
 
 require __DIR__ . '/auth.php';

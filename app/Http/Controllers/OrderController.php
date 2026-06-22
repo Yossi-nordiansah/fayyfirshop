@@ -362,6 +362,9 @@ class OrderController extends Controller
         $orders = Order::with([
             'user',
             'items.product.images',
+            'items.product.reviews' => function ($query) {
+                $query->where('user_id', auth()->id());
+            },
             'items.variant',
             'storeBranch'
         ])

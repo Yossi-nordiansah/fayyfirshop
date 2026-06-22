@@ -12,8 +12,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
 export default function CartPage() {
@@ -132,7 +130,6 @@ export default function CartPage() {
     return (
         <MainLayout>
             <Head title={`${t("cart.title", "Keranjang Belanja")} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen pb-16 font-sans bg-white pt-28">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -394,8 +391,6 @@ export default function CartPage() {
                     )}
                 </div>
             </div>
-
-            <Footer />
         </MainLayout>
     );
 }

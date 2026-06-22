@@ -30,14 +30,14 @@ export default function PaymentCodeCard({
             {/* Card Header */}
             <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div>
-                    <h2 className="text-sm font-extrabold text-slate-400 uppercase tracking-wider">
+                    <h2 className="text-xs lg:text-sm font-extrabold text-slate-400 uppercase tracking-wider">
                         {t("payment.method_title", "Metode Pembayaran")}
                     </h2>
-                    <p className="text-base font-black text-slate-900 mt-1 uppercase">
+                    <p className="text-xs lg:text-sm font-black text-slate-900 mt-1 uppercase">
                         {getPaymentMethodName(order.payment_method)}
                     </p>
                 </div>
-                <div className="bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-xl font-mono text-xs font-extrabold text-blue-950">
+                <div className="bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-xl font-mono text-[10px] lg:text-xs font-extrabold text-blue-950">
                     {order.invoice_number}
                 </div>
             </div>
@@ -45,7 +45,7 @@ export default function PaymentCodeCard({
             {/* 1. Virtual Account (non-mandiri) */}
             {["bca_va", "bri_va", "bni_va", "permata_va", "cimb_va", "seabank_va", "danamon_va", "bsi_va", "saqu_va"].includes(order.payment_method) && details.va_number && (
                 <div className="space-y-4 text-center">
-                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl inline-block max-w-sm w-full mx-auto">
+                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-sm w-full mx-auto">
                         <span className="text-xs text-slate-400 font-bold tracking-wider block uppercase">
                             {t("payment.va.label", "NOMOR VIRTUAL ACCOUNT")}
                         </span>

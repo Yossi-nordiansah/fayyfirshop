@@ -35,6 +35,7 @@ class User extends Authenticatable
         'receiver_name',
         'assigned_branch_id',
         'area_id',
+        'google_id',
     ];
 
     /**

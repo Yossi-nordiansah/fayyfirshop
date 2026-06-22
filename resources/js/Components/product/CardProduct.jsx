@@ -123,49 +123,52 @@ const ProductCard = ({
                     </div>
 
                     <div className="h-[14px] flex items-center">
-                        {rating > 0 && (
-                            <div
-                                className="flex items-center gap-0.5"
-                                title={`Rating: ${rating}`}
-                            >
-                                {[...Array(5)].map((_, index) => {
-                                    const starValue = index + 1;
-                                    const isFull = rating >= starValue;
-                                    const isHalf =
-                                        !isFull && rating >= starValue - 0.5;
+                        {(() => {
+                            const displayRating = rating > 0 ? rating : 5.0;
+                            return (
+                                <div
+                                    className="flex items-center gap-0.5"
+                                    title={`Rating: ${displayRating}`}
+                                >
+                                    {[...Array(5)].map((_, index) => {
+                                        const starValue = index + 1;
+                                        const isFull = displayRating >= starValue;
+                                        const isHalf =
+                                            !isFull && displayRating >= starValue - 0.5;
 
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="relative inline-block"
-                                        >
-                                            <Star
-                                                size={13}
-                                                className="text-zinc-200 fill-zinc-100"
-                                            />
-                                            {(isFull || isHalf) && (
-                                                <div
-                                                    className="absolute top-0 left-0 overflow-hidden"
-                                                    style={{
-                                                        width: isFull
-                                                            ? "100%"
-                                                            : "50%",
-                                                    }}
-                                                >
-                                                    <Star
-                                                        size={13}
-                                                        className="text-amber-400 fill-amber-400 max-w-none"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                <span className="text-[10px] font-bold text-zinc-400 ml-1 mt-0.5">
-                                    {rating}
-                                </span>
-                            </div>
-                        )}
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="relative inline-block"
+                                            >
+                                                <Star
+                                                    size={13}
+                                                    className="text-zinc-200 fill-zinc-100"
+                                                />
+                                                {(isFull || isHalf) && (
+                                                    <div
+                                                        className="absolute top-0 left-0 overflow-hidden"
+                                                        style={{
+                                                            width: isFull
+                                                                ? "100%"
+                                                                : "50%",
+                                                        }}
+                                                    >
+                                                        <Star
+                                                            size={13}
+                                                            className="text-amber-400 fill-amber-400 max-w-none"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    <span className="text-[10px] font-bold text-zinc-400 ml-1 mt-0.5">
+                                        {displayRating}
+                                    </span>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Bottom Row */}

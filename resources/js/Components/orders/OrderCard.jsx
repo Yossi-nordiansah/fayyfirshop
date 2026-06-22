@@ -18,6 +18,7 @@ import {
     DollarSign
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
+import ReviewOrderModal from "./ReviewOrderModal";
 
 function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPay, t }) {
     const [timeLeft, setTimeLeft] = useState("");
@@ -90,8 +91,33 @@ export default function OrderCard({
     getWhatsAppReviewUrl,
     getStatusStyle
 }) {
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
+    const [isReviewOpen, setIsReviewOpen] = useState(false);
     const statusInfo = getStatusStyle(order.status, order.payment_status, order.cancellation_status);
+
+    const isOrderReviewed = order.items.some(item => {
+        if (!item.product) return false;
+        return item.product.reviews && item.product.reviews.some(r => 
+            r.order_id === order.id &&
+            r.product_id === item.product_id &&
+            (item.product_variant_id ? r.product_variant_id === item.product_variant_id : true)
+        );
+    });
+
+    const getFirstProductSlug = (order) => {
+        const firstItem = order.items?.[0];
+        return firstItem?.product?.slug || null;
+    };
+
+    const handleShopAgain = (e, order) => {
+        e.stopPropagation();
+        const slug = getFirstProductSlug(order);
+        if (slug) {
+            router.visit(`/product/${slug}`);
+        } else {
+            router.visit('/products');
+        }
+    };
 
     return (
         <div
@@ -295,26 +321,34 @@ export default function OrderCard({
 
                     {/* 4. COMPLETED STATE */}
                     {order.status === "completed" && (
-                        <a
-                            href={getWhatsAppReviewUrl(order)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
-                        >
-                            <span>{t('orders.action.review')}</span>
-                        </a>
+                        isOrderReviewed ? (
+                            <button
+                                onClick={(e) => handleShopAgain(e, order)}
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
+                            >
+                                <span>{t('orders.action.shop_again', 'Belanja Lagi')}</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsReviewOpen(true);
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
+                            >
+                                <span>{t('orders.action.review')}</span>
+                            </button>
+                        )
                     )}
 
                     {/* 5. CANCELLED STATE */}
                     {order.status === "cancelled" && (
-                        <Link
-                            href="/products"
-                            onClick={(e) => e.stopPropagation()}
+                        <button
+                            onClick={(e) => handleShopAgain(e, order)}
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                         >
                             <span>{t('orders.action.shop_again')}</span>
-                        </Link>
+                        </button>
                     )}
                 </div>
             </div>
@@ -453,6 +487,13 @@ export default function OrderCard({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Review Order Modal */}
+            <ReviewOrderModal
+                isOpen={isReviewOpen}
+                onClose={() => setIsReviewOpen(false)}
+                order={order}
+            />
         </div>
     );
 }

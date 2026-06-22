@@ -122,18 +122,21 @@ const Footer = () => {
                                     size={18}
                                     className="text-amber-600 shrink-0 mt-0.5"
                                 />
-                                <span className="leading-relaxed">
-                                    {t("footer.address")}
-                                </span>
+                                <a href="https://share.google/RTqWfDBuWnTAvMOxb" target="_blank" className="leading-relaxed hover:text-amber-600 transition-colors">
+                                    Aljazeerah signature, Jl. Ternate No.03, Citarum, Kec. Bandung Wetan, Kota Bandung, Jawa Barat 40115
+                                </a>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Phone size={18} className="text-amber-600" />
-                                <span>+62 812 3456 7890</span>
+                                <a href="https://wa.me/6281290007740">+62 812-9000-7740</a>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <a
+                                href="mailto:info@fayyfirshop.com"
+                                className="flex items-center gap-3 hover:text-amber-600 transition-colors"
+                            >
                                 <Mail size={18} className="text-amber-600" />
                                 <span>info@fayyfirshop.com</span>
-                            </div>
+                            </a>
                         </div>
 
                         {/* Newsletter Mini */}

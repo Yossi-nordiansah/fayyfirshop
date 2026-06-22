@@ -15,8 +15,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import products from "../../data-source/data_products_30.json";
 import { useLanguage } from "@/Contexts/LanguageContext"; // 1. Import LanguageContext Proyek
 import LoginModal from "@/Components/LoginModal";
@@ -229,12 +227,12 @@ const parseWeightJs = (variant, product) => {
         if (matches) {
             let valueStr = matches[1];
             const unit = matches[2] ? matches[2].toLowerCase() : '';
-            
+
             const isKg = ['kg', 'kilogram'].includes(unit);
             if (!isKg && /\.\d{3}$/.test(valueStr)) {
                 valueStr = valueStr.replace('.', '');
             }
-            
+
             const value = parseFloat(valueStr);
             if (unit === 'kg' || unit === 'kilogram') {
                 return Math.round(value * 1000);
@@ -280,6 +278,23 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         }
         return product.description;
     }, [product, locale]);
+
+    const reviewsList = product.reviews || [];
+    const totalReviewsCount = reviewsList.length;
+
+    const ratingDistribution = React.useMemo(() => {
+        const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        reviewsList.forEach(r => {
+            if (counts[r.rating] !== undefined) counts[r.rating]++;
+        });
+        return counts;
+    }, [reviewsList]);
+
+    const averageRating = React.useMemo(() => {
+        if (totalReviewsCount === 0) return parseFloat(product.rating) || 5.0;
+        const sum = reviewsList.reduce((acc, curr) => acc + curr.rating, 0);
+        return (sum / totalReviewsCount).toFixed(1);
+    }, [reviewsList, product.rating]);
 
     const uniqueColors = React.useMemo(() => {
         if (isDbProduct) return [];
@@ -1109,7 +1124,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     return (
         <MainLayout>
             <Head title={`${displayName} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen pt-24 pb-20 font-sans bg-white">
                 {/* Breadcrumbs */}
@@ -1280,14 +1294,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 {/* Rating row */}
                                 <div className="flex flex-wrap items-center gap-3">
                                     <div className="flex items-center gap-0.5">
-                                        {renderStars(product.rating)}
+                                        {renderStars(averageRating)}
                                     </div>
                                     <span className="text-sm font-bold text-amber-500">
-                                        {product.rating}
+                                        {averageRating}
                                     </span>
                                     <span className="text-xs text-zinc-300">|</span>
                                     <span className="text-sm text-zinc-500">
-                                        {product.reviewCount || product.sold || 0}{" "}
+                                        {totalReviewsCount || product.reviewCount || 0}{" "}
                                         {t("product.detail.reviews", "ulasan")}
                                     </span>
                                     <span className="text-xs text-zinc-300">|</span>
@@ -1669,11 +1683,174 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             </p>
                         </div>
                     </motion.div>
-                </div>
 
+                    {/* Ratings & Reviews Section */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        className="pt-10 mt-10 border-t border-zinc-100"
+                    >
+                        <h2 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-3">
+                            {t("product.detail.reviews_title", "Penilaian Produk")}
+                            <span className="flex-1 h-px bg-gradient-to-r from-zinc-200 to-transparent" />
+                        </h2>
+
+                        {reviewsList.length === 0 ? (
+                            <div className="p-8 border border-dashed border-zinc-200 rounded-2xl text-center text-slate-400">
+                                <p className="text-sm font-semibold">
+                                    {t("product.detail.no_reviews", "Belum ada ulasan untuk produk ini.")}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    {t("product.detail.no_reviews_sub", "Jadilah yang pertama memberikan ulasan setelah melakukan pembelian.")}
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-8">
+                                    {/* Average Rating Score Card */}
+                                    <div className="bg-blue-50/40 border border-blue-100 p-6 rounded-2xl flex flex-col items-center justify-center text-center">
+                                        <span className="text-5xl font-black text-blue-950 font-mono tracking-tight">
+                                            {averageRating}
+                                        </span>
+                                        <span className="text-xs font-semibold text-slate-500 mt-1">
+                                            {t("product.detail.out_of_five", "dari 5")}
+                                        </span>
+                                        <div className="flex items-center gap-1 mt-3">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    size={18}
+                                                    className={`${i < Math.round(averageRating)
+                                                        ? "text-amber-400 fill-amber-400"
+                                                        : "text-zinc-200"
+                                                        }`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-3 font-semibold">
+                                            {totalReviewsCount} {t("product.detail.reviews_count_label", "Ulasan Terverifikasi")}
+                                        </p>
+                                    </div>
+
+                                    {/* Distribution Bar Chart Card */}
+                                    <div className="bg-white border border-zinc-100 p-6 rounded-2xl md:col-span-2 flex flex-col justify-center space-y-2.5">
+                                        {[5, 4, 3, 2, 1].map((stars) => {
+                                            const count = ratingDistribution[stars] || 0;
+                                            const percentage = totalReviewsCount > 0 ? (count / totalReviewsCount) * 100 : 0;
+                                            return (
+                                                <div key={stars} className="flex items-center gap-3 text-xs">
+                                                    <span className="w-12 font-bold text-slate-600 flex items-center gap-1">
+                                                        {stars} <Star size={12} className="text-amber-500 fill-current" />
+                                                    </span>
+                                                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="w-8 text-right font-bold text-slate-400 font-mono">
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Individual Customer Reviews List */}
+                                <div className="space-y-4">
+                                    {reviewsList.map((review) => {
+                                        const userAvatar = review.user?.avatar
+                                            ? review.user.avatar.startsWith("http") || review.user.avatar.startsWith("/")
+                                                ? review.user.avatar
+                                                : `/storage/${review.user.avatar}`
+                                            : "/images/default-profile.png";
+
+                                        // Mengatur format tanggal dinamis berdasarkan locale aktif
+                                        let localeTag = "id-ID";
+                                        if (locale === "en" || locale === "english") localeTag = "en-US";
+                                        else if (locale === "zh" || locale === "chinese") localeTag = "zh-CN";
+
+                                        const dateFormatted = new Date(review.created_at).toLocaleDateString(
+                                            localeTag,
+                                            { year: "numeric", month: "long", day: "numeric" }
+                                        );
+
+                                        const variantResolvedName = review.product_variant
+                                            ? review.product_variant.name_translations?.[locale] || review.product_variant.name
+                                            : null;
+
+                                        return (
+                                            <div key={review.id} className="p-5 border border-zinc-100 rounded-2xl bg-white space-y-3 hover:shadow-xs transition-shadow">
+                                                <div className="flex items-start justify-between flex-wrap gap-2">
+                                                    {/* Profile Info */}
+                                                    <div className="flex items-center gap-3">
+                                                        <img
+                                                            src={userAvatar}
+                                                            alt={review.user?.name || "Customer"}
+                                                            className="w-9 h-9 rounded-full object-cover border border-slate-100"
+                                                            referrerPolicy="no-referrer"
+                                                            onError={(e) => {
+                                                                e.target.src = "/images/default-profile.png";
+                                                            }}
+                                                        />
+                                                        <div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <h4 className="text-xs font-bold text-slate-900">
+                                                                    {review.user?.name || "Customer"}
+                                                                </h4>
+                                                                <div className="flex items-center gap-0.5 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[9px] font-bold border border-emerald-100 select-none">
+                                                                    <BadgeCheck size={10} className="fill-emerald-600 text-white" />
+                                                                    <span>{t("rating.verified", "Pembeli Terverifikasi")}</span>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">
+                                                                {dateFormatted}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Stars Rating */}
+                                                    <div className="flex items-center gap-0.5">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <Star
+                                                                key={i}
+                                                                size={12}
+                                                                className={`${i < review.rating
+                                                                    ? "text-amber-400 fill-amber-400"
+                                                                    : "text-zinc-200"
+                                                                    }`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Variant name if any */}
+                                                {variantResolvedName && (
+                                                    <p className="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-lg w-fit">
+                                                        {t("orders.variant", "Varian")}: {variantResolvedName}
+                                                    </p>
+                                                )}
+
+                                                {/* Comment Text */}
+                                                <p className="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap">
+                                                    {review.comment || (
+                                                        <span className="italic text-slate-400 text-[10px]">
+                                                            ({t("rating.no_comment", "Hanya memberikan nilai")})
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </motion.div>
+                </div>
             </div>
 
-            <Footer />
             <LoginModal
                 isOpen={isLoginModalOpen}
                 onClose={() => {

@@ -13,6 +13,7 @@ const RenderInput = ({
     errors = {},
     clientErrors = {},
     isRtl = false,
+    disabled = false,
 }) => {
     const errorMsg = clientErrors[id] || errors[id];
     return (
@@ -30,7 +31,8 @@ const RenderInput = ({
                     value={data[id]}
                     onChange={(e) => setData(id, e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full bg-slate-50 text-slate-900 placeholder-slate-400 ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border transition-all duration-300 outline-none ${errorMsg
+                    disabled={disabled}
+                    className={`w-full bg-slate-50 text-slate-900 placeholder-slate-400 ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border transition-all duration-300 outline-none ${disabled ? "opacity-60 cursor-not-allowed select-none bg-slate-100/80" : ""} ${errorMsg
                         ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                         : "border-slate-200 hover:border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
                         }`}

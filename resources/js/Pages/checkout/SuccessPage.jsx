@@ -3,8 +3,6 @@ import { Head, Link } from "@inertiajs/react";
 import { CheckCircle, ArrowRight, ShoppingBag, MapPin, Truck, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
 export default function SuccessPage({ order }) {
@@ -34,7 +32,6 @@ export default function SuccessPage({ order }) {
     return (
         <MainLayout>
             <Head title={`${t("checkout.success.title", "Pesanan Berhasil")} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen bg-slate-50 pb-20 pt-28 flex flex-col justify-center">
                 <div className="max-w-2xl mx-auto w-full px-4">
@@ -136,8 +133,6 @@ export default function SuccessPage({ order }) {
                     </motion.div>
                 </div>
             </div>
-
-            <Footer />
         </MainLayout>
     );
 }

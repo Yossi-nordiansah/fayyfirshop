@@ -16,16 +16,24 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import axios from "axios";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import MainLayout from "@/Layouts/MainLayout";
 import BaseRenderInput from "@/Components/register/RenderInput";
 import BaseRenderTextArea from "@/Components/register/RenderTextArea";
 
-export default function Register() {
+export default function Register({ auth, flash }) {
     const { t, locale } = useLanguage();
     const [clientErrors, setClientErrors] = useState({});
-    const [avatarPreview, setAvatarPreview] = useState('/images/default-profile.png');
+
+    const user = auth?.user;
+    const getAvatarUrl = () => {
+        if (!user?.avatar) return '/images/default-profile.png';
+        if (user.avatar.startsWith('http') || user.avatar.startsWith('/')) {
+            return user.avatar;
+        }
+        return `/storage/${user.avatar}`;
+    };
+
+    const [avatarPreview, setAvatarPreview] = useState(getAvatarUrl());
     const avatarInputRef = useRef(null);
 
     // Dropdown States untuk Wilayah Indonesia
@@ -43,7 +51,7 @@ export default function Register() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Mengontrol UI: "ID" untuk Domestik Indonesia, "INTL" untuk Luar Negeri
-    const [registrationType, setRegistrationType] = useState("ID");
+    const [registrationType, setRegistrationType] = useState(user?.country && user?.country !== "ID" ? "INTL" : "ID");
 
     const isRtl = locale === 'arabic';
 
@@ -74,18 +82,18 @@ export default function Register() {
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: "",
-        email: "",
+        name: user?.name || "",
+        email: user?.email || "",
         password: "",
         password_confirmation: "",
-        country: "ID",
-        phone: "",
-        address: "",
-        province: "",
-        city: "",
-        district: "",
-        postal_code: "",
-        receiver_name: "",
+        country: user?.country || "ID",
+        phone: user?.phone || "",
+        address: user?.address || "",
+        province: user?.province || "",
+        city: user?.city || "",
+        district: user?.district || "",
+        postal_code: user?.postal_code || "",
+        receiver_name: user?.receiver_name || user?.name || "",
         avatar: null,
     });
 
@@ -179,13 +187,15 @@ export default function Register() {
         } else if (!/\S+@\S+\.\S+/.test(data.email)) {
             errs.email = currentTxt.email_val;
         }
-        if (!data.password) {
-            errs.password = currentTxt.pass_req;
-        } else if (data.password.length < 8) {
-            errs.password = currentTxt.pass_len;
-        }
-        if (data.password !== data.password_confirmation) {
-            errs.password_confirmation = currentTxt.confirm_val;
+        if (!user) {
+            if (!data.password) {
+                errs.password = currentTxt.pass_req;
+            } else if (data.password.length < 8) {
+                errs.password = currentTxt.pass_len;
+            }
+            if (data.password !== data.password_confirmation) {
+                errs.password_confirmation = currentTxt.confirm_val;
+            }
         }
 
         if (!data.phone.trim()) errs.phone = currentTxt.phone_req;
@@ -220,7 +230,7 @@ export default function Register() {
 
     return (
         <div className="min-h-screen font-sans text-slate-900 selection:bg-amber-500 selection:text-white md:pt-16 lg:pt-20">
-            <Head title={t("register.title", "Daftar Akun")} />
+            <Head title={user ? t("register.complete_title", "Lengkapi Pendaftaran") : t("register.title", "Daftar Akun")} />
 
             {processing && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70 backdrop-blur-sm">
@@ -228,19 +238,17 @@ export default function Register() {
                 </div>
             )}
 
-            <Navbar alwaysSolid={true} />
-
             <MainLayout>
                 <div className="relative flex items-center justify-center w-full min-h-screen p-4 pb-12 overflow-hidden bg-transparent select-none md:p-12 pt-28">
                     <div className="relative z-10 w-full max-w-5xl bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xl py-6 px-3 md:p-12 min-h-[600px] flex flex-col justify-between">
 
-                        <div className="flex flex-col items-start justify-between gap-4 mb-8 sm:flex-row sm:items-center" dir={isRtl ? "rtl" : "ltr"}>
+                         <div className="flex flex-col items-start justify-between gap-4 mb-8 sm:flex-row sm:items-center" dir={isRtl ? "rtl" : "ltr"}>
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-wide">
-                                    {t("register.title", "Daftar Akun")}
+                                    {user ? t("register.complete_title", "Lengkapi Pendaftaran") : t("register.title", "Daftar Akun")}
                                 </h1>
                                 <p className="mt-1 text-xs text-slate-500">
-                                    {t("register.subtitle", "Silakan lengkapi informasi di bawah untuk mendaftar")}
+                                    {user ? t("register.complete_subtitle", "Silakan lengkapi informasi profil Anda untuk melanjutkan pembelian") : t("register.subtitle", "Silakan lengkapi informasi di bawah untuk mendaftar")}
                                 </p>
                             </div>
                             <div>
@@ -250,11 +258,45 @@ export default function Register() {
                             </div>
                         </div>
 
+                        {/* Quick Register / Login with Google */}
+                        {!user && (
+                            <div className="mb-6 flex flex-col items-center">
+                                <a
+                                    href={route('auth.google')}
+                                    className="flex items-center justify-center gap-3 w-full max-w-md px-6 py-3 text-xs font-bold tracking-widest text-slate-700 uppercase transition-all duration-300 shadow-sm border border-slate-200 hover:bg-slate-50 rounded-xl hover:shadow active:scale-95 bg-white"
+                                >
+                                    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                                    </svg>
+                                    {t("register.btn_google", "Daftar dengan Google")}
+                                </a>
+                                <div className="w-full max-w-md flex items-center justify-center my-4">
+                                    <span className="h-px bg-slate-200 grow"></span>
+                                    <span className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("register.or_divider", "atau")}</span>
+                                    <span className="h-px bg-slate-200 grow"></span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Error/Warning Message Banner */}
+                        {flash?.error && (
+                            <div
+                                className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium flex items-start gap-2 shadow-sm max-w-md mx-auto w-full"
+                                dir={isRtl ? "rtl" : "ltr"}
+                            >
+                                <span className="text-rose-600 shrink-0 mt-0.5">⚠️</span>
+                                <span>{t(flash.error, flash.error)}</span>
+                            </div>
+                        )}
+
                         {/* Avatar Upload */}
                         <div className="flex flex-col items-center mb-8">
                             <div className="relative cursor-pointer group" onClick={() => avatarInputRef.current?.click()}>
                                 <div className="overflow-hidden transition-all duration-300 border-4 border-white rounded-full shadow-lg w-28 h-28 ring-2 ring-amber-400 group-hover:ring-amber-500 group-hover:shadow-xl">
-                                    <img src={avatarPreview} alt="Profile Preview" className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110" />
+                                    <img src={avatarPreview} alt="Profile Preview" className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110" referrerPolicy="no-referrer" />
                                 </div>
                                 <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 rounded-full opacity-0 bg-black/40 group-hover:opacity-100">
                                     <Camera size={24} className="text-white" />
@@ -279,30 +321,32 @@ export default function Register() {
                                     <h2 className="pb-2 mb-4 text-sm font-bold tracking-wider uppercase border-b text-amber-600 border-slate-100">
                                         {t("register.account_info", "Informasi Akun")}
                                     </h2>
-                                    <BaseRenderInput label={t("register.name", "Nama Lengkap")} id="name" placeholder={currentTxt.placeholder_name} icon={User} data={data} setData={setData} errors={errors} clientErrors={clientErrors} isRtl={isRtl} />
-                                    <BaseRenderInput label={t("register.email", "Alamat Email")} id="email" type="email" placeholder={currentTxt.placeholder_email} icon={Mail} data={data} setData={setData} errors={errors} clientErrors={clientErrors} isRtl={isRtl} />
+                                    <BaseRenderInput label={t("register.name", "Nama Lengkap")} id="name" placeholder={currentTxt.placeholder_name} icon={User} data={data} setData={setData} errors={errors} clientErrors={clientErrors} isRtl={isRtl} disabled={!!user} />
+                                    <BaseRenderInput label={t("register.email", "Alamat Email")} id="email" type="email" placeholder={currentTxt.placeholder_email} icon={Mail} data={data} setData={setData} errors={errors} clientErrors={clientErrors} isRtl={isRtl} disabled={!!user} />
 
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div className="w-full">
-                                            <label htmlFor="password" className="block mb-1 text-sm font-medium text-zinc-700">{t("register.password", "Kata Sandi")}</label>
-                                            <div className="relative rounded-md shadow-sm">
-                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400"><Lock size={18} /></div>
-                                                <input type={showPassword ? "text" : "password"} id="password" value={data.password} onChange={(e) => setData("password", e.target.value)} placeholder={currentTxt.placeholder_pass} className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password || errors.password) ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"}`} />
-                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-zinc-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                                    {!user && (
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <div className="w-full">
+                                                <label htmlFor="password" className="block mb-1 text-sm font-medium text-zinc-700">{t("register.password", "Kata Sandi")}</label>
+                                                <div className="relative rounded-md shadow-sm">
+                                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400"><Lock size={18} /></div>
+                                                    <input type={showPassword ? "text" : "password"} id="password" value={data.password} onChange={(e) => setData("password", e.target.value)} placeholder={currentTxt.placeholder_pass} className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password || errors.password) ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"}`} />
+                                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-zinc-600">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                                                </div>
+                                                {(clientErrors.password || errors.password) && <p className="px-1 mt-1 text-xs text-red-500">{clientErrors.password || errors.password}</p>}
                                             </div>
-                                            {(clientErrors.password || errors.password) && <p className="px-1 mt-1 text-xs text-red-500">{clientErrors.password || errors.password}</p>}
-                                        </div>
 
-                                        <div className="w-full">
-                                            <label htmlFor="password_confirmation" className="block mb-1 text-sm font-medium text-zinc-700">{t("register.password_confirm", "Konfirmasi Sandi")}</label>
-                                            <div className="relative rounded-md shadow-sm">
-                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400"><Lock size={18} /></div>
-                                                <input type={showConfirmPassword ? "text" : "password"} id="password_confirmation" value={data.password_confirmation} onChange={(e) => setData("password_confirmation", e.target.value)} placeholder={currentTxt.placeholder_confirm} className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password_confirmation || errors.password_confirmation) ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"}`} />
-                                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-zinc-600">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                                            <div className="w-full">
+                                                <label htmlFor="password_confirmation" className="block mb-1 text-sm font-medium text-zinc-700">{t("register.password_confirm", "Konfirmasi Sandi")}</label>
+                                                <div className="relative rounded-md shadow-sm">
+                                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400"><Lock size={18} /></div>
+                                                    <input type={showConfirmPassword ? "text" : "password"} id="password_confirmation" value={data.password_confirmation} onChange={(e) => setData("password_confirmation", e.target.value)} placeholder={currentTxt.placeholder_confirm} className={`block w-full rounded-lg border bg-white pl-10 pr-10 py-2.5 text-zinc-900 text-sm outline-none transition-all duration-300 ${(clientErrors.password_confirmation || errors.password_confirmation) ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 hover:border-zinc-400"}`} />
+                                                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400 hover:text-zinc-600">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                                                </div>
+                                                {(clientErrors.password_confirmation || errors.password_confirmation) && <p className="px-1 mt-1 text-xs text-red-500">{clientErrors.password_confirmation || errors.password_confirmation}</p>}
                                             </div>
-                                            {(clientErrors.password_confirmation || errors.password_confirmation) && <p className="px-1 mt-1 text-xs text-red-500">{clientErrors.password_confirmation || errors.password_confirmation}</p>}
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-1">
@@ -478,7 +522,6 @@ export default function Register() {
                     </div>
                 </div>
 
-                <Footer />
             </MainLayout>
         </div>
     );

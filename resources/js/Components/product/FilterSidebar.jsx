@@ -61,7 +61,7 @@ const FilterSidebar = ({
     const { t, locale } = useLanguage();
 
     return (
-        <aside className="sticky hidden border shadow-xl lg:block w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
+        <aside className="sticky overflow-hiddenhidden border shadow-xl lg:block w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
             {/* Heading */}
             <div className="flex items-center justify-between pb-5 mb-6 border-b border-zinc-100">
                 <span className="font-bold text-xs uppercase tracking-[0.2em] text-zinc-900 flex items-center gap-2">
@@ -101,7 +101,7 @@ const FilterSidebar = ({
                                     onClick={() =>
                                         handleCategorySelect(catSlug)
                                     }
-                                    className={`grow text-left text-nowrap flex items-center justify-between px-4 py-3 rounded-l-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${isSelected && !selectedSub ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg shadow-blue-900/20" : isSelected ? "text-blue-600 font-extrabold bg-blue-50/50" : "text-zinc-600 hover:text-blue-600 hover:bg-zinc-50"}`}
+                                    className={`text-wrap grow text-left flex items-center justify-between px-4 py-3 rounded-l-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${isSelected && !selectedSub ? "bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg shadow-blue-900/20" : isSelected ? "text-blue-600 font-extrabold bg-blue-50/50" : "text-zinc-600 hover:text-blue-600 hover:bg-zinc-50"}`}
                                 >
                                     {catObj.name_translations?.[locale] || catObj.name || t(catObj.translationKey, catObj.name)}
                                 </button>

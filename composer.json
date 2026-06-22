@@ -11,6 +11,7 @@
         "laravel/breeze": "^2.4",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.28",
         "laravel/tinker": "^2.10.1",
         "laravolt/indonesia": "^0.41.0",
         "midtrans/midtrans-php": "^2.6",

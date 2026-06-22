@@ -23,6 +23,12 @@ class CheckoutController extends Controller
     public function index()
     {
         $user = auth()->user();
+
+        // Cek apakah user telah melengkapi data profil (untuk pengiriman)
+        if ($user && (!$user->phone || !$user->address || !$user->city || !$user->postal_code || !$user->receiver_name)) {
+            return redirect()->route('register')->with('error', 'checkout.complete_profile_warning');
+        }
+
         $storeBranches = StoreBranch::where('is_active', true)->get();
 
         $userVouchers = [];
@@ -1413,6 +1419,43 @@ class CheckoutController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengajukan pembatalan pesanan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function expireOrder($id)
+    {
+        $order = Order::with('items')->findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled' || $order->payment_status === 'expired') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan ini sudah dibayar, kedaluwarsa, atau dibatalkan.'
+            ], 422);
+        }
+
+        try {
+            DB::transaction(function () use ($order) {
+                $order->update([
+                    'status' => 'cancelled',
+                    'payment_status' => 'expired',
+                    'cancellation_reason' => 'Batas waktu pembayaran telah habis.'
+                ]);
+                $order->restoreStock();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesanan telah dibatalkan karena batas waktu pembayaran habis.'
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membatalkan pesanan: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -22,6 +22,10 @@ class RegisteredUserController extends Controller
 
     public function create(): Response
     {
+        $user = auth()->user();
+        if ($user && $user->phone && $user->address && $user->city && $user->receiver_name) {
+            return redirect('/');
+        }
         return Inertia::render('register/Register');
     }
 
@@ -32,6 +36,52 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $user = auth()->user();
+
+        if ($user) {
+            // Logged in user completing their profile (e.g. from Google login)
+            $request->validate([
+                'country' => 'required|string|max:2',
+                'phone' => 'required|string|max:255',
+                'address' => 'required|string|max:1000',
+                'city' => 'required|string|max:255',
+                'province' => 'required_if:country,ID|nullable|string|max:255',
+                'district' => 'required_if:country,ID|nullable|string|max:255',
+                'postal_code' => 'required|string|max:20',
+                'receiver_name' => 'required|string|max:255',
+                'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            ]);
+
+            $updateData = [];
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+                $updateData['avatar'] = $avatarPath;
+            }
+
+            // Auto resolve Biteship Area ID if country is Indonesia
+            $areaId = $this->resolveBiteshipAreaId(
+                $request->country,
+                $request->district,
+                $request->city,
+                $request->province,
+                $request->postal_code
+            );
+
+            $user->update(array_merge([
+                'country' => $request->country,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'city' => $request->city,
+                'district' => $request->district,
+                'province' => $request->province,
+                'receiver_name' => $request->receiver_name,
+                'postal_code' => $request->postal_code,
+                'area_id' => $areaId,
+            ], $updateData));
+
+            return redirect()->intended('/')->with('success', 'Profil Anda telah berhasil dilengkapi.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
@@ -63,7 +113,7 @@ class RegisteredUserController extends Controller
             $request->postal_code
         );
 
-        $user = User::create([
+        $newUser = User::create([
             'name' => $request->name,
             'avatar' => $avatarPath,
             'email' => $request->email,
@@ -79,7 +129,7 @@ class RegisteredUserController extends Controller
             'area_id' => $areaId,
         ]);
 
-        event(new Registered($user));
+        event(new Registered($newUser));
 
         // Do not automatically log in the user, redirect to home page and trigger login modal
         return redirect('/?login=1')->with('status', 'registered');

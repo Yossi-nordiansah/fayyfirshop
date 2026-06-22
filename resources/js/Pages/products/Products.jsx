@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import MainLayout from "@/Layouts/MainLayout";
 import CardProduct from "@/Components/product/CardProduct";
 import { CATEGORY_MAP } from "@/Components/product/FilterSidebar";
@@ -416,9 +414,7 @@ export default function Products({ category = null, subCategory = null, products
         <div className="min-h-screen text-zinc-100 font-sans selection:bg-amber-500 selection:text-white">
             <Head title={`${bannerTitle} - Fayyfir Shop`} />
 
-            <Navbar />
-
-            <MainLayout>
+            <MainLayout alwaysSolid={false}>
                 {/* 1. Luxurious Banner Header */}
                 <div className="relative pt-28 pb-20 px-6 bg-gradient-to-br from-slate-950 via-blue-950 to-zinc-950 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center">
                     {/* Arabesque Geometric Overlay */}
@@ -796,10 +792,6 @@ export default function Products({ category = null, subCategory = null, products
                         </div>
                     </div>
                 </div>
-
-
-
-                <Footer />
             </MainLayout>
         </div>
     );

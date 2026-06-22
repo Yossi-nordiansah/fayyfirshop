@@ -26,7 +26,7 @@ export default function ExpiryBanner({ order, timeLeft, t }) {
                 </div>
             </div>
 
-            <div className="text-right self-end sm:self-auto">
+            <div className="text-right self-end sm:self-auto lg:mr-0 mx-auto">
                 {timeLeft ? (
                     <div className="flex gap-1 items-center text-xs sm:text-sm font-black text-amber-950">
                         <div className="flex flex-col items-center">

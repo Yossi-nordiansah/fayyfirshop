@@ -24,7 +24,7 @@ class RestrictCustomerToProfile
             ];
 
             if (in_array($currentRouteName, $blockedRouteNames)) {
-                return redirect()->route('profile.edit');
+                return redirect('/');
             }
         }
 

@@ -4,11 +4,11 @@ import { useLanguage } from "@/Contexts/LanguageContext";
 import SlickSlider from "@/Components/home/SlickSlider";
 import { Star, Quote, BadgeCheck } from "lucide-react";
 
-const CustomerRating = () => {
-    const { t } = useLanguage();
+const CustomerRating = ({ reviews: dbReviews = [] }) => {
+    const { t, locale } = useLanguage();
 
-    // Data ulasan pelanggan premium (Sudah diperbaiki dari duplikasi)
-    const reviews = [
+    // Data ulasan pelanggan premium (Static fallback)
+    const staticReviews = [
         {
             id: 1,
             name: "Abdullah Mansur",
@@ -66,6 +66,38 @@ const CustomerRating = () => {
         },
     ];
 
+    const activeReviews = dbReviews.length > 0
+        ? dbReviews.map((r) => {
+              const nameTranslations = r.product?.name_translations;
+              let productTitle = r.product?.title || "";
+              if (nameTranslations) {
+                  let parsed = nameTranslations;
+                  if (typeof nameTranslations === 'string') {
+                      try {
+                          parsed = JSON.parse(nameTranslations);
+                      } catch (e) {
+                          parsed = {};
+                      }
+                  }
+                  productTitle = parsed[locale] || r.product?.title || "";
+              }
+
+              return {
+                  id: r.id,
+                  name: r.user?.name || "Customer",
+                  role: t("rating.verified", "Verified Buyer"),
+                  avatar: r.user?.avatar
+                      ? r.user.avatar.startsWith("http") || r.user.avatar.startsWith("/")
+                          ? r.user.avatar
+                          : `/storage/${r.user.avatar}`
+                      : "/images/default-profile.png",
+                  rating: r.rating,
+                  comment: r.comment,
+                  productName: productTitle
+              };
+          })
+        : staticReviews;
+
     return (
         <section className="bg-transparent pb-14 pt-4 px-2 overflow-hidden">
             <div className="max-w-7xl mx-auto">
@@ -83,22 +115,29 @@ const CustomerRating = () => {
                 {/* Integration with SlickSlider */}
                 <div className="md:px-4 px-2">
                     <SlickSlider>
-                        {reviews.map((review) => (
+                        {activeReviews.map((review) => (
                             <div key={review.id} className="px-3 py-4">
                                 <motion.div
                                     whileHover={{ y: -6, scale: 1.01 }}
-                                    className="bg-slate-100 rounded-2xl border border-zinc-100 p-6 shadow-lg relative flex flex-col justify-between h-[260px] group transition-all duration-300 w-full"
+                                    className="bg-slate-100 rounded-2xl border border-zinc-100 p-6 shadow-lg relative flex flex-col justify-between h-[270px] group transition-all duration-300 w-full"
                                 >
                                     {/* Quote Icon Background Accent */}
-                                    <Quote className="absolute right-6 top-6 text-zinc-100 group-hover:text-amber-500/10 transition-colors duration-300 w-10 h-10 -scale-x-100" />
+                                    <Quote className="absolute right-6 top-6 text-zinc-200/40 group-hover:text-amber-500/10 transition-colors duration-300 w-10 h-10 -scale-x-100 pointer-events-none" />
 
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
+                                        {/* Product Reviewed Title */}
+                                        {review.productName && (
+                                            <p className="text-[10px] text-blue-900 font-extrabold uppercase tracking-wide truncate max-w-[85%]" title={review.productName}>
+                                                {review.productName}
+                                            </p>
+                                        )}
+
                                         {/* Render Bintang Dinamik */}
                                         <div className="flex items-center gap-1">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star
                                                     key={i}
-                                                    size={16}
+                                                    size={14}
                                                     className={`${i < review.rating
                                                         ? "text-amber-400 fill-amber-400"
                                                         : "text-zinc-200"
@@ -108,8 +147,8 @@ const CustomerRating = () => {
                                         </div>
 
                                         {/* Ulasan Teks */}
-                                        <p className="text-xs text-zinc-600 font-medium font-sans leading-relaxed line-clamp-5">
-                                            "{review.comment}"
+                                        <p className="text-xs text-zinc-600 font-medium font-sans leading-relaxed line-clamp-4">
+                                            {review.comment ? `"${review.comment}"` : `(${t("rating.no_comment", "Rated only")})`}
                                         </p>
                                     </div>
 
@@ -119,6 +158,9 @@ const CustomerRating = () => {
                                             src={review.avatar}
                                             alt={review.name}
                                             className="w-10 h-10 rounded-full object-cover ring-2 ring-zinc-100 group-hover:ring-amber-500/20 transition-all duration-300"
+                                            onError={(e) => {
+                                                e.target.src = "/images/default-profile.png";
+                                            }}
                                         />
                                         <div className="overflow-hidden">
                                             <h4 className="text-xs font-bold text-zinc-800 font-sans truncate">

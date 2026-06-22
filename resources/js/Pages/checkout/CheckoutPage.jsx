@@ -6,8 +6,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import axios from "axios";
 
@@ -479,7 +477,6 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
     return (
         <MainLayout>
             <Head title={`${t("checkout.title", "Checkout")} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen pb-20 font-sans bg-slate-50 pt-28">
                 <div className="px-2 mx-auto w-full sm:px-6 lg:px-8">
@@ -610,8 +607,6 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
                     </div>
                 </div>
             </div>
-
-            <Footer />
         </MainLayout>
     );
 }

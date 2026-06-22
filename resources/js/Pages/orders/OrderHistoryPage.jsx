@@ -24,8 +24,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import OrderCard from "@/Components/orders/OrderCard";
 import CancelOrderModal from "@/Components/orders/CancelOrderModal";
@@ -34,7 +32,14 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
     const { t, locale } = useLanguage();
     const isRtl = locale === 'arabic';
 
-    const [activeTab, setActiveTab] = useState("all");
+    const validTabs = ["all", "unpaid", "processing", "shipped", "completed", "cancelled"];
+    const initialTab = (() => {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get("tab");
+        return validTabs.includes(tabParam) ? tabParam : "all";
+    })();
+
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [expandedOrderId, setExpandedOrderId] = useState(null);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
@@ -375,7 +380,6 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
     return (
         <MainLayout>
             <Head title={`${t("orders.title", "Pesanan Saya")} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen bg-slate-100 pb-10 pt-28" dir={isRtl ? "rtl" : "ltr"}>
                 <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -506,7 +510,6 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                 />
             </AnimatePresence>
 
-            <Footer />
         </MainLayout>
     );
 }

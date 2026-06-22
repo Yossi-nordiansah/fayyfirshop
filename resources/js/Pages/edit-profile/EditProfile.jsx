@@ -15,14 +15,12 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import axios from "axios";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import MainLayout from "@/Layouts/MainLayout";
 import BaseRenderInput from "@/Components/register/RenderInput";
 import BaseRenderTextArea from "@/Components/register/RenderTextArea";
 import ChangePasswordModal from "@/Components/edit-profile/ChangePasswordModal";
 
-export default function EditProfile({ auth, mustVerifyEmail, status }) {
+export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
     const { t, locale } = useLanguage();
     const [clientErrors, setClientErrors] = useState({});
     const isRtl = locale === 'ar';
@@ -236,8 +234,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                 </div>
             )}
 
-            <Navbar alwaysSolid={true} />
-
             <MainLayout>
                 <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-12 overflow-hidden bg-transparent select-none pt-28 pb-12">
                     <div className="relative z-10 w-full max-w-5xl bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xl p-6 md:p-12 min-h-[600px] flex flex-col justify-between">
@@ -257,6 +253,17 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+
+                        {/* Error/Warning Message Banner */}
+                        {flash?.error && (
+                            <div
+                                className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium flex items-start gap-2 shadow-sm"
+                                dir={isRtl ? "rtl" : "ltr"}
+                            >
+                                <span className="text-rose-600 shrink-0 mt-0.5">⚠️</span>
+                                <span>{t(flash.error, flash.error)}</span>
+                            </div>
+                        )}
 
                         {/* Header Bagian Atas */}
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8" dir={isRtl ? "rtl" : "ltr"}>
@@ -284,6 +291,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                                         src={avatarPreview}
                                         alt="Profile Preview"
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                        referrerPolicy="no-referrer"
                                     />
                                 </div>
                                 {/* Camera overlay */}
@@ -616,7 +624,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status }) {
                     </div>
                 </div>
 
-                <Footer />
             </MainLayout>
             <ChangePasswordModal
                 isOpen={isPasswordModalOpen}

@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
 
-export default function ActionPanel({ order, formatPrice, onChangeMethod, t }) {
+export default function ActionPanel({ order, formatPrice, onChangeMethod, timeLeft, t }) {
     // Generate dinamis template pesan WhatsApp berdasarkan bahasa terpilih
     const getWhatsAppMessage = () => {
         const invoiceText = t("checkout.action.wa.message", "Halo Admin Fayyfir Shop, saya mengalami kendala pembayaran untuk nomor invoice");
@@ -12,8 +12,8 @@ export default function ActionPanel({ order, formatPrice, onChangeMethod, t }) {
 
     return (
         <div className="space-y-2.5">
-            {/* Change Method Button — only when unpaid & pending */}
-            {order.payment_status === "unpaid" && order.status === "pending" && (
+            {/* Change Method Button — only when unpaid & pending & not yet expired */}
+            {order.payment_status === "unpaid" && order.status === "pending" && timeLeft !== null && (
                 <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}

@@ -25,6 +25,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
     const { auth, navCategories = [], activeEvents = [] } = usePage().props;
     const user = auth?.user;
+    const isProfileIncomplete = user && (!user.phone || !user.address || !user.city || !user.postal_code || !user.receiver_name);
 
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -378,6 +379,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                             }
                                             alt={user.name}
                                             className="object-cover transition-all border rounded-full w-7 h-7 border-white/20 hover:border-amber-400"
+                                            referrerPolicy="no-referrer"
                                         />
                                     ) : (
                                         <User size={20} />
@@ -401,11 +403,11 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                             <p className={`text-sm ${fwSemibold} truncate text-zinc-800`}>{user.name}</p>
                                                         </div>
                                                         <Link
-                                                            href="/profile"
+                                                            href={isProfileIncomplete ? "/register" : "/profile"}
                                                             className="flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
                                                         >
                                                             <User size={16} className="text-zinc-400" />
-                                                            {t("nav.account.profile", "Edit Profile")}
+                                                            {isProfileIncomplete ? t("nav.account.complete_profile", "Lengkapi Profile") : t("nav.account.profile", "Edit Profile")}
                                                         </Link>
                                                         <Link
                                                             href="/cart"
@@ -539,6 +541,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                     }
                                                     alt={user.name}
                                                     className="object-cover border rounded-full w-9 h-9 border-white/10"
+                                                    referrerPolicy="no-referrer"
                                                 />
                                                 <div className="overflow-hidden">
                                                     <p className={`text-sm ${fwSemibold} truncate`}>{user.name}</p>
@@ -568,12 +571,12 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 </Link>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <Link
-                                                        href="/profile"
+                                                        href={isProfileIncomplete ? "/register" : "/profile"}
                                                         onClick={() => setIsOpen(false)}
                                                         className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider text-center uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
                                                     >
                                                         <User size={14} />
-                                                        {t("nav.account.profile", "Profile")}
+                                                        {isProfileIncomplete ? t("nav.account.complete_profile", "Lengkapi Profile") : t("nav.account.profile", "Profile")}
                                                     </Link>
                                                     <button
                                                         onClick={() => {

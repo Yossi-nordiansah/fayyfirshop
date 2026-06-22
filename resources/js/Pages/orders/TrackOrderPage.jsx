@@ -3,8 +3,6 @@ import { Head, Link } from "@inertiajs/react";
 import { Truck, MapPin, Calendar, Clock, ShoppingBag, ArrowLeft, Package, User, Store } from "lucide-react";
 import { motion } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
-import Navbar from "@/Components/Navbar";
-import Footer from "@/Components/Footer";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
 export default function TrackOrderPage({ order, trackingLogs = [] }) {
@@ -66,7 +64,6 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
     return (
         <MainLayout>
             <Head title={`${t("orders.track.page_title", "Lacak Pesanan")} - Fayyfir Shop`} />
-            <Navbar alwaysSolid={true} />
 
             <div className="min-h-screen bg-slate-50 pb-20 pt-28 ">
                 <div className="max-w-4xl mx-auto px-4">
@@ -208,8 +205,6 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                     </div>
                 </div>
             </div>
-
-            <Footer />
         </MainLayout>
     );
 }
