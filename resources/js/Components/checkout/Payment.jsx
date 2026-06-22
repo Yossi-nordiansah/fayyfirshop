@@ -145,9 +145,16 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
         const calculateTimeLeft = () => {
             const expiry = order.payment_details?.expiry_time;
             const target = expiry
-                ? new Date(expiry)
+                ? new Date(expiry.includes("T") ? expiry : expiry.replace(" ", "T") + "+07:00")
                 : new Date(new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000);
-            const difference = target.getTime() - new Date().getTime();
+            
+            let difference = target.getTime() - new Date().getTime();
+            
+            if (isNaN(difference)) {
+                const fallbackTarget = new Date(new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000);
+                difference = fallbackTarget.getTime() - new Date().getTime();
+            }
+
             if (difference <= 0) return null;
             return {
                 hours: Math.floor(difference / (1000 * 60 * 60)),

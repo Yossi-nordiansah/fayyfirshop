@@ -9,8 +9,9 @@ export default function SuccessPage({ order }) {
     const { t, locale } = useLanguage();
 
     const formatPrice = (value) => {
-        const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
-        const formattedNumber = new Intl.NumberFormat("id-ID", {
+        // Konversi dinamis simbol mata uang berdasarkan setelan regional global
+        const currencySymbol = locale === "indonesia" ? "Rp" : locale === "arabic" ? "ر.س" : "SAR";
+        const formattedNumber = new Intl.NumberFormat(locale === "indonesia" ? "id-ID" : "en-US", {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(value || 0);
@@ -31,7 +32,7 @@ export default function SuccessPage({ order }) {
 
     return (
         <MainLayout>
-            <Head title={`${t("checkout.success.title", "Pesanan Berhasil")} - Fayyfir Shop`} />
+            <Head title={`${t("checkout.success.title_head", "Pesanan Berhasil")} - Fayyfir Shop`} />
 
             <div className="min-h-screen bg-slate-50 pb-20 pt-28 flex flex-col justify-center">
                 <div className="max-w-2xl mx-auto w-full px-4">
@@ -53,9 +54,9 @@ export default function SuccessPage({ order }) {
                             </motion.div>
                         </div>
 
-                        {/* Title */}
+                        {/* Title & Description */}
                         <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-wide">
-                            {t("checkout.success.title", "Terima Kasih!")}
+                            {t("checkout.success.thank_you", "Terima Kasih!")}
                         </h1>
                         <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
                             {t("checkout.success.desc", "Pesanan Anda berhasil dibuat dan sedang kami verifikasi. Invoice Anda telah diterbitkan.")}
@@ -64,7 +65,7 @@ export default function SuccessPage({ order }) {
                         {/* Order info details box */}
                         <div className="mt-8 border border-slate-100 bg-slate-50/50 rounded-2xl p-5 text-left text-xs text-slate-600 space-y-4">
                             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                                <span className="font-semibold text-slate-400">Invoice Number</span>
+                                <span className="font-semibold text-slate-400">{t("checkout.success.invoice", "Nomor Invoice")}</span>
                                 <span className="font-mono font-black text-sm text-blue-950 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
                                     {order.invoice_number}
                                 </span>
@@ -74,7 +75,7 @@ export default function SuccessPage({ order }) {
                                 <div className="flex gap-2.5">
                                     <Calendar className="text-slate-400 w-4 h-4 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <h4 className="font-bold text-slate-900">Tanggal Pemesanan</h4>
+                                        <h4 className="font-bold text-slate-900">{t("checkout.success.date", "Tanggal Pemesanan")}</h4>
                                         <p className="mt-0.5 text-slate-500">{formattedDate}</p>
                                     </div>
                                 </div>
@@ -82,7 +83,7 @@ export default function SuccessPage({ order }) {
                                 <div className="flex gap-2.5">
                                     <Truck className="text-slate-400 w-4 h-4 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <h4 className="font-bold text-slate-900">Kurir Pengiriman</h4>
+                                        <h4 className="font-bold text-slate-900">{t("checkout.success.courier", "Kurir Pengiriman")}</h4>
                                         <p className="mt-0.5 text-slate-500 uppercase">{order.shipping_courier} ({order.shipping_service})</p>
                                     </div>
                                 </div>
@@ -91,13 +92,13 @@ export default function SuccessPage({ order }) {
                             <div className="flex gap-2.5 pt-3 border-t border-slate-100 text-left">
                                 <MapPin className="text-slate-400 w-4 h-4 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h4 className="font-bold text-slate-900">Alamat Tujuan</h4>
+                                    <h4 className="font-bold text-slate-900">{t("checkout.success.address", "Alamat Tujuan")}</h4>
                                     {order.user?.address ? (
                                         <div className="mt-1 text-slate-500 leading-relaxed">
                                             <p className="font-bold text-slate-800">{order.user.receiver_name || order.user.name}</p>
                                             <p className="font-mono text-[10px]">{order.user.phone || '-'}</p>
                                             <p className="mt-0.5">
-                                                {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
+                                                {order.user.address}, {t("checkout.success.district_label", "Kec.")} {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
                                             </p>
                                         </div>
                                     ) : (
@@ -107,7 +108,7 @@ export default function SuccessPage({ order }) {
                             </div>
 
                             <div className="flex justify-between items-center pt-3 border-t border-slate-100 font-extrabold text-sm">
-                                <span className="text-slate-900">Total Pembayaran</span>
+                                <span className="text-slate-900">{t("checkout.success.total_payment", "Total Pembayaran")}</span>
                                 <span className="text-blue-900 text-base font-black">{formatPrice(order.total_amount)}</span>
                             </div>
                         </div>
@@ -118,7 +119,7 @@ export default function SuccessPage({ order }) {
                                 href={route('orders.track', order.id)}
                                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-900 to-blue-800 text-white font-bold text-sm px-6 py-3.5 rounded-2xl shadow-lg hover:from-blue-800 hover:to-blue-700 transition-all active:scale-[0.98]"
                             >
-                                <span>Lacak Pengiriman</span>
+                                <span>{t("checkout.success.btn_track", "Lacak Pengiriman")}</span>
                                 <ArrowRight size={16} />
                             </Link>
 
@@ -127,7 +128,7 @@ export default function SuccessPage({ order }) {
                                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm px-6 py-3.5 rounded-2xl hover:bg-slate-50 transition-all active:scale-[0.98]"
                             >
                                 <ShoppingBag size={16} />
-                                <span>Belanja Lagi</span>
+                                <span>{t("checkout.success.btn_continue", "Belanja Lagi")}</span>
                             </Link>
                         </div>
                     </motion.div>

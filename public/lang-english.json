@@ -828,7 +828,6 @@
     "checkout.validation.insufficient_stock": "Insufficient stock in selected warehouse. Please pick alternative branch.",
     "checkout.validation.courier_required": "Please choose a shipping courier option.",
     "checkout.success.title": "Order Completed!",
-    "checkout.success.desc": "Your order has been recorded. We will contact you shortly to process delivery.",
     "orders.track.page_title": "Track Order",
     "orders.track.title": "Track Shipping Status",
     "orders.track.subtitle": "Monitor your package delivery logs in real-time.",
@@ -1084,5 +1083,16 @@
     "rating.no_comment": "Rated only",
     "register.complete_subtitle": "Please complete your profile information to proceed with your purchase",
     "register.complete_title": "Complete Registration",
-    "checkout.complete_profile_warning": "Please complete your profile (phone number, recipient name, shipping address, city, and postal code) first before checking out."
+    "checkout.complete_profile_warning": "Please complete your profile (phone number, recipient name, shipping address, city, and postal code) first before checking out.",
+    "checkout.success.title_head": "Order Successful",
+    "checkout.success.thank_you": "Thank You!",
+    "checkout.success.desc": "Your order has been successfully created and is currently being verified. Your invoice has been issued.",
+    "checkout.success.invoice": "Invoice Number",
+    "checkout.success.date": "Order Date",
+    "checkout.success.courier": "Shipping Courier",
+    "checkout.success.address": "Shipping Address",
+    "checkout.success.district_label": "District",
+    "checkout.success.total_payment": "Total Payment",
+    "checkout.success.btn_track": "Track Shipment",
+    "checkout.success.btn_continue": "Continue Shopping"
 }

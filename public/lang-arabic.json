@@ -828,7 +828,6 @@
     "checkout.validation.insufficient_stock": "المخزون في المستودع المحدد غير كافٍ. يرجى اختيار فرع بديل.",
     "checkout.validation.courier_required": "يرجى اختيار شركة الشحن المناسبة.",
     "checkout.success.title": "تم تسجيل الطلب بنجاح!",
-    "checkout.success.desc": "تم تسجيل طلبك بنجاح. سنتواصل معك قريباً لتنسيق عملية التوصيل.",
     "orders.track.page_title": "تتبع الطلب",
     "orders.track.title": "تتبع حالة الشحن",
     "orders.track.subtitle": "تابع حالة تحرك شحنتك وتوصيلها في الوقت الفعلي.",
@@ -1091,5 +1090,16 @@
     "rating.no_comment": "تم التقييم فقط",
     "register.complete_subtitle": "يرجى إكمال معلومات ملفك الشخصي لمتابعة عملية الشراء",
     "register.complete_title": "إكمال التسجيل",
-    "checkout.complete_profile_warning": "يرجى إكمال ملفك الشخصي (رقم الهاتف، اسم المستلم، عنوان الشحن، المدينة، والرمز البريدي) أولاً قبل إتمام عملية الدفع."
+    "checkout.complete_profile_warning": "يرجى إكمال ملفك الشخصي (رقم الهاتف، اسم المستلم، عنوان الشحن، المدينة، والرمز البريدي) أولاً قبل إتمام عملية الدفع.",
+    "checkout.success.title_head": "تم تقديم الطلب بنجاح",
+    "checkout.success.thank_you": "شكراً لك!",
+    "checkout.success.desc": "تم إنشاء طلبك بنجاح وجاري التحقق منه الآن. تم إصدار فاتورتك بنجاح.",
+    "checkout.success.invoice": "رقم الفاتورة",
+    "checkout.success.date": "تاريخ الطلب",
+    "checkout.success.courier": "شركة الشحن",
+    "checkout.success.address": "عنوان التوصيل",
+    "checkout.success.district_label": "حي",
+    "checkout.success.total_payment": "إجمالي المبلغ المدفوع",
+    "checkout.success.btn_track": "تتبع الشحنة",
+    "checkout.success.btn_continue": "مواصلة التسوق"
 }

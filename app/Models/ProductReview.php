@@ -21,6 +21,8 @@ class ProductReview extends Model
         'is_visible' => 'boolean',
         'rating' => 'integer',
         'order_id' => 'integer',
+        'product_id' => 'integer',
+        'product_variant_id' => 'integer',
     ];
 
     protected static function booted()

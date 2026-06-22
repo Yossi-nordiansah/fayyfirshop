@@ -98,9 +98,9 @@ export default function OrderCard({
     const isOrderReviewed = order.items.some(item => {
         if (!item.product) return false;
         return item.product.reviews && item.product.reviews.some(r => 
-            r.order_id === order.id &&
-            r.product_id === item.product_id &&
-            (item.product_variant_id ? r.product_variant_id === item.product_variant_id : true)
+            Number(r.order_id) === Number(order.id) &&
+            Number(r.product_id) === Number(item.product_id) &&
+            (item.product_variant_id ? Number(r.product_variant_id) === Number(item.product_variant_id) : true)
         );
     });
 

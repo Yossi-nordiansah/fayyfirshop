@@ -822,7 +822,6 @@
     "checkout.validation.insufficient_stock": "Stok di gudang pengirim tidak mencukupi. Silakan pilih cabang alternatif.",
     "checkout.validation.courier_required": "Mohon pilih jasa pengiriman.",
     "checkout.success.title": "Pemesanan Berhasil!",
-    "checkout.success.desc": "Pesanan Anda telah dicatat. Kami akan segera menghubungi Anda untuk proses pengiriman.",
     "orders.track.page_title": "Lacak Pesanan",
     "orders.track.title": "Lacak Status Pengiriman",
     "orders.track.subtitle": "Pantau status pengiriman paket Anda secara real-time.",
@@ -1088,5 +1087,16 @@
     "rating.no_comment": "Hanya memberikan nilai",
     "register.complete_subtitle": "Silakan lengkapi informasi profil Anda untuk melanjutkan pembelian",
     "register.complete_title": "Lengkapi Pendaftaran",
-    "checkout.complete_profile_warning": "Silakan lengkapi profil Anda (nomor telepon, nama penerima, alamat lengkap, kota, dan kode pos) terlebih dahulu sebelum melakukan checkout."
+    "checkout.complete_profile_warning": "Silakan lengkapi profil Anda (nomor telepon, nama penerima, alamat lengkap, kota, dan kode pos) terlebih dahulu sebelum melakukan checkout.",
+    "checkout.success.title_head": "Pesanan Berhasil",
+    "checkout.success.thank_you": "Terima Kasih!",
+    "checkout.success.desc": "Pesanan Anda berhasil dibuat dan sedang kami verifikasi. Invoice Anda telah diterbitkan.",
+    "checkout.success.invoice": "Nomor Invoice",
+    "checkout.success.date": "Tanggal Pemesanan",
+    "checkout.success.courier": "Kurir Pengiriman",
+    "checkout.success.address": "Alamat Tujuan",
+    "checkout.success.district_label": "Kec.",
+    "checkout.success.total_payment": "Total Pembayaran",
+    "checkout.success.btn_track": "Lacak Pengiriman",
+    "checkout.success.btn_continue": "Belanja Lagi"
 }
