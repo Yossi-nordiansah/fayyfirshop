@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import {
     Plus,
     Search,
@@ -14,6 +14,7 @@ import { useLanguage } from '@/Contexts/LanguageContext';
 
 export default function VouchersTab({ vouchers = [] }) {
     const { t } = useLanguage();
+    const { errors: pageErrors = {} } = usePage().props;
 
     // Search filter
     const [searchVoucher, setSearchVoucher] = useState('');
@@ -21,6 +22,18 @@ export default function VouchersTab({ vouchers = [] }) {
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
+
+    // Validation errors state
+    const [localErrors, setLocalErrors] = useState({});
+
+    // Sync page errors to local state when page errors change
+    useEffect(() => {
+        if (pageErrors && Object.keys(pageErrors).length > 0) {
+            setLocalErrors(pageErrors);
+        } else {
+            setLocalErrors({});
+        }
+    }, [pageErrors]);
 
     // Form fields state
     const [voucherFields, setVoucherFields] = useState({
@@ -49,6 +62,7 @@ export default function VouchersTab({ vouchers = [] }) {
     };
 
     const openAddModal = () => {
+        setLocalErrors({});
         setModalMode('add');
         setVoucherFields({
             id: null,
@@ -70,6 +84,7 @@ export default function VouchersTab({ vouchers = [] }) {
     };
 
     const openEditModal = (item) => {
+        setLocalErrors({});
         setModalMode('edit');
         setVoucherFields({
             id: item.id,
@@ -88,6 +103,11 @@ export default function VouchersTab({ vouchers = [] }) {
             distribution_type: item.distribution_type || 'event'
         });
         setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setLocalErrors({});
+        setIsModalOpen(false);
     };
 
     const saveForm = (e) => {
@@ -117,11 +137,11 @@ export default function VouchersTab({ vouchers = [] }) {
 
         if (modalMode === 'add') {
             router.post(route('backoffice.promotion.voucher.store'), data, {
-                onSuccess: () => setIsModalOpen(false)
+                onSuccess: () => closeModal()
             });
         } else {
             router.put(route('backoffice.promotion.voucher.update', voucherFields.id), data, {
-                onSuccess: () => setIsModalOpen(false)
+                onSuccess: () => closeModal()
             });
         }
     };
@@ -325,7 +345,7 @@ export default function VouchersTab({ vouchers = [] }) {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
                     <form
                         onSubmit={saveForm}
-                        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-blue-50 flex flex-col max-h-[90vh]"
+                        className="w-full max-w-3xl bg-white rounded-xl shadow-2xl border border-blue-50 flex flex-col max-h-[90vh]"
                     >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-blue-100">
                             <div>
@@ -340,7 +360,7 @@ export default function VouchersTab({ vouchers = [] }) {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={closeModal}
                                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 transition"
                             >
                                 <X className="w-5 h-5" />
@@ -356,20 +376,26 @@ export default function VouchersTab({ vouchers = [] }) {
                                         value={voucherFields.name}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, name: e.target.value })}
                                         placeholder={t('backoffice.promotion.voucher.form.placeholder_name', 'Contoh: Diskon Mudik Ramadan')}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 ${localErrors.name ? 'border-rose-500' : 'border-slate-200'}`}
                                         required
                                     />
+                                    {localErrors.name && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.name}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">{t('backoffice.promotion.voucher.form.distribution_type', 'Tipe Distribusi Voucher')}</label>
                                     <select
                                         value={voucherFields.distribution_type}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, distribution_type: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-950 font-semibold text-slate-800"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:border-blue-950 font-semibold text-slate-800 ${localErrors.distribution_type ? 'border-rose-500' : 'border-slate-200'}`}
                                     >
                                         <option value="event">{t('backoffice.promotion.voucher.form.option_event', 'Voucher Event (Gunakan Kode)')}</option>
                                         <option value="manual">{t('backoffice.promotion.voucher.form.option_manual', 'Voucher Manual (Diberikan ke Customer)')}</option>
                                     </select>
+                                    {localErrors.distribution_type && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.distribution_type}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -381,9 +407,12 @@ export default function VouchersTab({ vouchers = [] }) {
                                         value={voucherFields.code}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, code: e.target.value })}
                                         placeholder={t('backoffice.promotion.voucher.form.placeholder_code', 'Contoh: RAMADAN15')}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950 font-bold uppercase"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 font-bold uppercase ${localErrors.code ? 'border-rose-500' : 'border-slate-200'}`}
                                         required={voucherFields.distribution_type === 'event'}
                                     />
+                                    {localErrors.code && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.code}</p>
+                                    )}
                                 </div>
                             )}
 
@@ -393,8 +422,11 @@ export default function VouchersTab({ vouchers = [] }) {
                                     value={voucherFields.description}
                                     onChange={(e) => setVoucherFields({ ...voucherFields, description: e.target.value })}
                                     placeholder={t('backoffice.promotion.voucher.form.placeholder_description', 'Keterangan mengenai voucher...')}
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950 h-16"
+                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 h-16 ${localErrors.description ? 'border-rose-500' : 'border-slate-200'}`}
                                 />
+                                {localErrors.description && (
+                                    <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.description}</p>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -403,11 +435,14 @@ export default function VouchersTab({ vouchers = [] }) {
                                     <select
                                         value={voucherFields.type}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, type: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-950"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:border-blue-950 ${localErrors.type ? 'border-rose-500' : 'border-slate-200'}`}
                                     >
                                         <option value="fixed">{t('backoffice.promotion.voucher.form.option_fixed', 'Fixed (Potongan Nominal)')}</option>
                                         <option value="percentage">{t('backoffice.promotion.voucher.form.option_percentage', 'Percentage (Persentase %)')}</option>
                                     </select>
+                                    {localErrors.type && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.type}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
@@ -417,9 +452,12 @@ export default function VouchersTab({ vouchers = [] }) {
                                         type="number"
                                         value={voucherFields.value}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, value: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950 font-bold"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 font-bold ${localErrors.value ? 'border-rose-500' : 'border-slate-200'}`}
                                         required
                                     />
+                                    {localErrors.value && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.value}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -431,8 +469,11 @@ export default function VouchersTab({ vouchers = [] }) {
                                             type="number"
                                             value={voucherFields.min_spending}
                                             onChange={(e) => setVoucherFields({ ...voucherFields, min_spending: e.target.value })}
-                                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 ${localErrors.min_spending ? 'border-rose-500' : 'border-slate-200'}`}
                                         />
+                                        {localErrors.min_spending && (
+                                            <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.min_spending}</p>
+                                        )}
                                     </div>
                                 )}
                                 <div>
@@ -441,8 +482,11 @@ export default function VouchersTab({ vouchers = [] }) {
                                         type="number"
                                         value={voucherFields.total_quota}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, total_quota: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950 font-semibold text-emerald-800"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 font-semibold text-emerald-800 ${localErrors.total_quota ? 'border-rose-500' : 'border-slate-200'}`}
                                     />
+                                    {localErrors.total_quota && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.total_quota}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">{t('backoffice.promotion.voucher.form.max_use_per_user', 'Batas Pakai / User')}</label>
@@ -450,8 +494,11 @@ export default function VouchersTab({ vouchers = [] }) {
                                         type="number"
                                         value={voucherFields.max_use_per_user}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, max_use_per_user: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 ${localErrors.max_use_per_user ? 'border-rose-500' : 'border-slate-200'}`}
                                     />
+                                    {localErrors.max_use_per_user && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.max_use_per_user}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -462,9 +509,12 @@ export default function VouchersTab({ vouchers = [] }) {
                                         type="datetime-local"
                                         value={voucherFields.start_date}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, start_date: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 ${localErrors.start_date ? 'border-rose-500' : 'border-slate-200'}`}
                                         required
                                     />
+                                    {localErrors.start_date && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.start_date}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">{t('backoffice.promotion.voucher.form.end_date', 'Berakhir Berlaku (DateTime)')}</label>
@@ -472,9 +522,12 @@ export default function VouchersTab({ vouchers = [] }) {
                                         type="datetime-local"
                                         value={voucherFields.end_date}
                                         onChange={(e) => setVoucherFields({ ...voucherFields, end_date: e.target.value })}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-950"
+                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-blue-950 ${localErrors.end_date ? 'border-rose-500' : 'border-slate-200'}`}
                                         required
                                     />
+                                    {localErrors.end_date && (
+                                        <p className="text-rose-600 text-xs mt-1 font-semibold">{localErrors.end_date}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -495,7 +548,7 @@ export default function VouchersTab({ vouchers = [] }) {
                         <div className="px-6 py-4 border-t border-blue-100 flex justify-end gap-3 bg-blue-50/30">
                             <button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={closeModal}
                                 className="px-4 py-2 text-sm font-bold text-slate-600 border border-slate-200 bg-white rounded-lg hover:bg-slate-50 transition"
                             >
                                 {t('backoffice.promotion.button.cancel', 'Batal')}

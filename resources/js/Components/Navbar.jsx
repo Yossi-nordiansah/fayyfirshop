@@ -13,6 +13,10 @@ import {
     LogOut,
     ShoppingBag,
     Bell,
+    Gift,
+    AlertCircle,
+    MessageSquare,
+    Ticket,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
@@ -20,10 +24,11 @@ import LoginModal from "./LoginModal";
 import TopVerticalTicker from "@/Pages/home/TopVerticalTicker";
 import AuthStatusModal from "./AuthStatusModal";
 import LogoutConfirmModal from "./LogoutConfirmModal";
+import UserVouchersModal from "./UserVouchersModal";
 
 const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => {
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
-    const { auth, navCategories = [], activeEvents = [] } = usePage().props;
+    const { auth, navCategories = [], activeEvents = [], notifications = [] } = usePage().props;
     const user = auth?.user;
     const isProfileIncomplete = user && (!user.phone || !user.address || !user.city || !user.postal_code || !user.receiver_name);
 
@@ -33,11 +38,102 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     const [showAccountDropdown, setShowAccountDropdown] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showVouchersModal, setShowVouchersModal] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [cartCount, setCartCount] = useState(0);
 
     const [showEventPopup, setShowEventPopup] = useState(false);
     const [toast, setToast] = useState(null); // { message, actionLabel, actionUrl }
+
+    const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+    const [notificationsList, setNotificationsList] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        const readIds = JSON.parse(localStorage.getItem("fayyfir_read_notifications") || "[]");
+        const list = (notifications || []).map(n => ({
+            ...n,
+            read: n.type === 'review_reminder' ? false : readIds.includes(n.id)
+        }));
+        setNotificationsList(list);
+        setUnreadCount(list.filter(n => !n.read).length);
+    }, [notifications]);
+
+    const markAsRead = (id) => {
+        const notification = notificationsList.find(n => n.id === id);
+        if (notification && notification.type === 'review_reminder') {
+            return;
+        }
+
+        const readIds = JSON.parse(localStorage.getItem("fayyfir_read_notifications") || "[]");
+        if (!readIds.includes(id)) {
+            readIds.push(id);
+            localStorage.setItem("fayyfir_read_notifications", JSON.stringify(readIds));
+
+            const list = notificationsList.map(n => n.id === id ? { ...n, read: true } : n);
+            setNotificationsList(list);
+            setUnreadCount(list.filter(n => !n.read).length);
+        }
+    };
+
+    const markAllAsRead = () => {
+        const readIds = JSON.parse(localStorage.getItem("fayyfir_read_notifications") || "[]");
+        notificationsList.forEach(n => {
+            if (n.type !== 'review_reminder' && !readIds.includes(n.id)) {
+                readIds.push(n.id);
+            }
+        });
+        localStorage.setItem("fayyfir_read_notifications", JSON.stringify(readIds));
+
+        const list = notificationsList.map(n => n.type === 'review_reminder' ? n : { ...n, read: true });
+        setNotificationsList(list);
+        setUnreadCount(list.filter(n => !n.read).length);
+    };
+
+    const translateNotification = (n) => {
+        if (n.type === 'profile') {
+            return {
+                title: t('notifications.profile.title', n.title),
+                message: t('notifications.profile.message', n.message),
+                actionLabel: t('notifications.profile.action', 'Lengkapi Sekarang'),
+            };
+        }
+        if (n.type === 'order') {
+            const translatedStatus = t(`notifications.order.status.${n.status}`, n.status);
+            const translatedMessage = t('notifications.order.message', `Pesanan {invoice} Anda kini berubah status menjadi {status}.`)
+                .replace('{invoice}', n.invoice_number)
+                .replace('{status}', translatedStatus);
+            return {
+                title: t('notifications.order.title', n.title),
+                message: translatedMessage,
+                actionLabel: t('notifications.order.action', 'Lihat Pesanan Saya'),
+            };
+        }
+        if (n.type === 'voucher') {
+            const translatedMessage = t('notifications.voucher.message', `Selamat! Anda mendapatkan voucher baru: {name} (Kode: {code}).`)
+                .replace('{name}', n.name)
+                .replace('{code}', n.code);
+            return {
+                title: t('notifications.voucher.title', n.title),
+                message: translatedMessage,
+                actionLabel: t('notifications.voucher.action', 'Lihat Voucher'),
+            };
+        }
+        if (n.type === 'review_reminder') {
+            const translatedMessage = t('notifications.review_reminder.message', `Pesanan {invoice} telah selesai. Berikan penilaian & ulasan terbaik Anda untuk produk yang telah dibeli!`)
+                .replace('{invoice}', n.invoice_number);
+            return {
+                title: t('notifications.review_reminder.title', n.title),
+                message: translatedMessage,
+                actionLabel: t('notifications.review_reminder.action', 'Tulis Ulasan'),
+            };
+        }
+        return {
+            title: n.title,
+            message: n.message,
+            actionLabel: null,
+        };
+    };
 
     // Find the latest active event that has a banner image
     const activeEvent = activeEvents?.find((e) => e.is_active && e.image_path);
@@ -170,6 +266,9 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
         })),
         { name: t("nav.all", "All Products"), href: "/products" },
     ];
+
+    const hasUnreadOrders = notificationsList.some(n => n.type === 'order' && !n.read);
+    const hasUnreadVouchers = notificationsList.some(n => n.type === 'voucher' && !n.read);
 
     return (
         <>
@@ -346,17 +445,120 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                 />
                             </div>
 
-                            {/* Notification Icon */}
-                            <button
-                                className="relative py-2 text-white transition-all duration-300 hover:text-blue-500 hover:scale-110 group cursor-pointer"
-                                aria-label="Notifications"
-                                onClick={(e) => e.preventDefault()}
+                            {/* Notification Dropdown Container */}
+                            <div
+                                className="relative py-2"
+                                onMouseEnter={() => setShowNotificationsDropdown(true)}
+                                onMouseLeave={() => setShowNotificationsDropdown(false)}
                             >
-                                <Bell size={20} />
-                                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
-                                    {t("nav.notifications", "Notifications")}
-                                </span>
-                            </button>
+                                <button
+                                    className="relative top-1 text-white transition-all duration-300 hover:text-blue-500 hover:scale-110 cursor-pointer"
+                                    aria-label="Notifications"
+                                    onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                                >
+                                    <Bell size={20} />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-md animate-bounce">
+                                            {unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                <AnimatePresence>
+                                    {showNotificationsDropdown && (
+                                        <motion.div
+                                            key="notifications-dropdown"
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 15 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute right-0 top-full pt-4 w-80 z-[120]"
+                                        >
+                                            <div className="py-2 overflow-hidden bg-white border border-zinc-100 shadow-2xl rounded-xl max-h-96 overflow-y-auto">
+                                                <div className="px-4 py-2 border-b border-zinc-100 flex items-center justify-between">
+                                                    <p className={`text-xs ${fwSemibold} text-zinc-800`}>
+                                                        {t("notifications.title", "Notifications")}
+                                                    </p>
+                                                    {unreadCount > 0 && (
+                                                        <button
+                                                            onClick={markAllAsRead}
+                                                            className="text-[10px] text-blue-500 hover:text-blue-600 font-semibold"
+                                                        >
+                                                            {t("notifications.mark_read", "Mark all read")}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="divide-y divide-zinc-50">
+                                                    {notificationsList.filter(n => !n.read).length === 0 ? (
+                                                        <div className="px-4 py-6 text-center text-xs text-zinc-400">
+                                                            {t("notifications.empty", "No new notifications")}
+                                                        </div>
+                                                    ) : (
+                                                        notificationsList.filter(n => !n.read).map((n) => {
+                                                            const { title, message, actionLabel } = translateNotification(n);
+                                                            return (
+                                                                <div
+                                                                    key={n.id}
+                                                                    className={`px-4 py-3 hover:bg-zinc-50 transition-colors duration-150 flex gap-3 relative ${!n.read ? "bg-blue-50/10" : ""}`}
+                                                                >
+                                                                    <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border ${n.type === 'profile' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                                        n.type === 'order' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                                        n.type === 'review_reminder' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                                                            'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                        }`}>
+                                                                        {n.type === 'profile' ? <AlertCircle size={16} /> :
+                                                                            n.type === 'order' ? <ShoppingBag size={16} /> :
+                                                                            n.type === 'review_reminder' ? <MessageSquare size={16} /> :
+                                                                                <Gift size={16} />}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <p className="text-xs font-semibold text-zinc-800 truncate">
+                                                                                {title}
+                                                                            </p>
+                                                                            {!n.read && (
+                                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1 shrink-0 animate-pulse" />
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-[10px] text-zinc-500 leading-relaxed break-words">
+                                                                            {message}
+                                                                        </p>
+                                                                        {n.link && (
+                                                                            n.type === 'voucher' ? (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        markAsRead(n.id);
+                                                                                        setShowNotificationsDropdown(false);
+                                                                                        setShowVouchersModal(true);
+                                                                                    }}
+                                                                                    className="text-[10px] text-blue-500 hover:underline font-semibold mt-1 self-start text-left cursor-pointer border-none bg-transparent p-0"
+                                                                                >
+                                                                                    {actionLabel || t("notifications.view", "View")}
+                                                                                </button>
+                                                                            ) : (
+                                                                                <Link
+                                                                                    href={n.link}
+                                                                                    onClick={() => {
+                                                                                        markAsRead(n.id);
+                                                                                        setShowNotificationsDropdown(false);
+                                                                                    }}
+                                                                                    className="text-[10px] text-blue-500 hover:underline font-semibold mt-1 self-start"
+                                                                                >
+                                                                                    {actionLabel || t("notifications.view", "View")}
+                                                                                </Link>
+                                                                            )
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
 
                             {/* PREMIUM ACCOUNT DROPDOWN */}
                             <div
@@ -425,11 +627,31 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                         </Link>
                                                         <Link
                                                             href={route('orders.index')}
-                                                            className="flex items-center gap-3 px-4 py-3 text-sm transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
+                                                            className="flex items-center justify-between px-4 py-3 text-sm transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
                                                         >
-                                                            <ShoppingBag size={16} className="text-zinc-400" />
-                                                            {t("nav.account.orders", "Pesanan Saya")}
+                                                            <div className="flex items-center gap-3">
+                                                                <ShoppingBag size={16} className="text-zinc-400" />
+                                                                <span>{t("nav.account.orders", "Pesanan Saya")}</span>
+                                                            </div>
+                                                            {hasUnreadOrders && (
+                                                                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-xs animate-pulse mr-1" />
+                                                            )}
                                                         </Link>
+                                                        <button
+                                                            onClick={() => {
+                                                                setShowAccountDropdown(false);
+                                                                setShowVouchersModal(true);
+                                                            }}
+                                                            className="flex items-center justify-between w-full px-4 py-3 text-sm text-left transition-all duration-200 text-zinc-700 hover:bg-blue-50 hover:text-blue-600"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <Ticket size={16} className="text-zinc-400" />
+                                                                <span>{t("nav.account.vouchers", "Voucher Saya")}</span>
+                                                            </div>
+                                                            {hasUnreadVouchers && (
+                                                                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-xs animate-pulse mr-1" />
+                                                            )}
+                                                        </button>
                                                         <button
                                                             onClick={() => {
                                                                 setShowAccountDropdown(false);
@@ -521,11 +743,18 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                     {/* Language Selector */}
                                     <MobileLanguageSelector languages={languages} locale={locale} setLocale={setLocale} t={t} fwBold={fwBold} fwSemibold={fwSemibold} />
 
-                                    {/* Notifications */}
-                                    <div className="flex items-center justify-between w-full py-2 transition-colors border-b border-white/5 text-white/80">
-                                        <span className={`text-sm ${fwSemibold} tracking-wider uppercase`}>{t("nav.notifications", "Notifications")}</span>
-                                        <Bell size={18} />
-                                    </div>
+                                    {/* Notifications Drawer (Mobile) */}
+                                    <MobileNotificationsMenu
+                                        notifications={notificationsList}
+                                        unreadCount={unreadCount}
+                                        markAllAsRead={markAllAsRead}
+                                        markAsRead={markAsRead}
+                                        translateNotification={translateNotification}
+                                        t={t}
+                                        fwBold={fwBold}
+                                        fwSemibold={fwSemibold}
+                                        setIsOpen={setIsOpen}
+                                    />
 
                                     {/* Account Actions */}
                                     {user ? (
@@ -548,14 +777,32 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2">
-                                                <Link
-                                                    href={route('orders.index')}
-                                                    onClick={() => setIsOpen(false)}
-                                                    className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
-                                                >
-                                                    <ShoppingBag size={14} />
-                                                    {t("nav.account.orders", "Pesanan Saya")}
-                                                </Link>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Link
+                                                        href={route('orders.index')}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
+                                                    >
+                                                        <ShoppingBag size={14} />
+                                                        <span>{t("nav.account.orders", "Pesanan Saya")}</span>
+                                                        {hasUnreadOrders && (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm animate-pulse" />
+                                                        )}
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsOpen(false);
+                                                            setShowVouchersModal(true);
+                                                        }}
+                                                        className={`flex items-center justify-center gap-2 py-3 text-xs ${fwSemibold} tracking-wider uppercase transition-all bg-white/10 hover:bg-white/15 rounded-xl`}
+                                                    >
+                                                        <Ticket size={14} />
+                                                        <span>{t("nav.account.vouchers", "Voucher Saya")}</span>
+                                                        {hasUnreadVouchers && (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm animate-pulse" />
+                                                        )}
+                                                    </button>
+                                                </div>
                                                 <Link
                                                     href="/cart"
                                                     onClick={() => setIsOpen(false)}
@@ -623,6 +870,13 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                 onClose={() => setShowLogoutConfirm(false)}
                 t={t}
                 isAdmin={false}
+            />
+
+            <UserVouchersModal
+                isOpen={showVouchersModal}
+                onClose={() => setShowVouchersModal(false)}
+                t={t}
+                locale={locale}
             />
 
             {/* Event Promotion Popup Banner */}
@@ -812,6 +1066,121 @@ const MobileLanguageSelector = ({ languages, locale, setLocale, t, fwBold, fwSem
                                 <span>{lang.label}</span>
                             </button>
                         ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// Expandable Notifications Menu for Mobile
+const MobileNotificationsMenu = ({ notifications, unreadCount, markAllAsRead, markAsRead, translateNotification, t, fwBold, fwSemibold, setIsOpen }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    return (
+        <div className="pb-2 border-b border-white/5">
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center justify-between w-full py-2 transition-colors hover:text-blue-400"
+            >
+                <div className="flex items-center gap-2">
+                    <Bell size={18} />
+                    <span className={`text-sm ${fwSemibold} tracking-wider uppercase`}>
+                        {t("notifications.title", "Notifications")}
+                        {unreadCount > 0 && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500 text-[10px] text-white font-bold leading-none">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </span>
+                </div>
+                <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        key="mobile-notifications-menu"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="py-3 px-4 mt-2 overflow-hidden bg-white/5 rounded-xl divide-y divide-white/5 max-h-80 overflow-y-auto"
+                    >
+                        {unreadCount > 0 && (
+                            <div className="pb-2 flex justify-end">
+                                <button
+                                    onClick={markAllAsRead}
+                                    className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
+                                >
+                                    {t("notifications.mark_read", "Mark all read")}
+                                </button>
+                            </div>
+                        )}
+                        <div className="space-y-3 pt-2">
+                            {notifications.filter(n => !n.read).length === 0 ? (
+                                <div className="text-center text-xs text-white/50 py-4">
+                                    {t("notifications.empty", "No new notifications")}
+                                </div>
+                            ) : (
+                                notifications.filter(n => !n.read).map((n) => {
+                                    const { title, message, actionLabel } = translateNotification(n);
+                                    return (
+                                        <div
+                                            key={n.id}
+                                            className={`py-2 text-xs flex gap-3 relative ${!n.read ? "bg-white/5 px-2 py-1.5 rounded-lg" : ""}`}
+                                        >
+                                            <div className={`flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border shrink-0 ${n.type === 'profile' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                n.type === 'order' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                                n.type === 'review_reminder' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                }`}>
+                                                {n.type === 'profile' ? <AlertCircle size={14} /> :
+                                                    n.type === 'order' ? <ShoppingBag size={14} /> :
+                                                    n.type === 'review_reminder' ? <MessageSquare size={14} /> :
+                                                        <Gift size={14} />}
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className="font-semibold text-white truncate">
+                                                        {title}
+                                                    </p>
+                                                    {!n.read && (
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1 shrink-0 animate-pulse" />
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] text-white/70 leading-relaxed break-words">
+                                                    {message}
+                                                </p>
+                                                {n.link && (
+                                                    n.type === 'voucher' ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                markAsRead(n.id);
+                                                                setIsOpen(false);
+                                                                setShowVouchersModal(true);
+                                                            }}
+                                                            className="text-[10px] text-blue-400 hover:underline font-semibold mt-1 self-start text-left cursor-pointer border-none bg-transparent p-0"
+                                                        >
+                                                            {actionLabel || t("notifications.view", "View")}
+                                                        </button>
+                                                    ) : (
+                                                        <Link
+                                                            href={n.link}
+                                                            onClick={() => {
+                                                                markAsRead(n.id);
+                                                                setIsOpen(false);
+                                                            }}
+                                                            className="text-[10px] text-blue-400 hover:underline font-semibold mt-1 self-start"
+                                                        >
+                                                            {actionLabel || t("notifications.view", "View")}
+                                                        </Link>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

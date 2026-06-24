@@ -41,16 +41,29 @@ class RegisteredUserController extends Controller
         if ($user) {
             // Logged in user completing their profile (e.g. from Google login)
             $request->validate([
-                'country' => 'required|string|max:2',
-                'phone' => 'required|string|max:255',
-                'address' => 'required|string|max:1000',
-                'city' => 'required|string|max:255',
-                'province' => 'required_if:country,ID|nullable|string|max:255',
-                'district' => 'required_if:country,ID|nullable|string|max:255',
-                'postal_code' => 'required|string|max:20',
-                'receiver_name' => 'required|string|max:255',
                 'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+                'phone' => 'required|string|max:255',
+                'addresses' => 'required|array|min:1',
+                'addresses.*.receiver_name' => 'required|string|max:255',
+                'addresses.*.phone' => 'required|string|max:255',
+                'addresses.*.country' => 'required|string|max:2',
+                'addresses.*.province' => 'nullable|string|max:255',
+                'addresses.*.city' => 'nullable|string|max:255',
+                'addresses.*.district' => 'nullable|string|max:255',
+                'addresses.*.postal_code' => 'required|string|max:20',
+                'addresses.*.address' => 'required|string|max:1000',
             ]);
+
+            // Validate Indonesian addresses
+            foreach ($request->addresses as $idx => $addr) {
+                if (($addr['country'] ?? 'ID') === 'ID') {
+                    if (empty($addr['province']) || empty($addr['city'])) {
+                        throw ValidationException::withMessages([
+                            "addresses.{$idx}.province" => 'Provinsi dan Kota wajib diisi untuk alamat Indonesia.',
+                        ]);
+                    }
+                }
+            }
 
             $updateData = [];
             if ($request->hasFile('avatar')) {
@@ -58,26 +71,35 @@ class RegisteredUserController extends Controller
                 $updateData['avatar'] = $avatarPath;
             }
 
-            // Auto resolve Biteship Area ID if country is Indonesia
-            $areaId = $this->resolveBiteshipAreaId(
-                $request->country,
-                $request->district,
-                $request->city,
-                $request->province,
-                $request->postal_code
-            );
-
             $user->update(array_merge([
-                'country' => $request->country,
                 'phone' => $request->phone,
-                'address' => $request->address,
-                'city' => $request->city,
-                'district' => $request->district,
-                'province' => $request->province,
-                'receiver_name' => $request->receiver_name,
-                'postal_code' => $request->postal_code,
-                'area_id' => $areaId,
             ], $updateData));
+
+            // Clean up existing addresses to sync new ones
+            $user->addresses()->delete();
+
+            foreach ($request->addresses as $idx => $addr) {
+                $areaId = $this->resolveBiteshipAreaId(
+                    $addr['country'],
+                    $addr['district'] ?? null,
+                    $addr['city'] ?? null,
+                    $addr['province'] ?? null,
+                    $addr['postal_code'] ?? null
+                );
+
+                $user->addresses()->create([
+                    'receiver_name' => $addr['receiver_name'],
+                    'phone' => $addr['phone'],
+                    'country' => $addr['country'],
+                    'province' => $addr['province'] ?? '',
+                    'city' => $addr['city'] ?? '',
+                    'district' => $addr['district'] ?? null,
+                    'postal_code' => $addr['postal_code'],
+                    'address' => $addr['address'],
+                    'area_id' => $areaId,
+                    'is_default' => $idx === 0,
+                ]);
+            }
 
             return redirect()->intended('/')->with('success', 'Profil Anda telah berhasil dilengkapi.');
         }
@@ -85,17 +107,29 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'country' => 'required|string|max:2',
-            'phone' => 'required|string|max:255',
-            'address' => 'required|string|max:1000',
-            'city' => 'required|string|max:255',
-            'province' => 'required_if:country,ID|nullable|string|max:255',
-            'district' => 'required_if:country,ID|nullable|string|max:255',
-            'postal_code' => 'required|string|max:20',
-            'receiver_name' => 'required|string|max:255',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'addresses' => 'required|array|min:1',
+            'addresses.*.receiver_name' => 'required|string|max:255',
+            'addresses.*.phone' => 'required|string|max:255',
+            'addresses.*.country' => 'required|string|max:2',
+            'addresses.*.province' => 'nullable|string|max:255',
+            'addresses.*.city' => 'nullable|string|max:255',
+            'addresses.*.district' => 'nullable|string|max:255',
+            'addresses.*.postal_code' => 'required|string|max:20',
+            'addresses.*.address' => 'required|string|max:1000',
         ]);
+
+        // Validate Indonesian addresses
+        foreach ($request->addresses as $idx => $addr) {
+            if (($addr['country'] ?? 'ID') === 'ID') {
+                if (empty($addr['province']) || empty($addr['city'])) {
+                    throw ValidationException::withMessages([
+                        "addresses.{$idx}.province" => 'Provinsi dan Kota wajib diisi untuk alamat Indonesia.',
+                    ]);
+                }
+            }
+        }
 
         // Handle avatar upload or use default
         if ($request->hasFile('avatar')) {
@@ -104,30 +138,36 @@ class RegisteredUserController extends Controller
             $avatarPath = '/images/default-profile.png';
         }
 
-        // Auto resolve Biteship Area ID if country is Indonesia
-        $areaId = $this->resolveBiteshipAreaId(
-            $request->country,
-            $request->district,
-            $request->city,
-            $request->province,
-            $request->postal_code
-        );
-
         $newUser = User::create([
             'name' => $request->name,
             'avatar' => $avatarPath,
             'email' => $request->email,
-            'country' => $request->country,
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'city' => $request->city,
-            'district' => $request->district,
-            'province' => $request->province,
-            'receiver_name' => $request->receiver_name,
-            'postal_code' => $request->postal_code,
+            'phone' => $request->addresses[0]['phone'],
             'password' => Hash::make($request->password),
-            'area_id' => $areaId,
         ]);
+
+        foreach ($request->addresses as $idx => $addr) {
+            $areaId = $this->resolveBiteshipAreaId(
+                $addr['country'],
+                $addr['district'] ?? null,
+                $addr['city'] ?? null,
+                $addr['province'] ?? null,
+                $addr['postal_code'] ?? null
+            );
+
+            $newUser->addresses()->create([
+                'receiver_name' => $addr['receiver_name'],
+                'phone' => $addr['phone'],
+                'country' => $addr['country'],
+                'province' => $addr['province'] ?? '',
+                'city' => $addr['city'] ?? '',
+                'district' => $addr['district'] ?? null,
+                'postal_code' => $addr['postal_code'],
+                'address' => $addr['address'],
+                'area_id' => $areaId,
+                'is_default' => $idx === 0,
+            ]);
+        }
 
         event(new Registered($newUser));
 

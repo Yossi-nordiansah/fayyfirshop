@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import {
     Eye,
     Truck,
@@ -50,6 +50,45 @@ export default function Orders({ orders = [], status }) {
         });
     };
 
+    const { notifications = [] } = usePage().props;
+    const [readNotifIds, setReadNotifIds] = useState([]);
+
+    useEffect(() => {
+        const loadReadIds = () => {
+            const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+            setReadNotifIds(stored);
+        };
+        loadReadIds();
+        window.addEventListener('admin-notifications-updated', loadReadIds);
+        return () => window.removeEventListener('admin-notifications-updated', loadReadIds);
+    }, []);
+
+    const unreadOrderNotifs = notifications.filter(
+        (n) => n.type === 'order_status' && !readNotifIds.includes(n.id)
+    );
+
+    // Mark notifications as read only when user explicitly clicks a specific status tab
+    const handleTabChange = (tab) => {
+        setStatusTab(tab);
+        if (tab === 'all') return; // Don't auto-read 'all' tab — dots should remain visible
+
+        const matching = unreadOrderNotifs.filter(n => n.status === tab);
+        if (matching.length > 0) {
+            const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+            let updated = false;
+            matching.forEach((n) => {
+                if (!stored.includes(n.id)) {
+                    stored.push(n.id);
+                    updated = true;
+                }
+            });
+            if (updated) {
+                localStorage.setItem('fayyfir_admin_read_notifications', JSON.stringify(stored));
+                window.dispatchEvent(new Event('admin-notifications-updated'));
+            }
+        }
+    };
+
     // Filters
     const filteredOrders = orders.filter((order) => {
         const matchesSearch =
@@ -65,6 +104,23 @@ export default function Orders({ orders = [], status }) {
     const handleOpenDetail = (order) => {
         setSelectedOrder(order);
         setIsDetailOpen(true);
+
+        // Mark any notifications for this order as read
+        const orderNotifs = unreadOrderNotifs.filter(n => n.invoice_number === order.invoice_number);
+        if (orderNotifs.length > 0) {
+            const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+            let updated = false;
+            orderNotifs.forEach((n) => {
+                if (!stored.includes(n.id)) {
+                    stored.push(n.id);
+                    updated = true;
+                }
+            });
+            if (updated) {
+                localStorage.setItem('fayyfir_admin_read_notifications', JSON.stringify(stored));
+                window.dispatchEvent(new Event('admin-notifications-updated'));
+            }
+        }
     };
 
     // request Biteship shipping booking
@@ -175,18 +231,26 @@ export default function Orders({ orders = [], status }) {
                             <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
                                 {/* Status tabs */}
                                 <div className="flex gap-1.5 overflow-x-auto">
-                                    {['all', 'pending', 'processing', 'shipped', 'completed', 'cancelled'].map((tab) => (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setStatusTab(tab)}
-                                            className={`px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wide transition-all ${statusTab === tab
-                                                ? 'bg-blue-950 text-white shadow-sm'
-                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {tab}
-                                        </button>
-                                    ))}
+                                    {['all', 'pending', 'processing', 'shipped', 'completed', 'cancelled'].map((tab) => {
+                                        const tabHasDot = tab === 'all'
+                                            ? unreadOrderNotifs.length > 0
+                                            : unreadOrderNotifs.some(n => n.status === tab);
+                                        return (
+                                            <button
+                                                key={tab}
+                                                onClick={() => handleTabChange(tab)}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wide transition-all ${statusTab === tab
+                                                    ? 'bg-blue-950 text-white shadow-sm'
+                                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {tab}
+                                                {tabHasDot && (
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-sm" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Search bar */}

@@ -11,6 +11,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -136,9 +138,7 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::get('/biteship/search-area', [StoreBranchController::class, 'searchArea'])
         ->name('backoffice.biteship.search-area');
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('backoffice/dashboard');
-    })->name('backoffice.dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('backoffice.dashboard');
 
     Route::get('/product-management', [ProductController::class, 'index'])
         ->name('backoffice.product-management');
@@ -199,9 +199,7 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::get('/customer/{customer}/statistics', [CustomerController::class, 'statistics'])->name('backoffice.customer.statistics');
     Route::post('/customer/{customer}/voucher', [CustomerController::class, 'assignVoucher'])->name('backoffice.customer.assign-voucher');
 
-    Route::get('/reports', function () {
-        return Inertia::render('backoffice/menu/Reports');
-    })->name('backoffice.reports');
+    Route::get('/reports', [ReportController::class, 'index'])->name('backoffice.reports');
 
     Route::get('/promotion', [PromotionController::class, 'index'])->name('backoffice.promotion');
     Route::post('/promotion/ticker', [PromotionController::class, 'storeTicker'])->name('backoffice.promotion.ticker.store');
@@ -243,6 +241,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // User Address Routes
+    Route::post('/addresses', [ProfileController::class, 'storeAddress'])->name('addresses.store');
+    Route::patch('/addresses/{address}', [ProfileController::class, 'updateAddress'])->name('addresses.update');
+    Route::delete('/addresses/{address}', [ProfileController::class, 'destroyAddress'])->name('addresses.destroy');
+    Route::patch('/addresses/{address}/default', [ProfileController::class, 'setDefaultAddress'])->name('addresses.set-default');
+
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::get('/checkout/search-area', [StoreBranchController::class, 'searchArea'])->name('checkout.search-area');
     Route::post('/checkout/check-stock', [CheckoutController::class, 'checkStock'])->name('checkout.check-stock');
@@ -260,6 +264,68 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');
     Route::post('/orders/{order}/cancel-request', [OrderController::class, 'requestCancellation'])->name('orders.cancel-request');
     Route::post('/orders/{order}/reviews', [ProductReviewController::class, 'store'])->name('orders.reviews.store');
+    Route::get('/api/user-vouchers', function () {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json([]);
+        }
+        
+        // 1. Get manual vouchers
+        $manualVouchers = \Illuminate\Support\Facades\DB::table('user_vouchers')
+            ->join('vouchers', 'user_vouchers.voucher_id', '=', 'vouchers.id')
+            ->where('user_vouchers.user_id', $user->id)
+            ->where('user_vouchers.is_used', false)
+            ->where('vouchers.is_active', true)
+            ->where('vouchers.end_date', '>=', now())
+            ->select(
+                'vouchers.id',
+                'vouchers.code',
+                'vouchers.name',
+                'vouchers.description',
+                'vouchers.type',
+                'vouchers.value',
+                'vouchers.min_spending',
+                'vouchers.max_discount',
+                'vouchers.end_date',
+                'vouchers.distribution_type'
+            )
+            ->get();
+
+        // 2. Get event vouchers that are active, not expired, and not fully used by this user
+        $eventVouchers = \Illuminate\Support\Facades\DB::table('vouchers')
+            ->where('distribution_type', 'event')
+            ->where('is_active', true)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->get()
+            ->filter(function ($voucher) use ($user) {
+                $usedCount = \Illuminate\Support\Facades\DB::table('voucher_usages')
+                    ->where('user_id', $user->id)
+                    ->where('voucher_id', $voucher->id)
+                    ->count();
+                return $usedCount < $voucher->max_use_per_user;
+            })
+            ->map(function ($voucher) {
+                return (object)[
+                    'id' => $voucher->id,
+                    'code' => $voucher->code,
+                    'name' => $voucher->name,
+                    'description' => $voucher->description,
+                    'type' => $voucher->type,
+                    'value' => $voucher->value,
+                    'min_spending' => $voucher->min_spending,
+                    'max_discount' => $voucher->max_discount,
+                    'end_date' => $voucher->end_date,
+                    'distribution_type' => $voucher->distribution_type,
+                ];
+            })
+            ->values();
+
+        // Combine and sort
+        $allVouchers = $manualVouchers->concat($eventVouchers)->sortByDesc('end_date')->values();
+            
+        return response()->json($allVouchers);
+    })->name('api.user-vouchers');
 });
 
 require __DIR__ . '/auth.php';

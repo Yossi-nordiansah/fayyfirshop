@@ -48,6 +48,7 @@ class CheckoutController extends Controller
             'user' => $user,
             'storeBranches' => $storeBranches,
             'userVouchers' => $userVouchers,
+            'addresses' => $user ? $user->addresses()->orderBy('is_default', 'desc')->get() : [],
         ]);
     }
 

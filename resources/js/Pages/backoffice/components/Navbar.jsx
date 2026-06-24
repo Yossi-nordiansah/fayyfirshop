@@ -1,5 +1,5 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { Bell, ChevronDown, Globe, LogOut, User, Package, Languages } from 'lucide-react';
+import { Bell, ChevronDown, Globe, LogOut, User, Package, Languages, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import { useState, useEffect } from 'react';
 import AuthStatusModal from '@/Components/AuthStatusModal';
@@ -55,6 +55,14 @@ const translateNotification = (notif, locale, t) => {
                     .replace('{langsStr}', translatedLangs)
             };
         }
+    } else if (notif.type === 'order_status') {
+        const translatedStatus = t(`notifications.order.status.${notif.status}`, notif.status);
+        return {
+            title: t('notifications.type.order_status', 'Status Pesanan Berubah'),
+            message: t('notifications.message.order_status', 'Pesanan {invoice} kini berstatus {status}.')
+                .replace('{invoice}', notif.invoice_number)
+                .replace('{status}', translatedStatus)
+        };
     }
     return { title: notif.title, message: notif.message };
 };
@@ -77,6 +85,40 @@ export default function Navbar() {
     const [showAccountDropdown, setShowAccountDropdown] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+
+    const [readNotifIds, setReadNotifIds] = useState([]);
+
+    useEffect(() => {
+        const loadReadIds = () => {
+            const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+            setReadNotifIds(stored);
+        };
+        loadReadIds();
+        window.addEventListener('admin-notifications-updated', loadReadIds);
+        return () => window.removeEventListener('admin-notifications-updated', loadReadIds);
+    }, []);
+
+    const unreadNotifications = notifications.filter(n => !readNotifIds.includes(n.id));
+
+    const handleMarkAsRead = (id) => {
+        const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+        if (!stored.includes(id)) {
+            stored.push(id);
+            localStorage.setItem('fayyfir_admin_read_notifications', JSON.stringify(stored));
+            window.dispatchEvent(new Event('admin-notifications-updated'));
+        }
+    };
+
+    const handleMarkAllAsRead = () => {
+        const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+        notifications.forEach(n => {
+            if (!stored.includes(n.id)) {
+                stored.push(n.id);
+            }
+        });
+        localStorage.setItem('fayyfir_admin_read_notifications', JSON.stringify(stored));
+        window.dispatchEvent(new Event('admin-notifications-updated'));
+    };
 
     useEffect(() => {
         let timeoutId;
@@ -182,9 +224,9 @@ export default function Navbar() {
                         aria-label={t('backoffice.navbar.aria.notifications', 'Notifications')}
                     >
                         <Bell className="w-5 h-5" aria-hidden="true" />
-                        {notifications.length > 0 && (
+                        {unreadNotifications.length > 0 && (
                             <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
-                                {notifications.length}
+                                {unreadNotifications.length}
                             </span>
                         )}
                     </button>
@@ -198,17 +240,21 @@ export default function Navbar() {
                                             {t('notifications.title', 'Notifications')}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            {getHeaderSubtitle(notifications.length, locale)}
+                                            {getHeaderSubtitle(unreadNotifications.length, locale)}
                                         </p>
                                     </div>
-                                    {notifications.length > 0 && (
-                                        <span className="px-2.5 py-1 text-xs font-black text-rose-700 bg-rose-50 border border-rose-100 rounded-full">
-                                            {notifications.length}
-                                        </span>
+                                    {unreadNotifications.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={handleMarkAllAsRead}
+                                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
+                                        >
+                                            {t('notifications.mark_read', 'Tandai semua dibaca')}
+                                        </button>
                                     )}
                                 </div>
                                 <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
-                                    {notifications.length === 0 ? (
+                                    {unreadNotifications.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
                                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 text-slate-400 mb-3 border border-slate-100">
                                                 <Bell className="w-5 h-5" aria-hidden="true" />
@@ -225,22 +271,31 @@ export default function Navbar() {
                                             </p>
                                         </div>
                                     ) : (
-                                        notifications.map((notif) => {
+                                        unreadNotifications.map((notif) => {
                                             const { title, message } = translateNotification(notif, locale, t);
                                             const isStock = notif.type === 'stock';
+                                            const isOrderStatus = notif.type === 'order_status';
                                             return (
                                                 <Link
                                                     key={notif.id}
                                                     href={notif.link}
                                                     className="flex gap-3 px-5 py-4 hover:bg-slate-50/70 transition-colors duration-200 text-left"
-                                                    onClick={() => setShowNotificationDropdown(false)}
+                                                    onClick={() => {
+                                                        handleMarkAsRead(notif.id);
+                                                        setShowNotificationDropdown(false);
+                                                    }}
                                                 >
-                                                    <div className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border ${isStock
-                                                            ? 'bg-amber-50 text-amber-600 border-amber-100'
-                                                            : 'bg-rose-50 text-rose-600 border-rose-100'
+                                                    <div className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border ${
+                                                            isStock
+                                                                ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                : isOrderStatus
+                                                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                    : 'bg-rose-50 text-rose-600 border-rose-100'
                                                         }`}>
                                                         {isStock ? (
                                                             <Package className="w-5 h-5" aria-hidden="true" />
+                                                        ) : isOrderStatus ? (
+                                                            <ShoppingBag className="w-5 h-5" aria-hidden="true" />
                                                         ) : (
                                                             <Languages className="w-5 h-5" aria-hidden="true" />
                                                         )}
@@ -250,7 +305,12 @@ export default function Navbar() {
                                                             <p className="text-xs font-bold text-slate-900 truncate">
                                                                 {title}
                                                             </p>
-                                                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${isStock ? 'bg-amber-500' : 'bg-rose-500'
+                                                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                                                    isStock
+                                                                        ? 'bg-amber-500'
+                                                                        : isOrderStatus
+                                                                            ? 'bg-blue-500'
+                                                                            : 'bg-rose-500'
                                                                 }`} />
                                                         </div>
                                                         <p className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-2">

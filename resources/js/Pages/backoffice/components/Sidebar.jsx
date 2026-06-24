@@ -1,5 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useLanguage } from '@/Contexts/LanguageContext';
+import { useState, useEffect } from 'react';
 import {
     BadgeCheck,
     BarChart3,
@@ -75,6 +76,23 @@ const menuItems = [
 
 export default function Sidebar() {
     const { t } = useLanguage();
+    const { notifications = [] } = usePage().props;
+    const [readNotifIds, setReadNotifIds] = useState([]);
+
+    useEffect(() => {
+        const loadReadIds = () => {
+            const stored = JSON.parse(localStorage.getItem('fayyfir_admin_read_notifications') || '[]');
+            setReadNotifIds(stored);
+        };
+        loadReadIds();
+        window.addEventListener('admin-notifications-updated', loadReadIds);
+        return () => window.removeEventListener('admin-notifications-updated', loadReadIds);
+    }, []);
+
+    const unreadNotifications = notifications.filter(n => !readNotifIds.includes(n.id));
+    const hasUnreadOrders = unreadNotifications.some(n => n.type === 'order_status');
+    const hasUnreadProducts = unreadNotifications.some(n => n.type === 'stock' || n.type === 'translation');
+
     const currentPath =
         typeof window !== 'undefined' ? window.location.pathname : '';
 
@@ -96,6 +114,10 @@ export default function Sidebar() {
                         : currentPath === item.href ||
                           currentPath.startsWith(item.href + '/');
 
+                    const isOrdersMenu = item.href === '/backoffice/orders';
+                    const isProductsMenu = item.href === '/backoffice/product-management';
+                    const hasDot = (isOrdersMenu && hasUnreadOrders) || (isProductsMenu && hasUnreadProducts);
+
                     return (
                         <Link
                             key={item.href}
@@ -106,7 +128,12 @@ export default function Sidebar() {
                                 }`}
                         >
                             <Icon className="w-5 h-5" aria-hidden="true" />
-                            <span>{t(item.labelKey, item.fallback)}</span>
+                            <span className="flex-1 flex items-center justify-between gap-2">
+                                <span>{t(item.labelKey, item.fallback)}</span>
+                                {hasDot && (
+                                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-sm shadow-amber-400/50" />
+                                )}
+                            </span>
                         </Link>
                     );
                 })}

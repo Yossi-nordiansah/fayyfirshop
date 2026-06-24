@@ -1,30 +1,31 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, useForm, router } from "@inertiajs/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     User,
     Mail,
-    Lock,
     Phone,
     MapPin,
-    Compass,
-    Home,
     Check,
-    Globe,
-    Camera
+    Camera,
+    Plus,
+    Trash2,
+    Edit,
+    ShieldCheck
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
-import axios from "axios";
 import MainLayout from "@/Layouts/MainLayout";
 import BaseRenderInput from "@/Components/register/RenderInput";
-import BaseRenderTextArea from "@/Components/register/RenderTextArea";
 import ChangePasswordModal from "@/Components/edit-profile/ChangePasswordModal";
+import AddressModal from "@/Components/edit-profile/AddressModal";
 
-export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
+export default function EditProfile({ auth, mustVerifyEmail, status, flash, addresses = [] }) {
     const { t, locale } = useLanguage();
     const [clientErrors, setClientErrors] = useState({});
-    const isRtl = locale === 'ar';
+    const isRtl = locale === 'ar' || locale === 'arabic';
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    const [editingAddress, setEditingAddress] = useState(null);
 
     // Helper for avatar URL resolution
     const getAvatarUrl = () => {
@@ -37,53 +38,22 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
 
     const [avatarPreview, setAvatarPreview] = useState(getAvatarUrl());
     const avatarInputRef = useRef(null);
-
-    // Dropdown States untuk Wilayah Indonesia
-    const [provinces, setProvinces] = useState([]);
-    const [cities, setCities] = useState([]);
-    const [districts, setDistricts] = useState([]);
-    const [loadingCities, setLoadingCities] = useState(false);
-    const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-
-    // Initial country selection based on whether user has an Indonesian district
-    const initialCountry = auth.user.district ? "ID" : (auth.user.province ? "SA" : "ID");
 
     const currentTxt = {
         name_req: t("register.err.name_req", "Nama lengkap wajib diisi"),
         email_req: t("register.err.email_req", "Email wajib diisi"),
         email_val: t("register.err.email_val", "Format email tidak valid"),
-        pass_len: t("register.err.pass_len", "Kata sandi minimal 8 karakter"),
-        confirm_val: t("register.err.confirm_val", "Konfirmasi kata sandi tidak cocok"),
         phone_req: t("register.err.phone_req", "Nomor telepon/WhatsApp wajib diisi"),
-        country_req: t("register.err.country_req", "Negara wajib diisi"),
-        address_req: t("register.err.address_req", "Alamat lengkap wajib diisi"),
-        province_req: t("register.err.province_req", "Provinsi wajib diisi"),
-        city_req: t("register.err.city_req", "Kota/Kabupaten wajib diisi"),
-        district_req: t("register.err.district_req", "Kecamatan wajib diisi"),
-        postal_req: t("register.err.postal_req", "Kode pos wajib diisi"),
-
         placeholder_name: t("register.place.name", "Masukkan nama lengkap Anda"),
         placeholder_email: t("register.place.email", "Masukkan alamat email Anda"),
-        placeholder_pass: t("register.place.pass", "Kosongkan jika tidak ingin mengubah"),
-        placeholder_confirm: t("register.place.confirm", "Kosongkan jika tidak ingin mengubah"),
         placeholder_phone: t("register.place.phone", "Contoh: 081234567890"),
-        placeholder_address: t("register.place.address", "Nama jalan, RT/RW, nomor rumah, kelurahan/kecamatan"),
-        placeholder_postal: t("register.place.postal", "40123"),
     };
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: auth.user.name || "",
         email: auth.user.email || "",
-        password: "",
-        country: initialCountry,
         phone: auth.user.phone || "",
-        receiver_name: auth.user.receiver_name || "",
-        address: auth.user.address || "",
-        province: auth.user.province || "",
-        city: auth.user.city || "",
-        district: auth.user.district || "",
-        postal_code: auth.user.postal_code || "",
         avatar: null,
         _method: "patch" // standard Laravel workaround for sending files via PATCH
     });
@@ -96,45 +66,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
         setAvatarPreview(previewUrl);
     };
 
-    // Hydrate address lists on mount for existing Indonesian users
-    useEffect(() => {
-        if (data.country === "ID") {
-            axios.get(route('api.provinces'))
-                .then((res) => {
-                    setProvinces(res.data);
-
-                    // Auto-hydrate cities if user has an existing province
-                    const userProv = res.data.find(p => p.name === auth.user.province);
-                    if (userProv) {
-                        setLoadingCities(true);
-                        axios.get(`/api/cities/${userProv.code}`)
-                            .then((cRes) => {
-                                setCities(cRes.data);
-                                setLoadingCities(false);
-
-                                // Auto-hydrate districts if user has an existing city
-                                const userCity = cRes.data.find(c => c.name === auth.user.city);
-                                if (userCity) {
-                                    setLoadingDistricts(true);
-                                    axios.get(`/api/districts/${userCity.code}`)
-                                        .then((dRes) => {
-                                            setDistricts(dRes.data);
-                                            setLoadingDistricts(false);
-                                        })
-                                        .catch(() => setLoadingDistricts(false));
-                                }
-                            })
-                            .catch(() => setLoadingCities(false));
-                    }
-                })
-                .catch((err) => console.error("Error fetching provinces:", err));
-        } else {
-            setProvinces([]);
-            setCities([]);
-            setDistricts([]);
-        }
-    }, [data.country]);
-
     // Handle profile update status message
     useEffect(() => {
         if (status === 'profile-updated') {
@@ -144,48 +75,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
         }
     }, [status]);
 
-    // Handler ketika Provinsi berubah (Hanya untuk Indonesia)
-    const handleProvinceChange = (provinceCode, provinceName) => {
-        setData((prev) => ({
-            ...prev,
-            province: provinceCode ? provinceName : "",
-            city: "",
-            district: ""
-        }));
-        setCities([]);
-        setDistricts([]);
-
-        if (!provinceCode) return;
-
-        setLoadingCities(true);
-        axios.get(`/api/cities/${provinceCode}`)
-            .then((res) => {
-                setCities(res.data);
-                setLoadingCities(false);
-            })
-            .catch(() => setLoadingCities(false));
-    };
-
-    // Handler ketika Kota berubah (Hanya untuk Indonesia)
-    const handleCityChange = (cityCode, cityName) => {
-        setData((prev) => ({
-            ...prev,
-            city: cityCode ? cityName : "",
-            district: ""
-        }));
-        setDistricts([]);
-
-        if (!cityCode) return;
-
-        setLoadingDistricts(true);
-        axios.get(`/api/districts/${cityCode}`)
-            .then((res) => {
-                setDistricts(res.data);
-                setLoadingDistricts(false);
-            })
-            .catch(() => setLoadingDistricts(false));
-    };
-
     const validateForm = () => {
         const errs = {};
         if (!data.name.trim()) errs.name = currentTxt.name_req;
@@ -194,17 +83,19 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
         } else if (!/\S+@\S+\.\S+/.test(data.email)) {
             errs.email = currentTxt.email_val;
         }
-
         if (!data.phone.trim()) errs.phone = currentTxt.phone_req;
-        if (!data.receiver_name.trim()) errs.receiver_name = t("validation.checkout.recipient_name_required", "Nama penerima wajib diisi");
-        if (!data.country) errs.country = currentTxt.country_req;
-        if (!data.address.trim()) errs.address = currentTxt.address_req;
-        if (!data.province.trim()) errs.province = currentTxt.province_req;
-        if (!data.city.trim()) errs.city = currentTxt.city_req;
-        if (data.country === "ID" && !data.district.trim()) errs.district = currentTxt.district_req;
-        if (!data.postal_code.trim()) errs.postal_code = currentTxt.postal_req;
 
         setClientErrors(errs);
+
+        if (Object.keys(errs).length > 0) {
+            const firstErrorKey = Object.keys(errs)[0];
+            const element = document.getElementById(firstErrorKey);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+            }
+        }
+
         return Object.keys(errs).length === 0;
     };
 
@@ -212,7 +103,6 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
         e.preventDefault();
 
         if (validateForm()) {
-            // Must use post to standard patch endpoint to support files via _method patch payload
             post(route("profile.update"), {
                 forceFormData: true,
                 onSuccess: () => {
@@ -221,6 +111,45 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                 onFinish: () => reset("password"),
             });
         }
+    };
+
+    // Address Action Handlers
+    const handleSaveAddress = async (addressData) => {
+        if (addressData.id) {
+            // Update existing
+            await router.patch(route('addresses.update', addressData.id), addressData, {
+                preserveScroll: true
+            });
+        } else {
+            // Create new
+            await router.post(route('addresses.store'), addressData, {
+                preserveScroll: true
+            });
+        }
+    };
+
+    const handleDeleteAddress = (id) => {
+        if (confirm(t('profile.confirm_delete_address', 'Apakah Anda yakin ingin menghapus alamat ini?'))) {
+            router.delete(route('addresses.destroy', id), {
+                preserveScroll: true
+            });
+        }
+    };
+
+    const handleSetDefaultAddress = (id) => {
+        router.patch(route('addresses.set-default', id), {}, {
+            preserveScroll: true
+        });
+    };
+
+    const openAddAddressModal = () => {
+        setEditingAddress(null);
+        setIsAddressModalOpen(true);
+    };
+
+    const openEditAddressModal = (address) => {
+        setEditingAddress(address);
+        setIsAddressModalOpen(true);
     };
 
     return (
@@ -240,7 +169,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
 
                         {/* Success Message Banner */}
                         <AnimatePresence>
-                            {showSuccess && (
+                            {(showSuccess || flash?.success) && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -249,7 +178,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                                     dir={isRtl ? "rtl" : "ltr"}
                                 >
                                     <Check size={18} className="text-emerald-600 shrink-0" />
-                                    <span>{t("profile.success_message", "Profil Anda telah berhasil diperbarui.")}</span>
+                                    <span>{flash?.success || t("profile.success_message", "Profil Anda telah berhasil diperbarui.")}</span>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -329,7 +258,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                         </div>
 
                         {/* Form Section */}
-                        <form onSubmit={submit} className="flex flex-col">
+                        <form onSubmit={submit} className="flex flex-col mb-12">
                             <div className="grid grid-cols-1 gap-6 md:gap-8">
                                 {/* Account Information */}
                                 <div className="space-y-1">
@@ -361,227 +290,12 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                                         isRtl={isRtl}
                                     />
 
-                                    <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                        {t("profile.button.change_password", "Ubah Kata Sandi")}
-                                    </button>
-                                </div>
-
-                                {/* Address & Contact Info */}
-                                <div className="space-y-1">
-                                    <h2 className="text-sm font-bold uppercase tracking-wider text-amber-600 mb-4 border-b border-slate-100 pb-2">
-                                        {t("register.address_info", "Alamat & Kontak")}
-                                    </h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Country Selection */}
-                                        <div className="relative mb-5" dir={isRtl ? "rtl" : "ltr"}>
-                                            <label htmlFor="country" className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5 px-1">
-                                                {t("register.country", "Wilayah Registrasi")} <span className="text-amber-600">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <div className={`absolute inset-y-0 ${isRtl ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none text-slate-400`}>
-                                                    <Globe size={18} className="opacity-70" />
-                                                </div>
-                                                <select
-                                                    id="country"
-                                                    value={data.country}
-                                                    onChange={(e) => {
-                                                        const selectedVal = e.target.value;
-                                                        if (selectedVal === initialCountry) {
-                                                            setData((prev) => ({
-                                                                ...prev,
-                                                                country: selectedVal,
-                                                                province: auth.user.province || "",
-                                                                city: auth.user.city || "",
-                                                                district: auth.user.district || "",
-                                                                address: auth.user.address || "",
-                                                                postal_code: auth.user.postal_code || ""
-                                                            }));
-                                                        } else {
-                                                            setData((prev) => ({
-                                                                ...prev,
-                                                                country: selectedVal,
-                                                                province: "",
-                                                                city: "",
-                                                                district: "",
-                                                                address: "",
-                                                                postal_code: ""
-                                                            }));
-                                                        }
-                                                        setClientErrors({});
-                                                    }}
-                                                    className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border border-slate-200 hover:border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all duration-300`}
-                                                >
-                                                    <option value="ID">{t("register.type_indonesia", "User Indonesia")}</option>
-                                                    <option value="SA">{t("register.type_international", "User International / Saudi Arabia")}</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <BaseRenderInput
-                                            label={t("register.phone", "Nomor Telepon / WhatsApp")}
-                                            id="phone"
-                                            type="tel"
-                                            placeholder={currentTxt.placeholder_phone}
-                                            icon={Phone}
-                                            data={data}
-                                            setData={setData}
-                                            errors={errors}
-                                            clientErrors={clientErrors}
-                                            isRtl={isRtl}
-                                        />
-                                    </div>
-
-                                    {/* DYNAMIC REGIONAL FORM */}
-                                    {data.country === "ID" ? (
-                                        <div className="space-y-1">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                {/* Provinsi */}
-                                                <div className="mb-5">
-                                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5 px-1">
-                                                        {t("register.province", "Provinsi")} <span className="text-amber-600">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <div className={`absolute inset-y-0 ${isRtl ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none text-slate-400`}>
-                                                            <Compass size={18} className="opacity-70" />
-                                                        </div>
-                                                        <select
-                                                            value={provinces.find(p => p.name === data.province)?.code || ""}
-                                                            onChange={(e) => {
-                                                                const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleProvinceChange(e.target.value, selectedOption ? selectedOption.text : "");
-                                                            }}
-                                                            className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${(clientErrors.province || errors.province) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
-                                                        >
-                                                            <option value="">-- {t("register.select_province", "Pilih Provinsi")} --</option>
-                                                            {provinces.map((p) => (
-                                                                <option key={p.code} value={p.code}>{p.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    {(clientErrors.province || errors.province) && (
-                                                        <p className="text-xs text-red-500 mt-1 px-1">{clientErrors.province || errors.province}</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Kota / Kabupaten */}
-                                                <div className="mb-5">
-                                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5 px-1">
-                                                        {t("register.city", "Kota / Kabupaten")} {loadingCities && <img src="/images/load.gif" alt="Loading" className="inline-block w-4 h-4 ml-1 align-middle" />} <span className="text-amber-600">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <div className={`absolute inset-y-0 ${isRtl ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none text-slate-400`}>
-                                                            <Home size={18} className="opacity-70" />
-                                                        </div>
-                                                        <select
-                                                            value={cities.find(c => c.name === data.city)?.code || ""}
-                                                            disabled={loadingCities || cities.length === 0}
-                                                            onChange={(e) => {
-                                                                const selectedOption = e.target.options[e.target.selectedIndex];
-                                                                handleCityChange(e.target.value, selectedOption ? selectedOption.text : "");
-                                                            }}
-                                                            className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${(clientErrors.city || errors.city) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
-                                                        >
-                                                            <option value="">-- {t("register.select_city", "Pilih Kota")} --</option>
-                                                            {cities.map((c) => (
-                                                                <option key={c.code} value={c.code}>{c.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    {(clientErrors.city || errors.city) && (
-                                                        <p className="text-xs text-red-500 mt-1 px-1">{clientErrors.city || errors.city}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                {/* Kecamatan */}
-                                                <div className="mb-5">
-                                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5 px-1">
-                                                        {t("register.district", "Kecamatan")} {loadingDistricts && <img src="/images/load.gif" alt="Loading" className="inline-block w-4 h-4 ml-1 align-middle" />} <span className="text-amber-600">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <div className={`absolute inset-y-0 ${isRtl ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none text-slate-400`}>
-                                                            <MapPin size={18} className="opacity-70" />
-                                                        </div>
-                                                        <select
-                                                            value={data.district}
-                                                            disabled={loadingDistricts || districts.length === 0}
-                                                            onChange={(e) => {
-                                                                setData("district", e.target.value);
-                                                            }}
-                                                            className={`w-full bg-slate-50 text-slate-900 appearance-none ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-3 rounded-xl border outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${(clientErrors.district || errors.district) ? 'border-red-500' : 'border-slate-200 hover:border-slate-300'}`}
-                                                        >
-                                                            <option value="">-- {t("register.select_district", "Pilih Kecamatan")} --</option>
-                                                            {districts.map((d) => (
-                                                                <option key={d.code} value={d.name}>{d.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    {(clientErrors.district || errors.district) && (
-                                                        <p className="text-xs text-red-500 mt-1 px-1">{clientErrors.district || errors.district}</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Kode Pos */}
-                                                <BaseRenderInput
-                                                    label={t("register.postal_code", "Kode Pos")}
-                                                    id="postal_code"
-                                                    placeholder={currentTxt.placeholder_postal}
-                                                    icon={Home}
-                                                    data={data}
-                                                    setData={setData}
-                                                    errors={errors}
-                                                    clientErrors={clientErrors}
-                                                    isRtl={isRtl}
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        /* International (Saudi Arabia) */
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                                            <BaseRenderInput
-                                                label={t("register.sa_region", "Wilayah / Provinsi (Region)")}
-                                                id="province"
-                                                placeholder={t("register.place.sa_region", "Misal: Makkah Region")}
-                                                icon={Compass}
-                                                data={data}
-                                                setData={setData}
-                                                errors={errors}
-                                                clientErrors={clientErrors}
-                                                isRtl={isRtl}
-                                            />
-
-                                            <BaseRenderInput
-                                                label={t("register.sa_city", "Kota (City)")}
-                                                id="city"
-                                                placeholder={t("register.place.sa_city", "Misal: Jeddah / Mecca")}
-                                                icon={Home}
-                                                data={data}
-                                                setData={setData}
-                                                errors={errors}
-                                                clientErrors={clientErrors}
-                                                isRtl={isRtl}
-                                            />
-
-                                            <BaseRenderInput
-                                                label={t("register.sa_postal", "Kode Pos / ZIP (5 Digit)")}
-                                                id="postal_code"
-                                                placeholder="21577"
-                                                icon={Home}
-                                                data={data}
-                                                setData={setData}
-                                                errors={errors}
-                                                clientErrors={clientErrors}
-                                                isRtl={isRtl}
-                                            />
-                                        </div>
-                                    )}
-
                                     <BaseRenderInput
-                                        label={t("register.receiver_name", "Nama Penerima")}
-                                        id="receiver_name"
-                                        placeholder={t("register.placeholder_receiver", "Masukkan nama penerima dari alamat anda")}
-                                        icon={User}
+                                        label={t("register.phone", "Nomor Telepon / WhatsApp")}
+                                        id="phone"
+                                        type="tel"
+                                        placeholder={currentTxt.placeholder_phone}
+                                        icon={Phone}
                                         data={data}
                                         setData={setData}
                                         errors={errors}
@@ -589,21 +303,15 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                                         isRtl={isRtl}
                                     />
 
-                                    <BaseRenderTextArea
-                                        label={data.country === "ID" ? t("register.address", "Alamat Lengkap Pengiriman") : t("register.sa_address", "Detail Alamat / Nama Jalan / No. Bangunan")}
-                                        id="address"
-                                        placeholder={data.country === "ID" ? currentTxt.placeholder_address : t("register.place.sa_address", "Nama jalan, nomor bangunan (4 digit), atau distrik")}
-                                        icon={MapPin}
-                                        data={data}
-                                        setData={setData}
-                                        errors={errors}
-                                        clientErrors={clientErrors}
-                                        isRtl={isRtl}
-                                    />
+                                    <div className="pt-2">
+                                        <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-bold uppercase tracking-wider">
+                                            {t("profile.button.change_password", "Ubah Kata Sandi")}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Submit Button */}
+                            {/* Submit Profile General Info Button */}
                             <div className="mt-8 flex justify-end items-center border-t border-slate-100 pt-6">
                                 <button
                                     type="submit"
@@ -614,13 +322,117 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
                                         t("register.btn_processing", "Memproses...")
                                     ) : (
                                         <>
-                                            {t("profile.btn_submit", "Simpan Perubahan")}
+                                            {t("profile.btn_submit", "Simpan Informasi Akun")}
                                             <Check size={14} />
                                         </>
                                     )}
                                 </button>
                             </div>
                         </form>
+
+                        {/* Addresses Section */}
+                        <div className="border-t border-slate-100 pt-8" dir={isRtl ? "rtl" : "ltr"}>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900 tracking-wide">
+                                        {t("profile.shipping_addresses", "Alamat Pengiriman")}
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        {t("profile.shipping_addresses_subtitle", "Kelola alamat pengiriman pesanan Anda")}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={openAddAddressModal}
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95"
+                                >
+                                    <Plus size={16} />
+                                    {t("profile.add_address", "Tambah Alamat")}
+                                </button>
+                            </div>
+
+                            {/* Addresses List */}
+                            {addresses.length === 0 ? (
+                                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <MapPin className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-500 font-medium">
+                                        {t("profile.no_addresses", "Belum ada alamat pengiriman.")}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-4 w-full">
+                                    {addresses.map((addr) => (
+                                        <div
+                                            key={addr.id}
+                                            className={`relative p-5 rounded-2xl border bg-white shadow-sm flex flex-col justify-between transition-all duration-300 ${
+                                                addr.is_default
+                                                    ? 'border-amber-400 ring-1 ring-amber-400/30 bg-amber-50/10'
+                                                    : 'border-slate-100 hover:border-slate-200'
+                                            }`}
+                                        >
+                                            <div>
+                                                {/* Header card */}
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-sm text-slate-800">
+                                                            {addr.receiver_name}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 font-medium mt-0.5">
+                                                            {addr.phone}
+                                                        </span>
+                                                    </div>
+                                                    {addr.is_default && (
+                                                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/50 px-2.5 py-1 rounded-full shadow-sm">
+                                                            <ShieldCheck size={12} />
+                                                            {t("profile.default_badge", "Utama")}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Address Details */}
+                                                <p className="text-xs text-slate-600 leading-relaxed font-medium mb-4">
+                                                    {addr.address}<br />
+                                                    {addr.district ? `${addr.district}, ` : ''}
+                                                    {addr.city}, {addr.province} {addr.postal_code}
+                                                </p>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-2 mt-auto pt-3 border-t border-slate-50">
+                                                {!addr.is_default && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetDefaultAddress(addr.id)}
+                                                        className="text-[10px] font-bold text-slate-600 hover:text-amber-600 bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-100 px-3 py-1.5 rounded-lg transition-colors"
+                                                    >
+                                                        {t("profile.set_default", "Jadikan Utama")}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditAddressModal(addr)}
+                                                    className="flex items-center gap-1 text-[10px] font-bold text-slate-600 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                                                >
+                                                    <Edit size={12} />
+                                                    {t("profile.edit_button", "Ubah")}
+                                                </button>
+                                                {!addr.is_default && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteAddress(addr.id)}
+                                                        className="flex items-center gap-1 text-[10px] font-bold text-slate-600 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-100 px-3 py-1.5 rounded-lg transition-colors ml-auto"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                        {t("profile.delete_button", "Hapus")}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 </div>
 
@@ -628,6 +440,14 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash }) {
             <ChangePasswordModal
                 isOpen={isPasswordModalOpen}
                 onClose={() => setIsPasswordModalOpen(false)}
+            />
+            <AddressModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                onSave={handleSaveAddress}
+                address={editingAddress}
+                t={t}
+                locale={locale}
             />
         </div>
     );

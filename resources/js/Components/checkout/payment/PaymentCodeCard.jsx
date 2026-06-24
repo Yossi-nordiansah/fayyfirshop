@@ -1,6 +1,6 @@
 import React from "react";
 import {
-    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode
+    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle
 } from "lucide-react";
 
 export default function PaymentCodeCard({
@@ -217,7 +217,7 @@ export default function PaymentCodeCard({
 
             {/* 5. Retail Outlets (Alfamart / Indomaret) */}
             {["alfamart", "indomaret"].includes(order.payment_method) && details.payment_code && (
-                <div className="space-y-4 text-center">
+                <div className="space-y-4 flex flex-col text-center">
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl inline-block max-w-sm w-full mx-auto">
                         <span className="text-xs text-slate-400 font-bold tracking-wider block uppercase">
                             {t("payment.retail.code_label", "KODE PEMBAYARAN KASIR")}
@@ -226,9 +226,22 @@ export default function PaymentCodeCard({
                             {details.payment_code}
                         </span>
                     </div>
+
+                    <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl max-w-xl w-full mx-auto text-left flex items-start gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+                        <div>
+                            <span className="text-xs font-black text-blue-950 block">
+                                {t("payment.retail.midtrans_notice_title", "Pemberitahuan Kasir")}
+                            </span>
+                            <span className="text-[11px] text-blue-800 font-medium leading-normal block mt-1">
+                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Midtrans / Online Shop.")}
+                            </span>
+                        </div>
+                    </div>
+
                     <button
                         onClick={() => copyText(details.payment_code)}
-                        className="inline-flex items-center gap-1.5 text-xs font-black text-blue-900 border border-blue-200 px-4 py-2 rounded-xl hover:bg-slate-50"
+                        className="w-fit mx-auto inline-flex items-center gap-1.5 text-xs font-black text-blue-900 border border-blue-200 px-4 py-2 rounded-xl hover:bg-slate-50"
                     >
                         <Copy size={14} />
                         <span>{t("payment.retail.copy", "Salin Kode Pembayaran")}</span>

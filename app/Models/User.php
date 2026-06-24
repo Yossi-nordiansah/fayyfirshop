@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(StoreBranch::class, 'assigned_branch_id');
     }
+
+    public function addresses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserAddress::class);
+    }
 }

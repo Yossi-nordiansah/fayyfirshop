@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     ArrowLeft,
@@ -17,7 +17,7 @@ import PaymentMethodSelection from "@/Components/checkout/PaymentMethodSelection
 import OrderNotes from "@/Components/checkout/OrderNotes";
 import OrderSummary from "@/Components/checkout/OrderSummary";
 
-export default function CheckoutPage({ user, storeBranches, userVouchers = [] }) {
+export default function CheckoutPage({ user, storeBranches, userVouchers = [], addresses = [] }) {
     const { t, locale } = useLanguage();
     const isRtl = locale === 'arabic';
 
@@ -47,6 +47,53 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
         postal_code: user?.postal_code ?? '',
         area_id: user?.area_id ?? '',
     });
+
+    // Reload user and addresses from server on mount (so that going back from Edit Profile gets fresh address data)
+    useEffect(() => {
+        router.reload({ only: ['addresses', 'user'] });
+    }, []);
+
+    const prevAddresses = useRef(addresses);
+    const prevAddressesLength = useRef(addresses.length);
+
+    // Sync addressForm with the latest addresses prop from Inertia
+    useEffect(() => {
+        if (addresses && addresses.length > 0) {
+            // If a new address was added (addresses list length increased), auto-select it
+            if (addresses.length > prevAddressesLength.current) {
+                const newAddr = addresses.find(addr => !prevAddresses.current.some(p => p.id === addr.id));
+                if (newAddr) {
+                    setAddressForm({
+                        receiver_name: newAddr.receiver_name ?? '',
+                        phone: newAddr.phone ?? '',
+                        address: newAddr.address ?? '',
+                        province: newAddr.province ?? '',
+                        city: newAddr.city ?? '',
+                        district: newAddr.district ?? '',
+                        postal_code: newAddr.postal_code ?? '',
+                        area_id: newAddr.area_id ?? '',
+                    });
+                }
+            } else {
+                // Otherwise, fall back to default behavior (e.g. initial mount or update to default status)
+                const activeAddr = addresses.find(a => a.is_default) || addresses[0];
+                if (activeAddr) {
+                    setAddressForm({
+                        receiver_name: activeAddr.receiver_name ?? '',
+                        phone: activeAddr.phone ?? '',
+                        address: activeAddr.address ?? '',
+                        province: activeAddr.province ?? '',
+                        city: activeAddr.city ?? '',
+                        district: activeAddr.district ?? '',
+                        postal_code: activeAddr.postal_code ?? '',
+                        area_id: activeAddr.area_id ?? '',
+                    });
+                }
+            }
+        }
+        prevAddresses.current = addresses;
+        prevAddressesLength.current = addresses.length;
+    }, [addresses]);
 
     // Warehouse/Branch Selection
     const [selectedBranchId, setSelectedBranchId] = useState(null);
@@ -531,6 +578,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [] })
                                 user={user}
                                 addressForm={addressForm}
                                 setAddressForm={setAddressForm}
+                                addresses={addresses}
                             />
 
                             {/* Section 2: Gudang Pengirim (Warehouse Switcher) */}

@@ -25,7 +25,124 @@ class ProfileController extends Controller
         return Inertia::render('edit-profile/EditProfile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'addresses' => $request->user()->addresses()->orderBy('is_default', 'desc')->get(),
         ]);
+    }
+
+    /**
+     * Store a new shipping address.
+     */
+    public function storeAddress(Request $request)
+    {
+        $request->validate([
+            'receiver_name' => 'required|string|max:255',
+            'phone' => 'required|string|max:255',
+            'country' => 'required|string|max:2',
+            'province' => 'required_if:country,ID|nullable|string|max:255',
+            'city' => 'required_if:country,ID|nullable|string|max:255',
+            'district' => 'required_if:country,ID|nullable|string|max:255',
+            'postal_code' => 'required|string|max:20',
+            'address' => 'required|string|max:1000',
+        ]);
+
+        $user = $request->user();
+
+        // Auto resolve Biteship Area ID if country is Indonesia
+        $areaId = $this->resolveBiteshipAreaId(
+            $request->country,
+            $request->district,
+            $request->city,
+            $request->province,
+            $request->postal_code
+        );
+
+        $user->addresses()->create([
+            'receiver_name' => $request->receiver_name,
+            'phone' => $request->phone,
+            'country' => $request->country,
+            'province' => $request->province ?: '',
+            'city' => $request->city ?: '',
+            'district' => $request->district ?: null,
+            'postal_code' => $request->postal_code,
+            'address' => $request->address,
+            'area_id' => $areaId,
+            'is_default' => $request->is_default ?? false,
+        ]);
+
+        return redirect()->back()->with('success', 'Alamat berhasil ditambahkan.');
+    }
+
+    /**
+     * Update an existing shipping address.
+     */
+    public function updateAddress(Request $request, \App\Models\UserAddress $address)
+    {
+        if ($address->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $request->validate([
+            'receiver_name' => 'required|string|max:255',
+            'phone' => 'required|string|max:255',
+            'country' => 'required|string|max:2',
+            'province' => 'required_if:country,ID|nullable|string|max:255',
+            'city' => 'required_if:country,ID|nullable|string|max:255',
+            'district' => 'required_if:country,ID|nullable|string|max:255',
+            'postal_code' => 'required|string|max:20',
+            'address' => 'required|string|max:1000',
+        ]);
+
+        // Auto resolve Biteship Area ID if country is Indonesia
+        $areaId = $this->resolveBiteshipAreaId(
+            $request->country,
+            $request->district,
+            $request->city,
+            $request->province,
+            $request->postal_code
+        );
+
+        $address->update([
+            'receiver_name' => $request->receiver_name,
+            'phone' => $request->phone,
+            'country' => $request->country,
+            'province' => $request->province ?: '',
+            'city' => $request->city ?: '',
+            'district' => $request->district ?: null,
+            'postal_code' => $request->postal_code,
+            'address' => $request->address,
+            'area_id' => $areaId,
+            'is_default' => $request->is_default ?? $address->is_default,
+        ]);
+
+        return redirect()->back()->with('success', 'Alamat berhasil diperbarui.');
+    }
+
+    /**
+     * Delete a shipping address.
+     */
+    public function destroyAddress(Request $request, \App\Models\UserAddress $address)
+    {
+        if ($address->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $address->delete();
+
+        return redirect()->back()->with('success', 'Alamat berhasil dihapus.');
+    }
+
+    /**
+     * Set a shipping address as default.
+     */
+    public function setDefaultAddress(Request $request, \App\Models\UserAddress $address)
+    {
+        if ($address->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $address->update(['is_default' => true]);
+
+        return redirect()->back()->with('success', 'Alamat utama berhasil diubah.');
     }
 
     /**
