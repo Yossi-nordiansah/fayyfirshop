@@ -394,6 +394,7 @@ export default function ProductForm({
         stock_type: product?.stock_type ?? 'variant',
         unit: product?.unit ?? '',
         weight: product?.weight ?? '',
+        capacity: product?.capacity ?? 1,
 
         // Gallery images
         images: [],   // new File uploads
@@ -1035,9 +1036,16 @@ export default function ProductForm({
 
             const finalWeight = hasWeightVariant ? 0 : (data.weight || 0);
 
+            const isSingle = !data.has_variants;
+            const unitLower = data.unit ? data.unit.toLowerCase() : '';
+            const finalCapacity = (isSingle && !['pcs', 'pack', 'box'].includes(unitLower))
+                ? (parseInt(data.capacity, 10) || 1)
+                : 1;
+
             return {
                 ...data,
                 weight: finalWeight,
+                capacity: finalCapacity,
                 ...(isEditing ? { _method: 'PATCH' } : {}),
                 branch_stocks: cleanedBranchStocks,
                 variants: transformedVariants

@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import CardProduct from "@/Components/product/CardProduct";
 import { CATEGORY_MAP } from "@/Components/product/FilterSidebar";
-import SidebarFilter from "./SidebarFilter";
+import SidebarFilter, { MobileFilterDrawer } from "./SidebarFilter";
 
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +15,7 @@ import {
     ShoppingBag,
     ArrowUpDown,
     RotateCcw,
+    Filter,
 } from "lucide-react";
 
 export default function Products({ category = null, subCategory = null, products = [] }) {
@@ -578,7 +579,7 @@ export default function Products({ category = null, subCategory = null, products
                                         }
                                         className="lg:hidden flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-900 rounded-xl text-xs font-bold transition-colors"
                                     >
-                                        <SlidersHorizontal size={14} />
+                                        <Filter size={14} />
                                         {t("catalog.filter_btn", "Filters")}
                                     </button>
 
@@ -792,6 +793,29 @@ export default function Products({ category = null, subCategory = null, products
                         </div>
                     </div>
                 </div>
+
+                {/* Sticky/Fixed Side Tab Button for Mobile */}
+                <button
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="lg:hidden fixed left-0 top-[35%] -translate-y-1/2 z-[90] flex items-center justify-center w-11 h-12 bg-blue-950 text-white rounded-r-2xl shadow-xl border-y border-r border-amber-500/30 active:scale-95 transition-all focus:outline-none"
+                    title="Filter Kategori"
+                >
+                    <Filter size={18} className="text-amber-400" />
+                </button>
+
+                {/* Mobile Slide-in Drawer */}
+                <MobileFilterDrawer
+                    selectedCat={selectedCat}
+                    selectedSub={selectedSub}
+                    searchQuery={searchQuery}
+                    expandedCategories={expandedCategories}
+                    toggleCategoryExpand={toggleCategoryExpand}
+                    handleCategorySelect={handleCategorySelect}
+                    resetFilters={resetFilters}
+                    mobileFiltersOpen={mobileFiltersOpen}
+                    setMobileFiltersOpen={setMobileFiltersOpen}
+                    categoryMap={dynamicCategoryMap}
+                />
             </MainLayout>
         </div>
     );

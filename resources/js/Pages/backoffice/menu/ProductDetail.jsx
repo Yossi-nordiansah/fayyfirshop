@@ -462,6 +462,14 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                             )}
                                         </div>
                                     </div>
+                                    {product.capacity && product.capacity > 1 && !['pcs', 'pack', 'box'].includes((product.unit || '').toLowerCase()) && (
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                                            <div>
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.form.capacity_label', 'Ukuran / Kapasitas')}</span>
+                                                <span className="font-semibold text-sm text-slate-700">{product.capacity} {product.unit}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

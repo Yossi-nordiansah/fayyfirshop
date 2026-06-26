@@ -33,6 +33,7 @@ class Product extends Model
         'description_translations',
         'stock_type',
         'unit',
+        'capacity',
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class Product extends Model
         'review_count' => 'integer',
         'sold' => 'integer',
         'weight' => 'integer',
+        'capacity' => 'integer',
         'is_new' => 'boolean',
         'is_best_seller' => 'boolean',
     ];

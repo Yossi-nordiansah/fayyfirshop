@@ -123,10 +123,14 @@ class Order extends Model
                         $product->update(['stock' => $product->variants()->sum('stock')]);
                     }
                 } else {
+                    $deduction = $item->quantity;
+                    if ($product && !in_array(strtolower($product->unit), ['pcs', 'pack', 'box'])) {
+                        $deduction = $item->quantity * ($product->capacity ?? 1);
+                    }
                     ProductBranchStock::where([
                         'product_id' => $item->product_id,
                         'store_branch_id' => $branchId
-                    ])->increment('stock', $item->quantity);
+                    ])->increment('stock', $deduction);
                     
                     if ($product) {
                         $product->update(['stock' => $product->branchStocks()->sum('stock')]);
@@ -226,10 +230,14 @@ class Order extends Model
                         $product->update(['stock' => $product->variants()->sum('stock')]);
                     }
                 } else {
+                    $deduction = $item->quantity;
+                    if ($product && !in_array(strtolower($product->unit), ['pcs', 'pack', 'box'])) {
+                        $deduction = $item->quantity * ($product->capacity ?? 1);
+                    }
                     ProductBranchStock::where([
                         'product_id' => $item->product_id,
                         'store_branch_id' => $branchId
-                    ])->decrement('stock', $item->quantity);
+                    ])->decrement('stock', $deduction);
                     
                     if ($product) {
                         $product->update(['stock' => $product->branchStocks()->sum('stock')]);

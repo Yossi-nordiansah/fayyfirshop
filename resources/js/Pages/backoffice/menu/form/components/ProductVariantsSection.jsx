@@ -348,54 +348,91 @@ export default function ProductVariantsSection({
                     </span>
 
                     {/* Unit selector and Weight input */}
-                    <div className={!data.has_variants ? "grid grid-cols-1 gap-4 sm:grid-cols-2" : "space-y-2 max-w-xs"}>
-                        {/* Unit selector */}
-                        <div className="space-y-2">
-                            <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
-                                {data.has_variants
-                                    ? t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')
-                                    : t('backoffice.product.form.variant_unit', 'Satuan (Unit)')
-                                } <span className="text-rose-500">*</span>
-                            </label>
-                            <select
-                                value={data.unit || ''}
-                                onChange={e => setData('unit', e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-950"
-                                required
-                            >
-                                <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
-                                {units.map(u => (
-                                    <option key={u.id} value={u.name}>{u.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Weight input for Single Product (when there are no variants) */}
-                        {!data.has_variants && (
-                            <div className="space-y-2">
-                                <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
-                                    {t('backoffice.product.weight', 'Berat Produk (Gram)')} <span className="text-rose-500">*</span>
-                                </label>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="text"
-                                        value={data.weight === '' || data.weight === null || data.weight === undefined ? '' : String(data.weight)}
-                                        onChange={e => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            setData('weight', val === '' ? '' : parseInt(val, 10));
-                                        }}
-                                        placeholder="e.g. 1000"
-                                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-12 text-sm font-semibold outline-none focus:border-blue-950"
+                    {(() => {
+                        const showCapacityInput = !data.has_variants && data.unit && !['pcs', 'pack', 'box'].includes(data.unit.toLowerCase());
+                        const gridClass = !data.has_variants 
+                            ? (showCapacityInput ? "grid grid-cols-1 gap-4 sm:grid-cols-3" : "grid grid-cols-1 gap-4 sm:grid-cols-2") 
+                            : "space-y-2 max-w-xs";
+                        
+                        return (
+                            <div className={gridClass}>
+                                {/* Unit selector */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                                        {data.has_variants
+                                            ? t('backoffice.product.form.parent_unit', 'Satuan Stok Induk')
+                                            : t('backoffice.product.form.variant_unit', 'Satuan (Unit)')
+                                        } <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={data.unit || ''}
+                                        onChange={e => setData('unit', e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-950"
                                         required
-                                    />
-                                    <span className="absolute right-3 text-xs font-bold text-slate-400">gram</span>
+                                    >
+                                        <option value="">{t('backoffice.product.form.placeholders.parent_unit', 'Pilih satuan...')}</option>
+                                        {units.map(u => (
+                                            <option key={u.id} value={u.name}>{u.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                                {errors.weight && (
-                                    <p className="mt-1 text-xs text-rose-600">{errors.weight}</p>
+
+                                {/* Weight input for Single Product (when there are no variants) */}
+                                {!data.has_variants && (
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                                            {t('backoffice.product.weight', 'Berat Produk (Gram)')} <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="text"
+                                                value={data.weight === '' || data.weight === null || data.weight === undefined ? '' : String(data.weight)}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    setData('weight', val === '' ? '' : parseInt(val, 10));
+                                                }}
+                                                placeholder="e.g. 1000"
+                                                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-12 text-sm font-semibold outline-none focus:border-blue-950"
+                                                required
+                                            />
+                                            <span className="absolute right-3 text-xs font-bold text-slate-400">gram</span>
+                                        </div>
+                                        {errors.weight && (
+                                            <p className="mt-1 text-xs text-rose-600">{errors.weight}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Capacity (Ukuran) input for Single Product when unit is not pcs/pack/box */}
+                                {showCapacityInput && (
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                                            {t('backoffice.product.form.capacity_label', 'Ukuran / Kapasitas')} <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="text"
+                                                value={data.capacity === '' || data.capacity === null || data.capacity === undefined ? '' : String(data.capacity)}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    setData('capacity', val === '' ? '' : parseInt(val, 10));
+                                                }}
+                                                placeholder="e.g. 500"
+                                                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-12 text-sm font-semibold outline-none focus:border-blue-950"
+                                                required
+                                            />
+                                            <span className="absolute right-3 text-xs font-bold text-slate-400">
+                                                {data.unit}
+                                            </span>
+                                        </div>
+                                        {errors.capacity && (
+                                            <p className="mt-1 text-xs text-rose-600">{errors.capacity}</p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        );
+                    })()}
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         {data.branch_stocks.map((bs, bIdx) => (

@@ -43,6 +43,10 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/about', function () {
+    return Inertia::render('about-us/AboutUs');
+})->name('about');
+
 Route::get('/products/{category?}', function ($category = null) {
     $products = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
         ->get();

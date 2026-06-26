@@ -84,6 +84,7 @@ class ProductController extends Controller
             'stock_type'                  => 'nullable|in:variant,parent',
             'unit'                        => 'nullable|string|max:50',
             'weight'                      => 'nullable|integer|min:0',
+            'capacity'                    => 'nullable|integer|min:1',
         ];
 
         if ($request->has('variants')) {
@@ -165,6 +166,16 @@ class ProductController extends Controller
                 $price = $minPrice ?? 0;
             }
 
+            $hasVariants = $request->boolean('has_variants');
+            $unit = $request->input('unit');
+            $capacity = 1;
+            if (!$hasVariants && $unit && !in_array(strtolower($unit), ['pcs', 'pack', 'box'])) {
+                $capacity = (int) $request->input('capacity', 1);
+                if ($capacity < 1) {
+                    $capacity = 1;
+                }
+            }
+
             // 1. Create primary Product record
             $product = Product::create([
                 'title'                   => $primaryTitle,
@@ -181,6 +192,7 @@ class ProductController extends Controller
                 'stock_type'              => $request->input('stock_type', 'variant'),
                 'unit'                    => $request->input('unit'),
                 'weight'                  => $request->input('weight', 0),
+                'capacity'                => $capacity,
             ]);
 
             // 2. Upload product gallery images
@@ -489,6 +501,7 @@ class ProductController extends Controller
             'stock_type'                  => 'nullable|in:variant,parent',
             'unit'                        => 'nullable|string|max:50',
             'weight'                      => 'nullable|integer|min:0',
+            'capacity'                    => 'nullable|integer|min:1',
         ];
 
         if ($request->has('variants')) {
@@ -587,6 +600,16 @@ class ProductController extends Controller
                 $price = $minPrice ?? 0;
             }
 
+            $hasVariants = $request->boolean('has_variants');
+            $unit = $request->input('unit');
+            $capacity = 1;
+            if (!$hasVariants && $unit && !in_array(strtolower($unit), ['pcs', 'pack', 'box'])) {
+                $capacity = (int) $request->input('capacity', 1);
+                if ($capacity < 1) {
+                    $capacity = 1;
+                }
+            }
+
             // 1. Update Product Details
             $product->update([
                 'title'                   => $primaryTitle,
@@ -602,6 +625,7 @@ class ProductController extends Controller
                 'stock_type'              => $request->input('stock_type', 'variant'),
                 'unit'                    => $request->input('unit'),
                 'weight'                  => $request->input('weight', 0),
+                'capacity'                => $capacity,
             ]);
 
             // 2. Sync product gallery images

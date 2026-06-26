@@ -700,7 +700,24 @@ export default function Orders({ orders = [], status }) {
                                      </div>
                                  </div>
 
-                                 <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-3">
+                                      {/* Manual Status Change Dropdown (untuk Testing & Management) */}
+                                      <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm text-xs font-semibold">
+                                          <span className="text-slate-500 mr-2">Ubah Status:</span>
+                                          <select
+                                              disabled={isUpdatingStatus}
+                                              value={selectedOrder.status}
+                                              onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
+                                              className="bg-transparent border-none p-0 text-xs font-bold text-slate-800 outline-none focus:ring-0 pr-8 cursor-pointer"
+                                          >
+                                              <option value="pending">Pending</option>
+                                              <option value="processing">Processing</option>
+                                              <option value="shipped">Shipped</option>
+                                              <option value="completed">Completed</option>
+                                              <option value="cancelled">Cancelled</option>
+                                          </select>
+                                      </div>
+
                                      {selectedOrder.status === 'pending' && (
                                          <button
                                              type="button"
