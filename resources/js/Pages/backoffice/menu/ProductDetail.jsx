@@ -102,12 +102,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         has_sub_variants: false,
                         sub_variants: [],
                         branch_stocks: storeBranches.map(branch => {
+                            const prodStock = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             return {
                                 store_branch_id: branch.id,
                                 branch_name: branch.name,
                                 country_code: branch.country_code,
-                                stock: existing?.stock ?? 0
+                                stock: product.stock_type === 'parent' ? (prodStock?.stock ?? 0) : (existing?.stock ?? 0)
                             };
                         }),
                     };
@@ -164,12 +165,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         image: v.image,
                         imagePreview: v.image ? `/storage/${v.image}` : null,
                         branch_stocks: storeBranches.map(branch => {
+                            const prodStock = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             return {
                                 store_branch_id: branch.id,
                                 branch_name: branch.name,
                                 country_code: branch.country_code,
-                                stock: existing?.stock ?? 0
+                                stock: product.stock_type === 'parent' ? (prodStock?.stock ?? 0) : (existing?.stock ?? 0)
                             };
                         }),
                     });
@@ -252,12 +254,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         sub_variants: [],
                         _subTypeTranslations: subTypeTranslations,
                         branch_stocks: storeBranches.map(branch => {
+                            const prodStock = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             return {
                                 store_branch_id: branch.id,
                                 branch_name: branch.name,
                                 country_code: branch.country_code,
-                                stock: existing?.stock ?? 0
+                                stock: product.stock_type === 'parent' ? (prodStock?.stock ?? 0) : (existing?.stock ?? 0)
                             };
                         }),
                     };
@@ -304,12 +307,13 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         image: v.image,
                         imagePreview: v.image ? `/storage/${v.image}` : null,
                         branch_stocks: storeBranches.map(branch => {
+                            const prodStock = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             const existing = v.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id)) || v.stocks?.find(s => Number(s.store_branch_id) === Number(branch.id));
                             return {
                                 store_branch_id: branch.id,
                                 branch_name: branch.name,
                                 country_code: branch.country_code,
-                                stock: existing?.stock ?? 0
+                                stock: product.stock_type === 'parent' ? (prodStock?.stock ?? 0) : (existing?.stock ?? 0)
                             };
                         }),
                     });
@@ -438,7 +442,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                         <div>
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.detail.total_stock', 'Total Stok')}</span>
                                             <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-950">
-                                                {product.stock ?? 0} Pcs
+                                                {product.stock ?? 0} {product.unit || 'Pcs'}
                                             </span>
                                         </div>
                                     </div>
@@ -549,6 +553,36 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                         {t('backoffice.product.detail.variant_composition', 'Komposisi Varian & Alokasi Inventaris Cabang')}
                                     </h3>
 
+                                    {/* Display centralized product-level stock if product.stock_type === 'parent' and there are variants */}
+                                    {product.stock_type === 'parent' && groupedVariants.length > 0 && (
+                                        <div className="mb-6 p-4 border border-blue-100 bg-blue-50/40 rounded-xl space-y-2">
+                                            <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
+                                                <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                                                    <Package className="w-3.5 h-3.5 text-blue-800" />
+                                                    {t('backoffice.product.detail.centralized_product_stock_active', 'Stok Induk Terpusat Aktif (Semua Varian Berbagi Stok Ini)')}
+                                                </span>
+                                                <span className="text-[10px] font-bold bg-blue-100 text-blue-950 px-2 py-0.5 rounded">
+                                                    {t('backoffice.product.detail.total_centralized_stock', 'Total Stok')}: {product.stock ?? 0} {product.unit || 'Pcs'}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                {storeBranches.map(branch => {
+                                                    const stockVal = product.branch_stocks?.find(s => Number(s.store_branch_id) === Number(branch.id))?.stock ?? 0;
+                                                    return (
+                                                        <div key={branch.id} className="p-2 text-center bg-white border border-slate-100 rounded-lg shadow-sm">
+                                                            <span className="text-[9px] font-black uppercase text-slate-400 block">
+                                                                {branch.country_code ? branch.country_code.toUpperCase() : branch.name}
+                                                            </span>
+                                                            <span className="text-xs font-extrabold text-blue-950">
+                                                                {stockVal} {product.unit || 'Pcs'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Option 1: No variants */}
                                     {groupedVariants.length === 0 ? (
                                         <div className="space-y-4">
@@ -563,7 +597,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                             <span className="block mb-1 text-xs font-black tracking-wider uppercase text-slate-500">
                                                                 {branch.country_code ? branch.country_code.toUpperCase() : branch.name}
                                                             </span>
-                                                            <span className="text-lg font-extrabold text-blue-950">{stockVal} Pcs</span>
+                                                            <span className="text-lg font-extrabold text-blue-950">{stockVal} {product.unit || 'Pcs'}</span>
                                                         </div>
                                                     );
                                                 })}

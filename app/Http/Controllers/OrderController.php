@@ -56,12 +56,8 @@ class OrderController extends Controller
             }
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $oldStatus, $newStatus, $updateData) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $updateData) {
             $order->update($updateData);
-
-            if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
-                $order->restoreStock();
-            }
         });
 
         return redirect()
@@ -128,7 +124,6 @@ class OrderController extends Controller
             }
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
-                $order->restoreStock();
                 $order->update([
                     'status' => 'cancelled',
                     'payment_status' => $order->payment_status === 'paid' ? 'refunded' : 'expired',

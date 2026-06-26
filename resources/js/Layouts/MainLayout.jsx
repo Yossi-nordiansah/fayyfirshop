@@ -1,8 +1,9 @@
 import React from 'react';
 import Navbar from '@/Components/Navbar';
 import Footer from '@/Components/Footer';
+import WhatsAppFloatingButton from '@/Components/WhatsAppFloatingButton';
 
-export default function MainLayout({ children, alwaysSolid = true }) {
+export default function MainLayout({ children, alwaysSolid = true, showWhatsAppFloatingButton = false }) {
     return (
         <>
             <Navbar alwaysSolid={alwaysSolid} />
@@ -12,6 +13,7 @@ export default function MainLayout({ children, alwaysSolid = true }) {
             >
                 {children}
             </div>
+            {showWhatsAppFloatingButton && <WhatsAppFloatingButton />}
             <Footer />
         </>
     );

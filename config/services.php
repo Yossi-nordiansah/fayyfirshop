@@ -48,4 +48,12 @@ return [
         'redirect'      => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'whatsapp' => [
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token'    => env('WHATSAPP_ACCESS_TOKEN'),
+        'api_version'     => env('API_VERSION', 'v25.0'),
+        'template_name'   => env('WHATSAPP_OTP_TEMPLATE', env('TEMPLATE_MESSAGE', null)), // null = free-form text
+        'template_lang'   => env('WHATSAPP_TEMPLATE_LANG', 'id'),
+    ],
+
 ];

@@ -262,13 +262,17 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
                                         </p>
                                     ) : (
                                         pendingOrders.map((order) => (
-                                            <div key={order.id} className="flex items-center justify-between gap-4 px-1 py-3 rounded-lg hover:bg-slate-50/60 transition-colors">
+                                            <Link
+                                                key={order.id}
+                                                href={`/backoffice/orders?search=${encodeURIComponent(order.id)}`}
+                                                className="flex items-center justify-between gap-4 px-1 py-3 rounded-lg hover:bg-slate-50/60 transition-colors cursor-pointer block"
+                                            >
                                                 <div>
                                                     <p className="text-sm font-bold text-blue-950 font-mono">{order.id}</p>
                                                     <p className="text-xs text-slate-500 mt-0.5">{order.customer} · {order.created_at}</p>
                                                 </div>
                                                 <p className="text-sm font-bold text-amber-600 tabular-nums">{order.total}</p>
-                                            </div>
+                                            </Link>
                                         ))
                                     )}
                                 </div>
@@ -302,12 +306,16 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
                                         </p>
                                     ) : (
                                         lowStockProducts.map((product) => (
-                                            <div key={product.name} className="flex items-center justify-between gap-4 px-1 py-3 rounded-lg hover:bg-slate-50/60 transition-colors">
+                                            <Link
+                                                key={product.name}
+                                                href={`/backoffice/product-management?search=${encodeURIComponent(product.name)}`}
+                                                className="flex items-center justify-between gap-4 px-1 py-3 rounded-lg hover:bg-slate-50/60 transition-colors cursor-pointer block"
+                                            >
                                                 <p className="text-sm font-semibold text-blue-950 truncate">{product.name}</p>
                                                 <span className={`flex-shrink-0 px-2.5 py-1 text-xs font-bold rounded-md border ${product.stock === 0 ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                                                     {product.stock === 0 ? t('products.out_of_stock', 'Out of stock') : t('products.stock_left', '{count} left').replace('{count}', product.stock)}
                                                 </span>
-                                            </div>
+                                            </Link>
                                         ))
                                     )}
                                 </div>

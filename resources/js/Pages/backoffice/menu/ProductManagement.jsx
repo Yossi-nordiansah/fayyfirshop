@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { FolderTree, Plus, Search, Eye, Layers, Package, Edit3, Trash2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConfirmModal from '../components/ConfirmModal';
@@ -12,6 +12,14 @@ export default function ProductManagement({ products = [], status, statusAction 
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingDeleteProduct, setPendingDeleteProduct] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(Boolean(status));
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const searchParam = params.get('search');
+        if (searchParam) {
+            setSearchQuery(searchParam);
+        }
+    }, []);
 
     const removeProduct = (product) => {
         setPendingDeleteProduct(product);

@@ -29,6 +29,7 @@ export default function Orders({ orders = [], status }) {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [bookingShipmentId, setBookingShipmentId] = useState(null);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const formatPrice = (value) => {
         // Backoffice displays centered values in IDR
@@ -52,6 +53,24 @@ export default function Orders({ orders = [], status }) {
 
     const { notifications = [] } = usePage().props;
     const [readNotifIds, setReadNotifIds] = useState([]);
+
+    const hasInitializedSearch = React.useRef(false);
+
+    useEffect(() => {
+        if (orders.length > 0 && !hasInitializedSearch.current) {
+            const params = new URLSearchParams(window.location.search);
+            const searchParam = params.get('search');
+            if (searchParam) {
+                setSearchTerm(searchParam);
+                const matchedOrder = orders.find(o => o.invoice_number === searchParam);
+                if (matchedOrder) {
+                    setSelectedOrder(matchedOrder);
+                    setIsDetailOpen(true);
+                }
+            }
+            hasInitializedSearch.current = true;
+        }
+    }, [orders]);
 
     useEffect(() => {
         const loadReadIds = () => {
@@ -163,6 +182,40 @@ export default function Orders({ orders = [], status }) {
         });
     };
 
+    const handleUpdateStatus = (orderId, newStatus) => {
+        setIsUpdatingStatus(true);
+        router.patch(route('backoffice.orders.update-status', orderId), {
+            status: newStatus,
+            payment_status: selectedOrder.payment_status
+        }, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const updated = page.props.orders.find(o => o.id === selectedOrder.id);
+                if (updated) setSelectedOrder(updated);
+            },
+            onFinish: () => {
+                setIsUpdatingStatus(false);
+            }
+        });
+    };
+
+    const handleUpdatePaymentStatus = (orderId, newPaymentStatus) => {
+        setIsUpdatingStatus(true);
+        router.patch(route('backoffice.orders.update-status', orderId), {
+            status: selectedOrder.status,
+            payment_status: newPaymentStatus
+        }, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const updated = page.props.orders.find(o => o.id === selectedOrder.id);
+                if (updated) setSelectedOrder(updated);
+            },
+            onFinish: () => {
+                setIsUpdatingStatus(false);
+            }
+        });
+    };
+
     const getStatusBadge = (status) => {
         switch (status) {
             case 'pending':
@@ -192,6 +245,25 @@ export default function Orders({ orders = [], status }) {
                 return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">Refunded</span>;
             default:
                 return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-700">{status}</span>;
+        }
+    };
+
+    const getTabIcon = (tab) => {
+        switch (tab) {
+            case 'all':
+                return <ShoppingBag size={14} />;
+            case 'pending':
+                return <Clock size={14} />;
+            case 'processing':
+                return <ActivityIcon size={14} />;
+            case 'shipped':
+                return <Truck size={14} />;
+            case 'completed':
+                return <CheckCircle size={14} />;
+            case 'cancelled':
+                return <XCircle size={14} />;
+            default:
+                return null;
         }
     };
 
@@ -244,7 +316,8 @@ export default function Orders({ orders = [], status }) {
                                                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                                                 }`}
                                             >
-                                                {tab}
+                                                {getTabIcon(tab)}
+                                                <span>{tab}</span>
                                                 {tabHasDot && (
                                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-sm" />
                                                 )}
@@ -274,13 +347,13 @@ export default function Orders({ orders = [], status }) {
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                                             <th className="p-4 w-12">No</th>
-                                            <th className="p-4">Invoice</th>
+                                            <th className="p-4">Invoice / Date</th>
                                             <th className="p-4">Customer</th>
                                             <th className="p-4">Shipping Warehouse</th>
                                             <th className="p-4 text-right">Total Billing</th>
-                                            <th className="p-4">Status</th>
+                                            <th className="p-4">Courier & Service</th>
                                             {statusTab === 'cancelled' && <th className="p-4">Cancellation Reason</th>}
-                                            <th className="p-4">Payment</th>
+                                            <th className="p-4">Payment & Status</th>
                                             <th className="p-4 text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -295,7 +368,12 @@ export default function Orders({ orders = [], status }) {
                                             filteredOrders.map((order, idx) => (
                                                 <tr key={order.id} className="hover:bg-slate-50/50">
                                                     <td className="p-4 font-bold text-slate-400">{idx + 1}</td>
-                                                    <td className="p-4 font-mono font-bold text-blue-950">{order.invoice_number}</td>
+                                                     <td className="p-4">
+                                                         <div className="font-mono font-bold text-blue-950">{order.invoice_number}</div>
+                                                         <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                                             <Calendar size={10} /> {formatDate(order.created_at)}
+                                                         </div>
+                                                     </td>
                                                     <td className="p-4">
                                                         <div className="font-semibold text-slate-800">{order.user?.name ?? 'Guest'}</div>
                                                         <div className="text-[10px] text-slate-400 mt-0.5">{order.user?.email}</div>
@@ -307,8 +385,23 @@ export default function Orders({ orders = [], status }) {
                                                         {formatPrice(order.total_amount)}
                                                     </td>
                                                      <td className="p-4">
-                                                         <div className="flex flex-col gap-1 items-start">
-                                                             {getStatusBadge(order.status)}
+                                                         <div className="flex flex-col gap-0.5">
+                                                             <span className="font-extrabold uppercase text-slate-800 tracking-wider">
+                                                                 {order.shipping_courier || '-'}
+                                                             </span>
+                                                             <span className="text-[10px] font-medium text-slate-500">
+                                                                 {order.shipping_service || ''}
+                                                             </span>
+                                                         </div>
+                                                     </td>
+                                                     {statusTab === 'cancelled' && (
+                                                         <td className="p-4 max-w-[200px] truncate font-medium text-rose-600" title={order.cancellation_reason}>
+                                                             {order.cancellation_reason || '-'}
+                                                         </td>
+                                                     )}
+                                                     <td className="p-4">
+                                                         <div className="flex flex-col gap-1.5 items-start">
+                                                             {getPaymentBadge(order.payment_status)}
                                                              {order.cancellation_status === 'pending' && (
                                                                  <span className="inline-flex items-center gap-1 rounded bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 animate-pulse">
                                                                      Cancel Req
@@ -321,12 +414,6 @@ export default function Orders({ orders = [], status }) {
                                                              )}
                                                          </div>
                                                      </td>
-                                                     {statusTab === 'cancelled' && (
-                                                         <td className="p-4 max-w-[200px] truncate font-medium text-rose-600" title={order.cancellation_reason}>
-                                                             {order.cancellation_reason || '-'}
-                                                         </td>
-                                                     )}
-                                                     <td className="p-4">{getPaymentBadge(order.payment_status)}</td>
                                                      <td className="p-4 text-center">
                                                          <div className="flex items-center justify-center gap-1.5">
                                                              <button
@@ -463,27 +550,13 @@ export default function Orders({ orders = [], status }) {
                                                 <span className="text-slate-400 block">Customer Destination Area ID</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.area_id ?? 'None'}</strong>
                                             </div>
-                                            
-                                            {/* Biteship Action Trigger */}
-                                            {['pending', 'processing'].includes(selectedOrder.status) && !selectedOrder.tracking_number && selectedOrder.store_branch?.area_id && selectedOrder.user?.area_id ? (
-                                                <div className="pt-2">
-                                                    <button
-                                                        type="button"
-                                                        disabled={bookingShipmentId === selectedOrder.id}
-                                                        onClick={() => handleCreateBiteshipShipment(selectedOrder.id)}
-                                                        className="w-full py-2 bg-blue-950 hover:bg-blue-900 text-white font-bold rounded-lg text-center transition disabled:opacity-50 flex items-center justify-center gap-1.5"
-                                                    >
-                                                        <Truck size={12} />
-                                                        <span>{bookingShipmentId === selectedOrder.id ? 'Booking...' : 'Book Biteship Shipment'}</span>
-                                                    </button>
-                                                </div>
-                                            ) : selectedOrder.tracking_number ? (
-                                                <div className="pt-1.5">
+                                            {selectedOrder.tracking_number && (
+                                                <div className="pt-1.5 border-t border-slate-200/80 mt-1">
                                                     <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-100">
                                                         Shipment Booked
                                                     </span>
                                                 </div>
-                                            ) : null}
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -594,7 +667,7 @@ export default function Orders({ orders = [], status }) {
                                 )}
                             </div>
 
-                             {/* Modal Footer: Status Overview */}
+                             {/* Modal Footer: Status Overview & Actions */}
                              <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
                                  <div className="flex flex-wrap items-center gap-6">
                                      <div className="flex items-center gap-2">
@@ -609,7 +682,80 @@ export default function Orders({ orders = [], status }) {
                                              <DollarSign size={12} /> Payment Status
                                          </span>
                                          {getPaymentBadge(selectedOrder.payment_status)}
+                                         {selectedOrder.status === 'pending' && (
+                                             <label className="inline-flex items-center gap-1.5 cursor-pointer ml-3 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-200 transition text-slate-700">
+                                                 <input
+                                                     type="checkbox"
+                                                     disabled={isUpdatingStatus}
+                                                     checked={selectedOrder.payment_status === 'paid'}
+                                                     onChange={(e) => {
+                                                         const targetPaymentStatus = e.target.checked ? 'paid' : 'unpaid';
+                                                         handleUpdatePaymentStatus(selectedOrder.id, targetPaymentStatus);
+                                                     }}
+                                                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                                                 />
+                                                 <span className="text-[10px] font-extrabold uppercase tracking-wide">Mark as Paid</span>
+                                             </label>
+                                         )}
                                      </div>
+                                 </div>
+
+                                 <div className="flex items-center gap-3">
+                                     {selectedOrder.status === 'pending' && (
+                                         <button
+                                             type="button"
+                                             disabled={isUpdatingStatus}
+                                             onClick={() => handleUpdateStatus(selectedOrder.id, 'processing')}
+                                             className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                                         >
+                                             <span>Proses Pesanan</span>
+                                         </button>
+                                     )}
+
+                                     {selectedOrder.status === 'processing' && !selectedOrder.tracking_number && (
+                                         <div className="flex flex-col items-end gap-1">
+                                             <button
+                                                 type="button"
+                                                 disabled={bookingShipmentId === selectedOrder.id || !selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id}
+                                                 onClick={() => handleCreateBiteshipShipment(selectedOrder.id)}
+                                                 className="px-5 py-2 bg-blue-950 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                                             >
+                                                 <Truck size={12} />
+                                                 <span>{bookingShipmentId === selectedOrder.id ? 'Booking...' : 'Book Biteship Shipment'}</span>
+                                             </button>
+                                             {(!selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id) && (
+                                                 <span className="text-[9px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-100 mt-1">
+                                                     {!selectedOrder.store_branch?.area_id && !selectedOrder.user?.area_id 
+                                                         ? 'Lengkapi Area ID Gudang & Pelanggan' 
+                                                         : (!selectedOrder.store_branch?.area_id ? 'Lengkapi Area ID Gudang' : 'Lengkapi Area ID Pelanggan')}
+                                                 </span>
+                                             )}
+                                         </div>
+                                     )}
+
+                                     {selectedOrder.status === 'shipped' && (
+                                         <a
+                                             href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                             target="_blank"
+                                             rel="noopener noreferrer"
+                                             className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                         >
+                                             <Truck size={12} />
+                                             <span>Lacak Pengiriman</span>
+                                         </a>
+                                     )}
+
+                                     {selectedOrder.status === 'completed' && (
+                                         <a
+                                             href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                             target="_blank"
+                                             rel="noopener noreferrer"
+                                             className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                         >
+                                             <Truck size={12} />
+                                             <span>Lacak & Lihat POD</span>
+                                         </a>
+                                     )}
                                  </div>
                              </div>
 

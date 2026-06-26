@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
@@ -14,8 +15,11 @@ class GoogleAuthController extends Controller
     /**
      * Redirect ke halaman login Google.
      */
-    public function redirect(): RedirectResponse
+    public function redirect(Request $request): RedirectResponse
     {
+        if ($request->has('redirect') && $request->input('redirect')) {
+            session(['url.intended' => $request->input('redirect')]);
+        }
         return Socialite::driver('google')->redirect();
     }
 

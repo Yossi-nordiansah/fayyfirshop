@@ -46,6 +46,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
         district: user?.district ?? '',
         postal_code: user?.postal_code ?? '',
         area_id: user?.area_id ?? '',
+        country: user?.country ?? 'ID',
     });
 
     // Reload user and addresses from server on mount (so that going back from Edit Profile gets fresh address data)
@@ -72,6 +73,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                         district: newAddr.district ?? '',
                         postal_code: newAddr.postal_code ?? '',
                         area_id: newAddr.area_id ?? '',
+                        country: newAddr.country ?? 'ID',
                     });
                 }
             } else {
@@ -87,6 +89,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                         district: activeAddr.district ?? '',
                         postal_code: activeAddr.postal_code ?? '',
                         area_id: activeAddr.area_id ?? '',
+                        country: activeAddr.country ?? 'ID',
                     });
                 }
             }
@@ -146,7 +149,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
 
                         // Auto select default branch based on user's country code
                         // Defaults: ID = 1 (Mojokerto), MY = 2 (Selangor), SA = 3 (Riyadh)
-                        const userCountry = user?.country ?? 'ID';
+                        const userCountry = addressForm.country ?? user?.country ?? 'ID';
                         let defaultBranch = storeBranches.find(b => b.code === userCountry && b.is_active);
 
                         if (!defaultBranch) {
@@ -189,6 +192,16 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                 setIsLoadingStock(false);
             });
     }, [user, storeBranches]);
+
+    // Sync selectedBranchId automatically when address country changes
+    useEffect(() => {
+        if (addressForm.country && storeBranches.length > 0) {
+            const targetBranch = storeBranches.find(b => b.code === addressForm.country && b.is_active);
+            if (targetBranch) {
+                setSelectedBranchId(targetBranch.id);
+            }
+        }
+    }, [addressForm.country, storeBranches]);
 
     // Trigger Shipping Rate Fetching when Branch, Area, or Cart changes
     useEffect(() => {

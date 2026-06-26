@@ -863,52 +863,9 @@ class CheckoutController extends Controller
                     }
                 }
 
-                // Create Order Items and Decrement Stocks
+                // Create Order Items
                 foreach ($orderItemsData as $itemData) {
                     $order->items()->create($itemData);
-
-                    $product = Product::find($itemData['product_id']);
-                    $variant = $itemData['product_variant_id'] ? ProductVariant::find($itemData['product_variant_id']) : null;
-
-                    if ($variant && $variant->parent_id) {
-                        $parentVariant = ProductVariant::find($variant->parent_id);
-                        if ($parentVariant && $parentVariant->stock_type === 'parent') {
-                            $capacity = $this->parseCapacity($variant);
-                            $deduction = $capacity * $itemData['quantity'];
-
-                            ProductVariantBranchStock::where([
-                                'product_variant_id' => $parentVariant->id,
-                                'store_branch_id' => $branchId
-                            ])->decrement('stock', $deduction);
-                        } else {
-                            ProductVariantBranchStock::where([
-                                'product_variant_id' => $itemData['product_variant_id'],
-                                'store_branch_id' => $branchId
-                            ])->decrement('stock', $itemData['quantity']);
-                        }
-                    } else if ($product && $product->stock_type === 'parent') {
-                        $variant = $itemData['product_variant_id'] ? ProductVariant::find($itemData['product_variant_id']) : null;
-                        $capacity = $this->parseCapacity($variant);
-                        $deduction = $capacity * $itemData['quantity'];
-
-                        ProductBranchStock::where([
-                            'product_id' => $itemData['product_id'],
-                            'store_branch_id' => $branchId
-                        ])->decrement('stock', $deduction);
-                    } else {
-                        // Decrement branch stock standard
-                        if ($itemData['product_variant_id']) {
-                            ProductVariantBranchStock::where([
-                                'product_variant_id' => $itemData['product_variant_id'],
-                                'store_branch_id' => $branchId
-                            ])->decrement('stock', $itemData['quantity']);
-                        } else {
-                            ProductBranchStock::where([
-                                'product_id' => $itemData['product_id'],
-                                'store_branch_id' => $branchId
-                            ])->decrement('stock', $itemData['quantity']);
-                        }
-                    }
                 }
 
                 if ($request->payment_method !== 'cod') {
@@ -1265,14 +1222,7 @@ class CheckoutController extends Controller
             $status = 'pending';
         } else if ($transactionStatus == 'deny' || $transactionStatus == 'expire' || $transactionStatus == 'cancel') {
             $paymentStatus = 'expired';
-            if ($order->status !== 'cancelled') {
-                $status = 'cancelled';
-                DB::transaction(function () use ($order) {
-                    $order->restoreStock();
-                });
-            } else {
-                $status = 'cancelled';
-            }
+            $status = 'cancelled';
         }
 
         $details = $order->payment_details;
@@ -1446,7 +1396,6 @@ class CheckoutController extends Controller
                     'payment_status' => 'expired',
                     'cancellation_reason' => 'Batas waktu pembayaran telah habis.'
                 ]);
-                $order->restoreStock();
             });
 
             return response()->json([

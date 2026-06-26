@@ -63,6 +63,13 @@ class AuthenticatedSessionController extends Controller
         $request->session()->flash('login_status', 'success_customer');
 
         if ($user && $user->role === 'customer') {
+            if ($request->filled('redirect')) {
+                $targetUrl = $request->input('redirect');
+                if (!str_contains($targetUrl, '/login') && !str_contains($targetUrl, '/register')) {
+                    session()->forget('url.intended');
+                    return redirect()->to($targetUrl);
+                }
+            }
             return redirect()->intended(url()->previous());
         }
 

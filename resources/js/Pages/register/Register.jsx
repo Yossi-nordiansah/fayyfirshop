@@ -345,7 +345,7 @@ export default function Register({ auth, flash }) {
                         {!user && (
                             <div className="mb-6 flex flex-col items-center">
                                 <a
-                                    href={route('auth.google')}
+                                    href={route('auth.google', { redirect: typeof window !== 'undefined' ? window.location.href : '' })}
                                     className="flex items-center justify-center gap-3 w-full max-w-md px-6 py-3 text-xs font-bold tracking-widest text-slate-700 uppercase transition-all duration-300 shadow-sm border border-slate-200 hover:bg-slate-50 rounded-xl hover:shadow active:scale-95 bg-white"
                                 >
                                     <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">

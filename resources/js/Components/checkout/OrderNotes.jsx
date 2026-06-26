@@ -22,7 +22,7 @@ export default function OrderNotes({ notes, setNotes }) {
 
             <textarea
                 rows={3}
-                placeholder={t("checkout.notes_placeholder", "Instruksi pengiriman (contoh: pagar hitam, taruh di pos satpam)...")}
+                placeholder={t("checkout.notes_placeholder", "Catatan untuk penjual (contoh: request packing tambahan, tolong segera diproses)...")}
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600/20 transition-all duration-300 resize-none layout-arabic-right"

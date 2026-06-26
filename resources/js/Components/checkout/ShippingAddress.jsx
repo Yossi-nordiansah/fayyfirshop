@@ -44,6 +44,7 @@ export default function ShippingAddress({
             district: addr.district,
             postal_code: addr.postal_code,
             area_id: addr.area_id,
+            country: addr.country ?? 'ID',
         });
         setIsModalOpen(false);
     };

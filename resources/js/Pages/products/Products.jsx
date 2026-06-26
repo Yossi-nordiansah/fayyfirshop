@@ -414,7 +414,7 @@ export default function Products({ category = null, subCategory = null, products
         <div className="min-h-screen text-zinc-100 font-sans selection:bg-amber-500 selection:text-white">
             <Head title={`${bannerTitle} - Fayyfir Shop`} />
 
-            <MainLayout alwaysSolid={false}>
+            <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 {/* 1. Luxurious Banner Header */}
                 <div className="relative pt-28 pb-20 px-6 bg-gradient-to-br from-slate-950 via-blue-950 to-zinc-950 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center">
                     {/* Arabesque Geometric Overlay */}

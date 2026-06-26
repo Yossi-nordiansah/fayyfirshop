@@ -11,7 +11,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion, newProducts 
     return (
         <div className="min-h-screen">
             <Head title="Home" />
-            <MainLayout alwaysSolid={false}>
+            <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 <HeroSlider />
                 <CategorySection />
                 <NewProduct products={newProducts} />
