@@ -7,6 +7,31 @@ import LogoutConfirmModal from '@/Components/LogoutConfirmModal';
 
 const translateNotification = (notif, locale, t) => {
     if (notif.type === 'stock') {
+        const matchPbs = notif.message.match(/Stok produk "(.+)" di cabang (.+) menipis \((\d+) Pcs\)\./);
+        if (matchPbs) {
+            const [, name, branch, stock] = matchPbs;
+            return {
+                title: t('notifications.type.stock_low', 'Stok Menipis'),
+                message: t('notifications.message.stock_low_branch', 'Stok produk "{name}" di cabang {branch} menipis ({stock} Pcs).')
+                    .replace('{name}', name)
+                    .replace('{branch}', branch)
+                    .replace('{stock}', stock)
+            };
+        }
+
+        const matchPvbs = notif.message.match(/Stok varian "(.+)" dari produk "(.+)" di cabang (.+) menipis \((\d+) Pcs\)\./);
+        if (matchPvbs) {
+            const [, variant, product, branch, stock] = matchPvbs;
+            return {
+                title: t('notifications.type.stock_low', 'Stok Menipis'),
+                message: t('notifications.message.stock_low_variant_branch', 'Stok varian "{variant}" dari produk "{product}" di cabang {branch} menipis ({stock} Pcs).')
+                    .replace('{variant}', variant)
+                    .replace('{product}', product)
+                    .replace('{branch}', branch)
+                    .replace('{stock}', stock)
+            };
+        }
+
         const match = notif.message.match(/Stok produk "(.+)" menipis \((\d+) Pcs\)\./);
         if (match) {
             const [, name, stock] = match;

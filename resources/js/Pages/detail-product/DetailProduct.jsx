@@ -248,7 +248,27 @@ const parseWeightJs = (variant, product) => {
 
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
-    const { auth } = usePage().props;
+    const { auth, visitorCountryCode = 'ID' } = usePage().props;
+
+    const getBranchStockForUser = React.useCallback((item) => {
+        if (!item) return 0;
+        const branchStocksList = item.branch_stocks || item.branchStocks || [];
+        if (branchStocksList.length === 0) {
+            return item.stock || 0;
+        }
+        
+        const match = branchStocksList.find(bs => bs.branch?.country_code === visitorCountryCode);
+        if (match) {
+            return match.stock || 0;
+        }
+
+        const defaultMatch = branchStocksList.find(bs => bs.branch?.is_default);
+        if (defaultMatch) {
+            return defaultMatch.stock || 0;
+        }
+
+        return branchStocksList[0]?.stock || 0;
+    }, [visitorCountryCode]);
 
     const product =
         initialProduct ||
@@ -366,7 +386,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         price: v.price,
                         unit: v.unit || product.unit,
                         image: v.image,
-                        stock: v.stock || 0,
+                        stock: getBranchStockForUser(v),
                         stock_type: v.stock_type || 'variant',
                         name_translations: {
                             indonesia: isParentUkuran ? getVariantNameWithUnit(v.name_translations?.indonesia || v.name, v.unit || product.unit, 'indonesia') : (v.name_translations?.indonesia || v.name || ""),
@@ -429,9 +449,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         sku: v.sku || '',
                         price: v.price || '',
                         image: v.image,
-                        stock: v.stock || 0,
+                        stock: getBranchStockForUser(v),
                     });
-                    parent.stock += (v.stock || 0);
+                    parent.stock += getBranchStockForUser(v);
                 }
             });
 
@@ -507,7 +527,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         price: hasSub ? '' : v.price,
                         unit: v.unit || product.unit,
                         image: v.image,
-                        stock: hasSub ? 0 : (v.stock || 0),
+                        stock: hasSub ? 0 : getBranchStockForUser(v),
                         name_translations: {
                             indonesia: isParentUkuran ? getVariantNameWithUnit(parentNameIndo, v.unit || product.unit, 'indonesia') : parentNameIndo,
                             english: isParentUkuran ? getVariantNameWithUnit(parentNameEng, v.unit || product.unit, 'english') : parentNameEng,
@@ -547,16 +567,16 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         sku: v.sku || '',
                         price: v.price || '',
                         image: v.image,
-                        stock: v.stock || 0,
+                        stock: getBranchStockForUser(v),
                     });
-                    parentGroups[parentKey].stock += (v.stock || 0);
+                    parentGroups[parentKey].stock += getBranchStockForUser(v);
                     parentGroups[parentKey].has_sub_variants = true;
                 }
             });
 
             return Object.values(parentGroups);
         }
-    }, [product.variants, isDbProduct, locale]);
+    }, [product.variants, isDbProduct, locale, getBranchStockForUser]);
 
     // Resolusi combined gallery: gambar produk (Eloquent / static JSON) + gambar varian
     const productImages = React.useMemo(() => {
@@ -709,7 +729,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const currentStock = React.useMemo(() => {
         if (product.stock_type === 'parent') {
-            const parentStock = product.stock || 0;
+            const parentStock = getBranchStockForUser(product);
             const variantName = activeVariant ? (activeVariant.name_translations?.[locale] || activeVariant.name_translations?.indonesia || activeVariant.name || '') : '';
             const capacity = parseCapacityJs(variantName, product.unit, activeVariant);
             return Math.floor(parentStock / capacity);
@@ -718,16 +738,16 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             if (activeVariant.parent_id) {
                 const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
                 if (parentVar && parentVar.stock_type === 'parent') {
-                    const parentStock = parentVar.stock || 0;
+                    const parentStock = getBranchStockForUser(parentVar);
                     const variantName = activeVariant.name_translations?.[locale] || activeVariant.name_translations?.indonesia || activeVariant.name || '';
                     const capacity = parseCapacityJs(variantName, parentVar.unit, activeVariant);
                     return Math.floor(parentStock / capacity);
                 }
             }
-            return activeVariant.stock;
+            return getBranchStockForUser(activeVariant);
         }
-        return product.stock || 0;
-    }, [activeVariant, product.stock, product.stock_type, product.variants, locale]);
+        return getBranchStockForUser(product);
+    }, [activeVariant, product, getBranchStockForUser, locale]);
 
     // Resolve the active variant from groupedVariants (has inherited units)
     const activeGroupedSubVariant = React.useMemo(() => {
@@ -781,19 +801,19 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const displayStock = React.useMemo(() => {
         if (product.stock_type === 'parent') {
-            return product.stock || 0;
+            return getBranchStockForUser(product);
         }
         if (activeVariant) {
             if (activeVariant.parent_id) {
                 const parentVar = product.variants?.find(v => v.id === activeVariant.parent_id);
                 if (parentVar && parentVar.stock_type === 'parent') {
-                    return parentVar.stock || 0;
+                    return getBranchStockForUser(parentVar);
                 }
             }
-            return activeVariant.stock || 0;
+            return getBranchStockForUser(activeVariant) || 0;
         }
-        return product.stock || 0;
-    }, [activeVariant, product.stock, product.stock_type, product.variants]);
+        return getBranchStockForUser(product);
+    }, [activeVariant, product, getBranchStockForUser]);
 
     const isParentStockMode = React.useMemo(() => {
         if (product.stock_type === 'parent') return true;
@@ -833,6 +853,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             : t("product.detail.pcs", "Pcs");
         return text.replace("{qty}", displayStock).replace("{unit}", unitStr).trim().replace(/\s+/g, ' ');
     }, [displayStock, currentUnit, parentStockUnit, isParentStockMode, locale, t]);
+
+    const warehouseLabel = React.useMemo(() => {
+        if (visitorCountryCode === 'ID') return t('product.detail.warehouse.id', 'Gudang Indonesia');
+        if (visitorCountryCode === 'MY') return t('product.detail.warehouse.my', 'Gudang Malaysia');
+        if (visitorCountryCode === 'SA') return t('product.detail.warehouse.sa', 'Gudang Saudi Arabia');
+        return t('product.detail.warehouse.default', 'Gudang Utama');
+    }, [visitorCountryCode, t]);
 
     const handleQuantityChange = (type) => {
         if (type === "minus" && quantity > 1) setQuantity(quantity - 1);
@@ -1394,7 +1421,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                 const isSelected = selectedParentKey === parent.key;
                                                 const parentName = parent.name_translations?.[locale] || parent.name_translations?.indonesia || '';
                                                 const isParentOutOfStock = product.stock_type === 'parent'
-                                                    ? (product.stock || 0) < parseCapacityJs(parent.name_translations?.[locale] || parent.name_translations?.indonesia || parent.name || '', product.unit, parent)
+                                                    ? getBranchStockForUser(product) < parseCapacityJs(parent.name_translations?.[locale] || parent.name_translations?.indonesia || parent.name || '', product.unit, parent)
                                                     : parent.stock === 0;
 
                                                 return (
@@ -1490,9 +1517,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                         }
                                                         const parentVarOfSub = subVar.parent_id ? product.variants?.find(v => v.id === subVar.parent_id) : null;
                                                         const isSubOutOfStock = product.stock_type === 'parent'
-                                                            ? (product.stock || 0) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', product.unit, subVar)
+                                                            ? getBranchStockForUser(product) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', product.unit, subVar)
                                                             : (parentVarOfSub && parentVarOfSub.stock_type === 'parent')
-                                                                ? (parentVarOfSub.stock || 0) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', parentVarOfSub.unit, subVar)
+                                                                ? getBranchStockForUser(parentVarOfSub) < parseCapacityJs(subVar.name_translations?.[locale] || subVar.name_translations?.indonesia || subVar.name || '', parentVarOfSub.unit, subVar)
                                                                 : subVar.stock === 0;
 
                                                         return (
@@ -1627,9 +1654,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                             {t("product.detail.stock_out", "Stok habis")}
                                         </span>
                                     ) : (
-                                        <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5">
+                                        <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5 flex-wrap">
                                             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                                            {stockStatusText}
+                                            <span>
+                                                {stockStatusText}{" "}
+                                                <span className="text-xs text-slate-400 font-medium font-sans">
+                                                    ({warehouseLabel})
+                                                </span>
+                                            </span>
                                         </span>
                                     )}
                                 </div>

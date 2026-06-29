@@ -4,10 +4,13 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::command('model:prune')->daily();
 
 Artisan::command('inventory:setup-branch-stocks {--copy-existing-to=ID : Branch country code that receives current products.stock and product_variants.stock values} {--reset : Delete existing branch stock rows before recreating them}', function () {
     if (

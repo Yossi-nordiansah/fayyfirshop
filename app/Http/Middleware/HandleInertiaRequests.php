@@ -70,22 +70,60 @@ class HandleInertiaRequests extends Middleware
                     ];
                 }
 
+                // 2. Dynamic stock threshold notifications per branch
+                $lowProductStocks = \App\Models\ProductBranchStock::with(['product', 'branch'])
+                    ->whereColumn('stock', '<=', 'low_stock_threshold')
+                    ->get();
+
+                foreach ($lowProductStocks as $pbs) {
+                    if (!$pbs->product) continue;
+                    if ($pbs->product->variants()->exists() && $pbs->product->stock_type === 'variant') {
+                        continue;
+                    }
+                    $name = $pbs->product->name_translations['indonesia'] ?? $pbs->product->title;
+                    $branchName = $pbs->branch->name;
+                    $notifications[] = [
+                        'id' => 'stock_pbs_' . $pbs->id . '_' . $pbs->stock,
+                        'type' => 'stock',
+                        'title' => 'Stok Menipis',
+                        'message' => "Stok produk \"{$name}\" di cabang {$branchName} menipis ({$pbs->stock} Pcs).",
+                        'link' => route('backoffice.products.show', $pbs->product->slug),
+                    ];
+                }
+
+                $lowVariantStocks = \App\Models\ProductVariantBranchStock::with(['variant.product', 'branch'])
+                    ->whereColumn('stock', '<=', 'low_stock_threshold')
+                    ->get();
+
+                foreach ($lowVariantStocks as $pvbs) {
+                    if (!$pvbs->variant || !$pvbs->variant->product) continue;
+                    $variant = $pvbs->variant;
+                    $product = $variant->product;
+                    $branchName = $pvbs->branch->name;
+
+                    if ($variant->parent_id) {
+                        $parentVariant = \App\Models\ProductVariant::find($variant->parent_id);
+                        if ($parentVariant && $parentVariant->stock_type === 'parent') {
+                            continue;
+                        }
+                    }
+
+                    $productName = $product->name_translations['indonesia'] ?? $product->title;
+                    $variantName = $variant->name_translations['indonesia'] ?? $variant->name;
+
+                    $notifications[] = [
+                        'id' => 'stock_pvbs_' . $pvbs->id . '_' . $pvbs->stock,
+                        'type' => 'stock',
+                        'title' => 'Stok Menipis',
+                        'message' => "Stok varian \"{$variantName}\" dari produk \"{$productName}\" di cabang {$branchName} menipis ({$pvbs->stock} Pcs).",
+                        'link' => route('backoffice.products.show', $product->slug),
+                    ];
+                }
+
                 // Retrieve only required columns for maximum query performance
                 $products = \App\Models\Product::select('id', 'title', 'name_translations', 'description_translations', 'stock', 'slug')->get();
 
                 foreach ($products as $product) {
-                    // 2. Stock < 10 notifications
-                    if ($product->stock < 10) {
-                        $name = $product->name_translations['indonesia'] ?? $product->title;
-                        $notifications[] = [
-                            'id' => 'stock_' . $product->id,
-                            'type' => 'stock',
-                            'title' => 'Stok Menipis (<10)',
-                            'message' => "Stok produk \"{$name}\" menipis ({$product->stock} Pcs).",
-                            'link' => route('backoffice.products.show', $product->slug),
-                        ];
-                    }
-
                     // 3. Missing language translation notifications
                     $missingLangs = [];
                     $names = $product->name_translations ?? [];
@@ -250,6 +288,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
+            'visitorCountryCode' => fn () => $this->getVisitorCountryCode($request),
             'flash' => [
                 'login_status' => $request->session()->get('login_status'),
                 'logout_status' => $request->session()->get('logout_status'),
@@ -284,5 +323,47 @@ class HandleInertiaRequests extends Middleware
                     ]),
                 ]),
         ];
+    }
+
+    protected function getVisitorCountryCode(Request $request): string
+    {
+        $ip = $request->header('CF-Connecting-IP')
+            ?: ($request->header('X-Forwarded-For')
+                ? explode(',', $request->header('X-Forwarded-For'))[0]
+                : $request->ip());
+
+        $ip = trim($ip);
+
+        if ($ip === '127.0.0.1' || $ip === '::1' || empty($ip)) {
+            $ip = '180.244.133.22';
+        }
+
+        $cacheKey = 'visitor_location_' . str_replace([':', '.'], '_', $ip);
+        $location = \Illuminate\Support\Facades\Cache::get($cacheKey);
+
+        if ($location && isset($location['countryCode'])) {
+            return strtoupper($location['countryCode']);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(3)->get("http://ip-api.com/json/{$ip}");
+            if ($response->successful()) {
+                $data = $response->json();
+                if (($data['status'] ?? '') === 'success') {
+                    $countryCode = strtoupper($data['countryCode'] ?? 'ID');
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                        'country' => $data['country'] ?? 'Unknown',
+                        'countryCode' => $data['countryCode'] ?? 'Unknown',
+                        'regionName' => $data['regionName'] ?? 'Unknown',
+                        'city' => $data['city'] ?? 'Unknown',
+                    ], now()->addDay());
+                    return $countryCode;
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignore
+        }
+
+        return 'ID';
     }
 }

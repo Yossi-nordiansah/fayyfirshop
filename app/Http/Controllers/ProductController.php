@@ -219,6 +219,7 @@ class ProductController extends Controller
                         'store_branch_id' => $bStock['store_branch_id'],
                         'stock'           => $stockVal,
                         'reserved_stock'  => 0,
+                        'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                         'is_available'    => $stockVal > 0,
                     ]);
                 }
@@ -305,6 +306,7 @@ class ProductController extends Controller
                                     'store_branch_id' => $bStock['store_branch_id'],
                                     'stock'           => $stockVal,
                                     'reserved_stock'  => 0,
+                                    'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                     'is_available'    => $stockVal > 0,
                                 ]);
                             }
@@ -362,6 +364,7 @@ class ProductController extends Controller
                                         'store_branch_id' => $bStock['store_branch_id'],
                                         'stock'           => $stockVal,
                                         'reserved_stock'  => 0,
+                                        'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                         'is_available'    => $stockVal > 0,
                                     ]);
                                 }
@@ -379,6 +382,7 @@ class ProductController extends Controller
                                     'store_branch_id' => $bStock['store_branch_id'],
                                     'stock'           => $stockVal,
                                     'reserved_stock'  => 0,
+                                    'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                     'is_available'    => $stockVal > 0,
                                 ]);
                             }
@@ -678,6 +682,7 @@ class ProductController extends Controller
                         'store_branch_id' => $bStock['store_branch_id'],
                         'stock'           => $stockVal,
                         'reserved_stock'  => 0,
+                        'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                         'is_available'    => $stockVal > 0,
                     ]);
                 }
@@ -820,6 +825,7 @@ class ProductController extends Controller
                                         'store_branch_id' => $bStock['store_branch_id'],
                                         'stock'           => $stockVal,
                                         'reserved_stock'  => 0,
+                                        'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                         'is_available'    => $stockVal > 0,
                                     ]);
                                 }
@@ -913,6 +919,7 @@ class ProductController extends Controller
                                                 'store_branch_id' => $bStock['store_branch_id'],
                                                 'stock'           => $stockVal,
                                                 'reserved_stock'  => 0,
+                                                'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                                 'is_available'    => $stockVal > 0,
                                             ]);
                                         }
@@ -931,6 +938,7 @@ class ProductController extends Controller
                                         'store_branch_id' => $bStock['store_branch_id'],
                                         'stock'           => $stockVal,
                                         'reserved_stock'  => 0,
+                                        'low_stock_threshold' => (int) ($bStock['low_stock_threshold'] ?? 5),
                                         'is_available'    => $stockVal > 0,
                                     ]);
                                 }

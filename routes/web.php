@@ -63,7 +63,8 @@ Route::get('/product/{slug}', function ($slug) {
         'category',
         'subCategory',
         'variants.unit',
-        'variants.branchStocks',
+        'variants.branchStocks.branch',
+        'branchStocks.branch',
         'images',
         'reviews' => function ($query) {
             $query->where('is_visible', true)->with(['user', 'productVariant'])->latest('id');
@@ -143,6 +144,7 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.biteship.search-area');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('backoffice.dashboard');
+    Route::get('/visitor-logs', [DashboardController::class, 'visitorLogs'])->name('backoffice.visitor-logs');
 
     Route::get('/product-management', [ProductController::class, 'index'])
         ->name('backoffice.product-management');

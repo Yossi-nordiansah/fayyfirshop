@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\RestrictCustomerToProfile::class,
             \App\Http\Middleware\RestrictAdminToBackoffice::class,
+            \App\Http\Middleware\LogVisitorLocation::class,
         ]);
 
         $middleware->alias([

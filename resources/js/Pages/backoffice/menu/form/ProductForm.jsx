@@ -118,7 +118,8 @@ export default function ProductForm({
                             store_branch_id: branch.id,
                             branch_name: branch.name,
                             country_code: branch.country_code,
-                            stock: existing?.stock ?? 0
+                            stock: existing?.stock ?? 0,
+                            low_stock_threshold: existing?.low_stock_threshold ?? 5
                         };
                     }),
                     sub_variants: pChildren.map(c => {
@@ -197,7 +198,8 @@ export default function ProductForm({
                                     store_branch_id: branch.id,
                                     branch_name: branch.name,
                                     country_code: branch.country_code,
-                                    stock: existing?.stock ?? 0
+                                    stock: existing?.stock ?? 0,
+                                    low_stock_threshold: existing?.low_stock_threshold ?? 5
                                 };
                             }),
                         };
@@ -308,7 +310,8 @@ export default function ProductForm({
                             store_branch_id: branch.id,
                             branch_name: branch.name,
                             country_code: branch.country_code,
-                            stock: existing?.stock ?? 0
+                            stock: existing?.stock ?? 0,
+                            low_stock_threshold: existing?.low_stock_threshold ?? 5
                         };
                     }),
                 };
@@ -356,7 +359,8 @@ export default function ProductForm({
                             store_branch_id: branch.id,
                             branch_name: branch.name,
                             country_code: branch.country_code,
-                            stock: existing?.stock ?? 0
+                            stock: existing?.stock ?? 0,
+                            low_stock_threshold: existing?.low_stock_threshold ?? 5
                         };
                     }),
                 });
@@ -410,7 +414,8 @@ export default function ProductForm({
                 store_branch_id: branch.id,
                 branch_name: branch.name,
                 country_code: branch.country_code,
-                stock: existing?.stock ?? 0
+                stock: existing?.stock ?? 0,
+                low_stock_threshold: existing?.low_stock_threshold ?? 5
             };
         }),
 
@@ -533,6 +538,7 @@ export default function ProductForm({
                         branch_name: b.name,
                         country_code: b.country_code,
                         stock: 0,
+                        low_stock_threshold: 5,
                     })),
                 },
                 ...data.variants,
@@ -636,6 +642,7 @@ export default function ProductForm({
                     branch_name: b.name,
                     country_code: b.country_code,
                     stock: 0,
+                    low_stock_threshold: 5,
                 })),
             },
             ...updated[vIdx].sub_variants,
@@ -714,6 +721,25 @@ export default function ProductForm({
     const updateStandardStock = (bIdx, value) => {
         const updated = [...form.data.branch_stocks];
         updated[bIdx].stock = value === '' ? '' : (parseInt(value) >= 0 ? parseInt(value) : 0);
+        form.setData('branch_stocks', updated);
+    };
+
+    const updateVariantLowStockThreshold = (vIdx, bIdx, value) => {
+        const updated = [...form.data.variants];
+        updated[vIdx].branch_stocks[bIdx].low_stock_threshold = value === '' ? '' : (parseInt(value) >= 0 ? parseInt(value) : 0);
+        form.setData('variants', updated);
+    };
+
+    const updateSubVariantLowStockThreshold = (vIdx, svIdx, bIdx, value) => {
+        const updated = [...form.data.variants];
+        const sv = updated[vIdx].sub_variants[svIdx];
+        sv.branch_stocks[bIdx].low_stock_threshold = value === '' ? '' : (parseInt(value) >= 0 ? parseInt(value) : 0);
+        form.setData('variants', updated);
+    };
+
+    const updateStandardLowStockThreshold = (bIdx, value) => {
+        const updated = [...form.data.branch_stocks];
+        updated[bIdx].low_stock_threshold = value === '' ? '' : (parseInt(value) >= 0 ? parseInt(value) : 0);
         form.setData('branch_stocks', updated);
     };
 
@@ -919,7 +945,8 @@ export default function ProductForm({
         form.transform((data) => {
             const cleanedBranchStocks = data.branch_stocks.map(bs => ({
                 ...bs,
-                stock: bs.stock === '' ? 0 : bs.stock
+                stock: bs.stock === '' ? 0 : bs.stock,
+                low_stock_threshold: bs.low_stock_threshold === '' ? 5 : bs.low_stock_threshold
             }));
 
             const transformedVariants = [];
@@ -928,7 +955,8 @@ export default function ProductForm({
                 if (v.has_sub_variants && v.sub_variants && v.sub_variants.length > 0) {
                     const cleanedParentStocks = (v.branch_stocks || []).map(bs => ({
                         ...bs,
-                        stock: bs.stock === '' ? 0 : bs.stock
+                        stock: bs.stock === '' ? 0 : bs.stock,
+                        low_stock_threshold: bs.low_stock_threshold === '' ? 5 : bs.low_stock_threshold
                     }));
 
                     const cleanedSubVariants = v.sub_variants.map((sv) => {
@@ -965,7 +993,8 @@ export default function ProductForm({
 
                         const cleanedVariantStocks = (sv.branch_stocks || []).map(bs => ({
                             ...bs,
-                            stock: bs.stock === '' ? 0 : bs.stock
+                            stock: bs.stock === '' ? 0 : bs.stock,
+                            low_stock_threshold: bs.low_stock_threshold === '' ? 5 : bs.low_stock_threshold
                         }));
 
                         const typeTranslations = {
@@ -1010,7 +1039,8 @@ export default function ProductForm({
                 } else {
                     const cleanedVariantStocks = v.branch_stocks.map(bs => ({
                         ...bs,
-                        stock: bs.stock === '' ? 0 : bs.stock
+                        stock: bs.stock === '' ? 0 : bs.stock,
+                        low_stock_threshold: bs.low_stock_threshold === '' ? 5 : bs.low_stock_threshold
                     }));
 
                     transformedVariants.push({
@@ -1200,6 +1230,9 @@ export default function ProductForm({
                                     updateVariantTypeLang={updateVariantTypeLang}
                                     updateVariantStock={updateVariantStock}
                                     updateStandardStock={updateStandardStock}
+                                    updateVariantLowStockThreshold={updateVariantLowStockThreshold}
+                                    updateSubVariantLowStockThreshold={updateSubVariantLowStockThreshold}
+                                    updateStandardLowStockThreshold={updateStandardLowStockThreshold}
                                     handleVariantImage={handleVariantImage}
                                     addSubVariant={addSubVariant}
                                     removeSubVariant={removeSubVariant}

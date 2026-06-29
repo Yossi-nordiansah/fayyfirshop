@@ -144,6 +144,9 @@ export default function ProductVariantsSection({
     updateVariantTypeLang,
     updateVariantStock,
     updateStandardStock,
+    updateVariantLowStockThreshold,
+    updateStandardLowStockThreshold,
+    updateSubVariantLowStockThreshold,
     handleVariantImage,
     addSubVariant,
     removeSubVariant,
@@ -440,18 +443,31 @@ export default function ProductVariantsSection({
                                 <label className="mb-2 block truncate text-xs font-black uppercase text-slate-700">
                                     {bs.country_code ? bs.country_code.toUpperCase() : bs.branch_name}
                                 </label>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="text"
-                                        value={formatStockInput(bs.stock)}
-                                        onChange={e => updateStandardStock(bIdx, parseStockInput(e.target.value))}
-                                        className="w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-3 pr-10 py-2 text-center text-sm font-semibold text-slate-800 outline-none focus:border-blue-950 focus:bg-white"
-                                    />
-                                    {data.unit && (
-                                        <span className="absolute right-3 text-xs font-bold text-slate-400">
-                                            {data.unit}
-                                        </span>
-                                    )}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="mb-1 block text-[10px] font-bold text-slate-400 uppercase">
+                                            {t('backoffice.product.form.stock', 'Stok')}
+                                        </label>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="text"
+                                                value={formatStockInput(bs.stock)}
+                                                onChange={e => updateStandardStock(bIdx, parseStockInput(e.target.value))}
+                                                className="w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-2 pr-2 py-1.5 text-center text-sm font-semibold text-slate-800 outline-none focus:border-blue-950 focus:bg-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-[10px] font-bold text-slate-400 uppercase">
+                                            {t('backoffice.product.form.min_stock', 'Min. Stok')}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formatStockInput(bs.low_stock_threshold ?? 5)}
+                                            onChange={e => updateStandardLowStockThreshold(bIdx, parseStockInput(e.target.value))}
+                                            className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-center text-sm font-semibold text-slate-800 outline-none focus:border-blue-950 focus:bg-white"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -766,23 +782,30 @@ export default function ProductVariantsSection({
                                                             {variant.branch_stocks.map((bStock, bIdx) => (
                                                                 <div
                                                                     key={bStock.store_branch_id}
-                                                                    className="flex flex-col items-center gap-1 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                                                                    className="flex flex-col gap-1.5 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
                                                                 >
-                                                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 text-center block">
                                                                         {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
                                                                     </label>
-                                                                    <div className="relative flex items-center w-full">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={formatStockInput(bStock.stock)}
-                                                                            onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
-                                                                            className="w-full rounded bg-slate-50 border border-slate-200 pl-1.5 pr-8 py-1 text-center text-xs font-semibold outline-none focus:border-blue-950"
-                                                                        />
-                                                                        {variant.unit && (
-                                                                            <span className="absolute right-2 text-[10px] font-bold text-slate-400">
-                                                                                {variant.unit}
-                                                                            </span>
-                                                                        )}
+                                                                    <div className="space-y-1 w-full">
+                                                                        <div className="relative flex items-center w-full">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={formatStockInput(bStock.stock)}
+                                                                                onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
+                                                                                placeholder="Stok"
+                                                                                className="w-full rounded bg-slate-50 border border-slate-200 px-1.5 py-0.5 text-center text-xs font-semibold outline-none focus:border-blue-950 focus:bg-white"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase leading-none truncate">{t('backoffice.product.form.min_stock_abbr', 'Min')}:</span>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={formatStockInput(bStock.low_stock_threshold ?? 5)}
+                                                                                onChange={e => updateVariantLowStockThreshold(vIdx, bIdx, parseStockInput(e.target.value))}
+                                                                                className="w-full rounded bg-slate-50/50 border border-slate-200/80 px-1 py-0.5 text-center text-[10px] font-medium outline-none focus:border-blue-950 focus:bg-white"
+                                                                            />
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -1228,16 +1251,27 @@ export default function ProductVariantsSection({
                                                                     </p>
                                                                     <div className="grid grid-cols-3 gap-2">
                                                                         {(subVar.branch_stocks || []).map((bStock, bIdx) => (
-                                                                            <div key={bStock.store_branch_id} className="flex flex-col items-center gap-1 rounded-lg border border-slate-100 bg-slate-50/50 p-2">
-                                                                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                                                            <div key={bStock.store_branch_id} className="flex flex-col gap-1 rounded-lg border border-slate-100 bg-slate-50/50 p-2">
+                                                                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 text-center block">
                                                                                     {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
                                                                                 </label>
-                                                                                <input
-                                                                                    type="text"
-                                                                                    value={formatStockInput(bStock.stock)}
-                                                                                    onChange={e => updateSubVariantStock(vIdx, svIdx, bIdx, parseStockInput(e.target.value))}
-                                                                                    className="w-full rounded bg-white border border-slate-200 px-1 py-0.5 text-center text-xs font-semibold outline-none focus:border-blue-950"
-                                                                                />
+                                                                                <div className="space-y-1 w-full">
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={formatStockInput(bStock.stock)}
+                                                                                        onChange={e => updateSubVariantStock(vIdx, svIdx, bIdx, parseStockInput(e.target.value))}
+                                                                                        className="w-full rounded bg-white border border-slate-200 px-1 py-0.5 text-center text-xs font-semibold outline-none focus:border-blue-950"
+                                                                                    />
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <span className="text-[8px] font-bold text-slate-400 uppercase leading-none truncate">{t('backoffice.product.form.min_stock_abbr', 'Min')}:</span>
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            value={formatStockInput(bStock.low_stock_threshold ?? 5)}
+                                                                                            onChange={e => updateSubVariantLowStockThreshold(vIdx, svIdx, bIdx, parseStockInput(e.target.value))}
+                                                                                            className="w-full rounded bg-white/80 border border-slate-200 px-1 py-0.5 text-center text-[9px] font-medium outline-none focus:border-blue-950"
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -1262,17 +1296,28 @@ export default function ProductVariantsSection({
                                                 {variant.branch_stocks.map((bStock, bIdx) => (
                                                     <div
                                                         key={bStock.store_branch_id}
-                                                        className="flex flex-col items-center gap-1 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                                                        className="flex flex-col gap-1.5 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
                                                     >
-                                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 text-center block">
                                                             {bStock.country_code ? bStock.country_code.toUpperCase() : bStock.branch_name}
                                                         </label>
-                                                        <input
-                                                            type="text"
-                                                            value={formatStockInput(bStock.stock)}
-                                                            onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
-                                                            className="w-full rounded bg-slate-50 border border-slate-200 px-1.5 py-1 text-center text-xs font-semibold outline-none focus:border-blue-950"
-                                                        />
+                                                        <div className="space-y-1 w-full">
+                                                            <input
+                                                                type="text"
+                                                                value={formatStockInput(bStock.stock)}
+                                                                onChange={e => updateVariantStock(vIdx, bIdx, parseStockInput(e.target.value))}
+                                                                className="w-full rounded bg-slate-50 border border-slate-200 px-1.5 py-1 text-center text-xs font-semibold outline-none focus:border-blue-950 focus:bg-white"
+                                                            />
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] font-bold text-slate-400 uppercase leading-none truncate">{t('backoffice.product.form.min_stock_abbr', 'Min')}:</span>
+                                                                <input
+                                                                    type="text"
+                                                                    value={formatStockInput(bStock.low_stock_threshold ?? 5)}
+                                                                    onChange={e => updateVariantLowStockThreshold(vIdx, bIdx, parseStockInput(e.target.value))}
+                                                                    className="w-full rounded bg-slate-50/50 border border-slate-200/80 px-1 py-0.5 text-center text-[10px] font-medium outline-none focus:border-blue-950 focus:bg-white"
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

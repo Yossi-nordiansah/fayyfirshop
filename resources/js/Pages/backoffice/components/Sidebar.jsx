@@ -8,6 +8,7 @@ import {
     Building2,
     ClipboardList,
     ContactRound,
+    Globe,
     LayoutDashboard,
     MessageSquareText,
     Sparkles,
@@ -71,6 +72,12 @@ const menuItems = [
         fallback: 'Promotion',
         href: '/backoffice/promotion',
         icon: Sparkles,
+    },
+    {
+        labelKey: 'backoffice.sidebar.visitor_logs',
+        fallback: 'Visitor Logs',
+        href: '/backoffice/visitor-logs',
+        icon: Globe,
     },
 ];
 

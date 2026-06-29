@@ -115,4 +115,14 @@ class DashboardController extends Controller
             'monthlySales' => $monthlySales,
         ]);
     }
+
+    public function visitorLogs()
+    {
+        $logs = \App\Models\VisitorLog::latest('id')
+            ->paginate(15);
+
+        return Inertia::render('backoffice/visitor-logs/Index', [
+            'logs' => $logs,
+        ]);
+    }
 }
