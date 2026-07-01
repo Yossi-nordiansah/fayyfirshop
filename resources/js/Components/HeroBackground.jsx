@@ -21,7 +21,7 @@ const HeroBackground = ({ image, theme, isActive, children, productImage, classN
                     alt="Hero Background"
                     className="w-full h-full object-cover"
                 />
-                
+
                 {/* 2. Aesthetic Overlays */}
                 <div className={`absolute inset-0 bg-gradient-to-r ${theme} from-blue-800/60 to-blue-400/20 transition-colors duration-1000`} />
                 <div className="absolute inset-0 bg-black/40 backdrop-brightness-75" />
@@ -31,22 +31,22 @@ const HeroBackground = ({ image, theme, isActive, children, productImage, classN
             {productImage && (
                 <motion.div
                     initial={{ x: 50, opacity: 0 }}
-                    animate={{ 
-                        x: isActive ? 0 : 50, 
+                    animate={{
+                        x: isActive ? 0 : 50,
                         opacity: isActive ? 1 : 0,
-                        y: [0, -15, 0] 
+                        y: [0, -15, 0]
                     }}
-                    transition={{ 
+                    transition={{
                         x: { duration: 1.2, delay: 0.5 },
                         opacity: { duration: 1.2, delay: 0.5 },
                         y: { repeat: Infinity, duration: 6, ease: "easeInOut" }
                     }}
-                    className="absolute hidden right-[10%] bottom-32 -translate-y-1/2 z-20 hidden md:block w-1/3"
+                    className="absolute right-[10%] bottom-32 -translate-y-1/2 z-20 hidden md:block w-1/3"
                 >
                     <img
                         src={productImage}
                         alt="Product"
-                        className="lg:block hidden lg:w-96 drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]"
+                        className={`lg:block hidden ${productImage?.includes('Perfume') ? "w-10 lg:w-80" : "lg:w-96"} drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]`}
                     />
                 </motion.div>
             )}

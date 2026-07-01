@@ -66,7 +66,11 @@ function ImageUploadZone({ previews = [], primaryIndex = 0, onAdd, onRemove, onS
 }
 
 // ─── Component 2: Galeri Produk ───────────────────────────────────────────────
-export default function ProductGallerySection({ previews, primaryIndex, onAdd, onRemove, onSetPrimary, t }) {
+export default function ProductGallerySection({ previews, primaryIndex, onAdd, onRemove, onSetPrimary, errors, t }) {
+    const imageErrors = Object.keys(errors || {})
+        .filter(key => key === 'images' || key.startsWith('images.'))
+        .map(key => errors[key]);
+
     return (
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-3">
@@ -84,6 +88,15 @@ export default function ProductGallerySection({ previews, primaryIndex, onAdd, o
                 onSetPrimary={onSetPrimary}
                 t={t}
             />
+            {imageErrors.length > 0 && (
+                <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/50 p-3 space-y-1">
+                    {imageErrors.map((err, idx) => (
+                        <p key={idx} className="text-xs font-semibold text-rose-600">
+                            {err}
+                        </p>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

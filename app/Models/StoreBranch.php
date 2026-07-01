@@ -19,6 +19,8 @@ class StoreBranch extends Model
         'currency_code',
         'currency_symbol',
         'timezone',
+        'latitude',
+        'longitude',
         'city',
         'street',
         'district',
@@ -28,10 +30,13 @@ class StoreBranch extends Model
         'is_default',
         'is_active',
         'area_id',
+        'whatsapp_number',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 }

@@ -71,9 +71,14 @@ const parseStockInput = (value) => {
 };
 
 // Helper to format any numeric sequences inside a sub-variant value with a thousands separator
-const formatValueWithSeparator = (value) => {
+const formatValueWithSeparator = (value, type = '') => {
     if (value === undefined || value === null || value === '') return '';
     const valStr = String(value);
+
+    const isUkuran = type?.toLowerCase() === 'ukuran' || type?.toLowerCase() === 'size' || type === 'المقاس';
+    if (!isUkuran) {
+        return valStr;
+    }
 
     return valStr.replace(/[\d\.]+/g, (match) => {
         const cleanDigits = match.replace(/\./g, '');
@@ -630,7 +635,7 @@ export default function ProductVariantsSection({
                                                         type="text"
                                                         value={variant.name_translations?.indonesia ?? ''}
                                                         onChange={e => {
-                                                            const val = formatValueWithSeparator(e.target.value);
+                                                            const val = formatValueWithSeparator(e.target.value, variant.type);
                                                             updateVariantField(vIdx, 'name_translations', {
                                                                 indonesia: val,
                                                                 english: val,
@@ -656,7 +661,7 @@ export default function ProductVariantsSection({
                                                         <input
                                                             type="text"
                                                             value={variant.name_translations?.indonesia ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'indonesia', formatValueWithSeparator(e.target.value))}
+                                                            onChange={e => updateVariantLang(vIdx, 'indonesia', formatValueWithSeparator(e.target.value, variant.type))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '100ml / Large'
                                                                     : variant.type === 'Warna' ? 'Merah / Rouge'
@@ -679,7 +684,7 @@ export default function ProductVariantsSection({
                                                         <input
                                                             type="text"
                                                             value={variant.name_translations?.english ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'english', formatValueWithSeparator(e.target.value))}
+                                                            onChange={e => updateVariantLang(vIdx, 'english', formatValueWithSeparator(e.target.value, variant.type))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '100ml / Large'
                                                                     : variant.type === 'Warna' ? 'Red / Blue'
@@ -703,7 +708,7 @@ export default function ProductVariantsSection({
                                                             type="text"
                                                             dir="rtl"
                                                             value={variant.name_translations?.arabic ?? ''}
-                                                            onChange={e => updateVariantLang(vIdx, 'arabic', formatValueWithSeparator(e.target.value))}
+                                                            onChange={e => updateVariantLang(vIdx, 'arabic', formatValueWithSeparator(e.target.value, variant.type))}
                                                             placeholder={
                                                                 variant.type === 'Ukuran' ? '١٠٠ مل / كبير'
                                                                     : variant.type === 'Warna' ? 'أحمر / أزرق'
@@ -1026,7 +1031,7 @@ export default function ProductVariantsSection({
                                                                                 type="text"
                                                                                 value={subVar.name_translations?.indonesia ?? ''}
                                                                                 onChange={e => {
-                                                                                    const val = formatValueWithSeparator(e.target.value);
+                                                                                    const val = formatValueWithSeparator(e.target.value, subVar.type);
                                                                                     updateSubVariantField(vIdx, svIdx, 'name_translations', {
                                                                                         indonesia: val,
                                                                                         english: val,
@@ -1050,7 +1055,7 @@ export default function ProductVariantsSection({
                                                                                 <input
                                                                                     type="text"
                                                                                     value={subVar.name_translations?.indonesia ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'indonesia', formatValueWithSeparator(e.target.value))}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'indonesia', formatValueWithSeparator(e.target.value, subVar.type))}
                                                                                     placeholder="Contoh: 250ml, Stroberi"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
@@ -1067,7 +1072,7 @@ export default function ProductVariantsSection({
                                                                                 <input
                                                                                     type="text"
                                                                                     value={subVar.name_translations?.english ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'english', formatValueWithSeparator(e.target.value))}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'english', formatValueWithSeparator(e.target.value, subVar.type))}
                                                                                     placeholder="e.g. 250ml, Strawberry"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />
@@ -1084,7 +1089,7 @@ export default function ProductVariantsSection({
                                                                                 <input
                                                                                     type="text"
                                                                                     value={subVar.name_translations?.arabic ?? ''}
-                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', formatValueWithSeparator(e.target.value))}
+                                                                                    onChange={e => updateSubVariantLang(vIdx, svIdx, 'arabic', formatValueWithSeparator(e.target.value, subVar.type))}
                                                                                     placeholder="مثال: ٢٥٠ مل, فراولة"
                                                                                     className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-blue-950"
                                                                                 />

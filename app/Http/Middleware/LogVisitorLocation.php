@@ -33,7 +33,7 @@ class LogVisitorLocation
 
         $cacheKey = 'visitor_location_' . str_replace([':', '.'], '_', $ip);
         $location = Cache::get($cacheKey);
-        if (!$location) {
+        if (!$location || !isset($location['lat']) || !isset($location['lon'])) {
             try {
                 $response = Http::timeout(3)->get("http://ip-api.com/json/{$lookupIp}");
                 if ($response->successful()) {
@@ -44,6 +44,8 @@ class LogVisitorLocation
                             'countryCode' => $data['countryCode'] ?? 'Unknown',
                             'regionName' => $data['regionName'] ?? 'Unknown',
                             'city' => $data['city'] ?? 'Unknown',
+                            'lat' => $data['lat'] ?? null,
+                            'lon' => $data['lon'] ?? null,
                         ];
                         Cache::put($cacheKey, $location, now()->addDay());
                     }

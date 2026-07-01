@@ -172,10 +172,25 @@ class StoreBranchController extends Controller
             'province' => ['nullable', 'string', 'max:255'],
             'detail_address' => ['nullable', 'string'],
             'area_id' => ['nullable', 'string', 'max:255'],
+            'whatsapp_number' => ['nullable', 'string', 'max:255'],
         ]);
 
         $validated['code'] = strtoupper(trim((string) $validated['code']));
-        $validated['country_code'] = $validated['code'];
+
+        // Resolve country_code from country_name (must be 2 characters, e.g., ID, MY, SA)
+        $countryName = $validated['country_name'] ?? '';
+        $countryCode = '';
+        foreach ($this->getCountries() as $c) {
+            if (strcasecmp($c['name'], $countryName) === 0) {
+                $countryCode = strtoupper($c['code']);
+                break;
+            }
+        }
+        if (empty($countryCode)) {
+            $countryCode = substr($validated['code'], 0, 2);
+        }
+        $validated['country_code'] = $countryCode;
+
         $validated['currency_code'] = strtoupper(trim((string) $validated['currency_code']));
 
         if (empty($validated['timezone'])) {

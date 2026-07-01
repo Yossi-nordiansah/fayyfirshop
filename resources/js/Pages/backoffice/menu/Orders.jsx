@@ -155,7 +155,7 @@ export default function Orders({ orders = [], status }) {
     };
 
     const handleApproveCancel = (orderId) => {
-        if (!confirm("Apakah Anda yakin ingin menyetujui pembatalan pesanan ini? Stok produk akan dikembalikan.")) {
+        if (!confirm(t('backoffice.orders.confirm.approve_cancel', 'Apakah Anda yakin ingin menyetujui pembatalan pesanan ini? Stok produk akan dikembalikan.'))) {
             return;
         }
         router.post(route('backoffice.orders.approve-cancellation', orderId), {}, {
@@ -169,7 +169,7 @@ export default function Orders({ orders = [], status }) {
     };
 
     const handleRejectCancel = (orderId) => {
-        if (!confirm("Apakah Anda yakin ingin menolak pembatalan pesanan ini?")) {
+        if (!confirm(t('backoffice.orders.confirm.reject_cancel', 'Apakah Anda yakin ingin menolak pembatalan pesanan ini?'))) {
             return;
         }
         router.post(route('backoffice.orders.reject-cancellation', orderId), {}, {
@@ -219,15 +219,15 @@ export default function Orders({ orders = [], status }) {
     const getStatusBadge = (status) => {
         switch (status) {
             case 'pending':
-                return <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700"><Clock size={12} /> Pending</span>;
+                return <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700"><Clock size={12} /> {t('backoffice.orders.status.pending', 'Pending')}</span>;
             case 'processing':
-                return <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700"><ActivityIcon size={12} /> Processing</span>;
+                return <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700"><ActivityIcon size={12} /> {t('backoffice.orders.status.processing', 'Processing')}</span>;
             case 'shipped':
-                return <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700"><Truck size={12} /> Shipped</span>;
+                return <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700"><Truck size={12} /> {t('backoffice.orders.status.shipped', 'Shipped')}</span>;
             case 'completed':
-                return <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle size={12} /> Completed</span>;
+                return <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle size={12} /> {t('backoffice.orders.status.completed', 'Completed')}</span>;
             case 'cancelled':
-                return <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700"><XCircle size={12} /> Cancelled</span>;
+                return <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700"><XCircle size={12} /> {t('backoffice.orders.status.cancelled', 'Cancelled')}</span>;
             default:
                 return <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700">{status}</span>;
         }
@@ -236,13 +236,13 @@ export default function Orders({ orders = [], status }) {
     const getPaymentBadge = (status) => {
         switch (status) {
             case 'unpaid':
-                return <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-rose-700">Unpaid</span>;
+                return <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-rose-700">{t('backoffice.orders.payment.unpaid', 'Unpaid')}</span>;
             case 'paid':
-                return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">Paid</span>;
+                return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">{t('backoffice.orders.payment.paid', 'Paid')}</span>;
             case 'expired':
-                return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-500">Expired</span>;
+                return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-500">{t('backoffice.orders.payment.expired', 'Expired')}</span>;
             case 'refunded':
-                return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">Refunded</span>;
+                return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">{t('backoffice.orders.payment.refunded', 'Refunded')}</span>;
             default:
                 return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-slate-700">{status}</span>;
         }
@@ -269,7 +269,7 @@ export default function Orders({ orders = [], status }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title="Orders Management - Backoffice" />
+            <Head title={t('backoffice.orders.title', 'Orders Management') + " - Backoffice"} />
 
             <div className="flex min-h-screen">
                 <Sidebar />
@@ -282,10 +282,10 @@ export default function Orders({ orders = [], status }) {
                         <section className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold tracking-normal text-blue-950">
-                                    Orders Management
+                                    {t('backoffice.orders.title', 'Orders Management')}
                                 </h1>
                                 <p className="max-w-2xl mt-1 text-sm text-slate-600">
-                                    Monitor customer transactions, update order status, and book courier pickup using Biteship.
+                                    {t('backoffice.orders.subtitle', 'Monitor customer transactions, update order status, and book courier pickup using Biteship.')}
                                 </p>
                             </div>
                         </section>
@@ -314,10 +314,10 @@ export default function Orders({ orders = [], status }) {
                                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wide transition-all ${statusTab === tab
                                                     ? 'bg-blue-950 text-white shadow-sm'
                                                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                }`}
+                                                    }`}
                                             >
                                                 {getTabIcon(tab)}
-                                                <span>{tab}</span>
+                                                <span>{t('backoffice.orders.tabs.' + tab, tab.charAt(0).toUpperCase() + tab.slice(1))}</span>
                                                 {tabHasDot && (
                                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-sm" />
                                                 )}
@@ -333,7 +333,7 @@ export default function Orders({ orders = [], status }) {
                                     </span>
                                     <input
                                         type="text"
-                                        placeholder="Search invoice or customer..."
+                                        placeholder={t('backoffice.orders.search_placeholder', 'Search invoice or customer...')}
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs outline-none bg-white focus:border-blue-500 transition-colors"
@@ -346,34 +346,34 @@ export default function Orders({ orders = [], status }) {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                                            <th className="p-4 w-12">No</th>
-                                            <th className="p-4">Invoice / Date</th>
-                                            <th className="p-4">Customer</th>
-                                            <th className="p-4">Shipping Warehouse</th>
-                                            <th className="p-4 text-right">Total Billing</th>
-                                            <th className="p-4">Courier & Service</th>
-                                            {statusTab === 'cancelled' && <th className="p-4">Cancellation Reason</th>}
-                                            <th className="p-4">Payment & Status</th>
-                                            <th className="p-4 text-center">Actions</th>
+                                            <th className="p-4 w-12">{t('backoffice.orders.table.no', 'No')}</th>
+                                            <th className="p-4">{t('backoffice.orders.table.invoice_date', 'Invoice / Date')}</th>
+                                            <th className="p-4">{t('backoffice.orders.table.customer', 'Customer')}</th>
+                                            <th className="p-4">{t('backoffice.orders.table.shipping_warehouse', 'Shipping Warehouse')}</th>
+                                            <th className="p-4 text-right">{t('backoffice.orders.table.total_billing', 'Total Billing')}</th>
+                                            <th className="p-4">{t('backoffice.orders.table.courier_service', 'Courier & Service')}</th>
+                                            {statusTab === 'cancelled' && <th className="p-4">{t('backoffice.orders.table.cancellation_reason', 'Cancellation Reason')}</th>}
+                                            <th className="p-4">{t('backoffice.orders.table.payment_status', 'Payment & Status')}</th>
+                                            <th className="p-4 text-center">{t('backoffice.orders.table.actions', 'Actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-xs">
                                         {filteredOrders.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="p-8 text-center text-slate-400">
-                                                    No orders found matching the filter criteria.
+                                                <td colSpan={statusTab === 'cancelled' ? 9 : 8} className="p-8 text-center text-slate-400">
+                                                    {t('backoffice.orders.table.empty', 'No orders found matching the filter criteria.')}
                                                 </td>
                                             </tr>
                                         ) : (
                                             filteredOrders.map((order, idx) => (
                                                 <tr key={order.id} className="hover:bg-slate-50/50">
                                                     <td className="p-4 font-bold text-slate-400">{idx + 1}</td>
-                                                     <td className="p-4">
-                                                         <div className="font-mono font-bold text-blue-950">{order.invoice_number}</div>
-                                                         <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                                                             <Calendar size={10} /> {formatDate(order.created_at)}
-                                                         </div>
-                                                     </td>
+                                                    <td className="p-4">
+                                                        <div className="font-mono font-bold text-blue-950">{order.invoice_number}</div>
+                                                        <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                                            <Calendar size={10} /> {formatDate(order.created_at)}
+                                                        </div>
+                                                    </td>
                                                     <td className="p-4">
                                                         <div className="font-semibold text-slate-800">{order.user?.name ?? 'Guest'}</div>
                                                         <div className="text-[10px] text-slate-400 mt-0.5">{order.user?.email}</div>
@@ -384,58 +384,58 @@ export default function Orders({ orders = [], status }) {
                                                     <td className="p-4 font-extrabold text-blue-900 text-right">
                                                         {formatPrice(order.total_amount)}
                                                     </td>
-                                                     <td className="p-4">
-                                                         <div className="flex flex-col gap-0.5">
-                                                             <span className="font-extrabold uppercase text-slate-800 tracking-wider">
-                                                                 {order.shipping_courier || '-'}
-                                                             </span>
-                                                             <span className="text-[10px] font-medium text-slate-500">
-                                                                 {order.shipping_service || ''}
-                                                             </span>
-                                                         </div>
-                                                     </td>
-                                                     {statusTab === 'cancelled' && (
-                                                         <td className="p-4 max-w-[200px] truncate font-medium text-rose-600" title={order.cancellation_reason}>
-                                                             {order.cancellation_reason || '-'}
-                                                         </td>
-                                                     )}
-                                                     <td className="p-4">
-                                                         <div className="flex flex-col gap-1.5 items-start">
-                                                             {getPaymentBadge(order.payment_status)}
-                                                             {order.cancellation_status === 'pending' && (
-                                                                 <span className="inline-flex items-center gap-1 rounded bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 animate-pulse">
-                                                                     Cancel Req
-                                                                 </span>
-                                                             )}
-                                                             {order.cancellation_status === 'rejected' && (
-                                                                 <span className="inline-flex items-center gap-1 rounded bg-slate-100 border border-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-500">
-                                                                     Cancel Ditolak
-                                                                 </span>
-                                                             )}
-                                                         </div>
-                                                     </td>
-                                                     <td className="p-4 text-center">
-                                                         <div className="flex items-center justify-center gap-1.5">
-                                                             <button
-                                                                 onClick={() => handleOpenDetail(order)}
-                                                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition"
-                                                             >
-                                                                 <Eye size={12} />
-                                                                 <span>Details</span>
-                                                             </button>
-                                                             {order.tracking_number && (
-                                                                 <a
-                                                                     href={route('orders.track', order.id)}
-                                                                     target="_blank"
-                                                                     rel="noopener noreferrer"
-                                                                     className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 rounded-lg font-bold transition border border-indigo-100"
-                                                                 >
-                                                                     <Truck size={12} />
-                                                                     <span>Track</span>
-                                                                 </a>
-                                                             )}
-                                                         </div>
-                                                     </td>
+                                                    <td className="p-4">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="font-extrabold uppercase text-slate-800 tracking-wider">
+                                                                {order.shipping_courier || '-'}
+                                                            </span>
+                                                            <span className="text-[10px] font-medium text-slate-500">
+                                                                {order.shipping_service || ''}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    {statusTab === 'cancelled' && (
+                                                        <td className="p-4 max-w-[200px] truncate font-medium text-rose-600" title={order.cancellation_reason}>
+                                                            {order.cancellation_reason || '-'}
+                                                        </td>
+                                                    )}
+                                                    <td className="p-4">
+                                                        <div className="flex flex-col gap-1.5 items-start">
+                                                            {getPaymentBadge(order.payment_status)}
+                                                            {order.cancellation_status === 'pending' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 animate-pulse">
+                                                                    {t('backoffice.orders.cancellation.req', 'Cancel Req')}
+                                                                </span>
+                                                            )}
+                                                            {order.cancellation_status === 'rejected' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-slate-100 border border-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-500">
+                                                                    {t('backoffice.orders.cancellation.rejected', 'Cancel Rejected')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <button
+                                                                onClick={() => handleOpenDetail(order)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition"
+                                                            >
+                                                                <Eye size={12} />
+                                                                <span>{t('backoffice.orders.action.details', 'Details')}</span>
+                                                            </button>
+                                                            {order.tracking_number && (
+                                                                <a
+                                                                    href={route('orders.track', order.id)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 rounded-lg font-bold transition border border-indigo-100"
+                                                                >
+                                                                    <Truck size={12} />
+                                                                    <span>{t('backoffice.orders.action.track', 'Track')}</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))
                                         )}
@@ -464,7 +464,7 @@ export default function Orders({ orders = [], status }) {
                                         {selectedOrder.invoice_number}
                                     </h3>
                                     <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                                        <Calendar size={10} /> Created on {formatDate(selectedOrder.created_at)}
+                                        <Calendar size={10} /> {t('backoffice.orders.modal.created_on', 'Created on {date}').replace('{date}', formatDate(selectedOrder.created_at))}
                                     </p>
                                 </div>
                                 <button
@@ -480,18 +480,18 @@ export default function Orders({ orders = [], status }) {
                                 <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
                                     {/* Column 1: Customer details */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><User size={12} /> Customer Information</h4>
+                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><User size={12} /> {t('backoffice.orders.modal.customer_info', 'Customer Information')}</h4>
                                         <div className="bg-slate-50 rounded-2xl p-4 text-xs space-y-2">
                                             <div>
-                                                <span className="text-slate-400 block">Name</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.name', 'Name')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.name}</strong>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block">Phone</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.phone', 'Phone')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.phone}</strong>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block">Email</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.email', 'Email')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.email}</strong>
                                             </div>
                                         </div>
@@ -499,61 +499,61 @@ export default function Orders({ orders = [], status }) {
 
                                     {/* Column 2: Shipping details */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Truck size={12} /> Shipping Destination</h4>
+                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Truck size={12} /> {t('backoffice.orders.modal.shipping_destination', 'Shipping Destination')}</h4>
                                         <div className="bg-slate-50 rounded-2xl p-4 text-xs space-y-2">
                                             <div>
-                                                <span className="text-slate-400 block">Recipient</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.recipient', 'Recipient')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.receiver_name || selectedOrder.user?.name}</strong>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block">Courier Service</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.courier_service', 'Courier Service')}</span>
                                                 <strong className="text-slate-800 uppercase">{selectedOrder.shipping_courier} - {selectedOrder.shipping_service}</strong>
                                             </div>
-                                             <div>
-                                                 <span className="text-slate-400 block">Address Details</span>
-                                                 {selectedOrder.user?.address ? (
-                                                     <p className="text-slate-600 mt-0.5 leading-normal">
-                                                         {selectedOrder.user.address}, Kec. {selectedOrder.user.district}, {selectedOrder.user.city}, {selectedOrder.user.province} {selectedOrder.user.postal_code}
-                                                     </p>
-                                                 ) : (
-                                                     <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address}</p>
-                                                 )}
-                                             </div>
-                                             {selectedOrder.tracking_number && (
-                                                 <div className="pt-2 border-t border-slate-200/80 space-y-2">
-                                                     <div>
-                                                         <span className="text-slate-400 block">Airwaybill (AWB)</span>
-                                                         <strong className="text-blue-950 font-mono">{selectedOrder.tracking_number}</strong>
-                                                     </div>
-                                                     <a
-                                                         href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                                         className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
-                                                     >
-                                                         <Truck size={12} />
-                                                         <span>Lacak Pengiriman</span>
-                                                     </a>
-                                                 </div>
-                                             )}
+                                            <div>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.address_details', 'Address Details')}</span>
+                                                {selectedOrder.user?.address ? (
+                                                    <p className="text-slate-600 mt-0.5 leading-normal">
+                                                        {selectedOrder.user.address}, Kec. {selectedOrder.user.district}, {selectedOrder.user.city}, {selectedOrder.user.province} {selectedOrder.user.postal_code}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address}</p>
+                                                )}
+                                            </div>
+                                            {selectedOrder.tracking_number && (
+                                                <div className="pt-2 border-t border-slate-200/80 space-y-2">
+                                                    <div>
+                                                        <span className="text-slate-400 block">{t('backoffice.orders.modal.awb', 'Airwaybill (AWB)')}</span>
+                                                        <strong className="text-blue-950 font-mono">{selectedOrder.tracking_number}</strong>
+                                                    </div>
+                                                    <a
+                                                        href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                                        className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
+                                                    >
+                                                        <Truck size={12} />
+                                                        <span>{t('backoffice.orders.modal.track_shipment', 'Lacak Pengiriman')}</span>
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
                                     {/* Column 3: Logistics details & Actions */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Box size={12} /> Processing Warehouse</h4>
+                                        <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Box size={12} /> {t('backoffice.orders.modal.processing_warehouse', 'Processing Warehouse')}</h4>
                                         <div className="bg-slate-50 rounded-2xl p-4 text-xs space-y-2">
                                             <div>
-                                                <span className="text-slate-400 block">Fulfillment Branch</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.fulfillment_branch', 'Fulfillment Branch')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.store_branch?.name}</strong>
                                                 <span className="text-[10px] text-slate-400 block mt-0.5">Area ID: {selectedOrder.store_branch?.area_id ?? 'None'}</span>
                                             </div>
                                             <div>
-                                                <span className="text-slate-400 block">Customer Destination Area ID</span>
+                                                <span className="text-slate-400 block">{t('backoffice.orders.modal.destination_area', 'Customer Destination Area ID')}</span>
                                                 <strong className="text-slate-800">{selectedOrder.user?.area_id ?? 'None'}</strong>
                                             </div>
                                             {selectedOrder.tracking_number && (
                                                 <div className="pt-1.5 border-t border-slate-200/80 mt-1">
                                                     <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-100">
-                                                        Shipment Booked
+                                                        {t('backoffice.orders.modal.shipment_booked', 'Shipment Booked')}
                                                     </span>
                                                 </div>
                                             )}
@@ -563,15 +563,15 @@ export default function Orders({ orders = [], status }) {
 
                                 {/* Order Items Table */}
                                 <div className="space-y-3">
-                                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><ShoppingBag size={12} /> Ordered Items</h4>
+                                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><ShoppingBag size={12} /> {t('backoffice.orders.modal.ordered_items', 'Ordered Items')}</h4>
                                     <div className="border border-slate-100 rounded-2xl overflow-hidden">
                                         <table className="w-full text-left text-xs">
                                             <thead>
                                                 <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                                                    <th className="p-3">Product</th>
-                                                    <th className="p-3 text-right">Price</th>
-                                                    <th className="p-3 text-center">Qty</th>
-                                                    <th className="p-3 text-right">Subtotal</th>
+                                                    <th className="p-3">{t('backoffice.orders.modal.product', 'Product')}</th>
+                                                    <th className="p-3 text-right">{t('backoffice.orders.modal.price', 'Price')}</th>
+                                                    <th className="p-3 text-center">{t('backoffice.orders.modal.qty', 'Qty')}</th>
+                                                    <th className="p-3 text-right">{t('backoffice.orders.modal.subtotal', 'Subtotal')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -580,7 +580,7 @@ export default function Orders({ orders = [], status }) {
                                                         <td className="p-3">
                                                             <div className="font-bold text-slate-800">{item.product?.title}</div>
                                                             {item.variant && (
-                                                                <div className="text-[10px] text-slate-400 mt-0.5">Varian: {item.variant.name}</div>
+                                                                <div className="text-[10px] text-slate-400 mt-0.5">{t('backoffice.orders.modal.variant', 'Varian:')} {item.variant.name}</div>
                                                             )}
                                                         </td>
                                                         <td className="p-3 text-right">{formatPrice(item.price)}</td>
@@ -589,15 +589,15 @@ export default function Orders({ orders = [], status }) {
                                                     </tr>
                                                 ))}
                                                 <tr className="bg-slate-50/50 font-bold border-t border-slate-100">
-                                                    <td colSpan={3} className="p-3 text-right text-slate-500">Subtotal</td>
+                                                    <td colSpan={3} className="p-3 text-right text-slate-500">{t('backoffice.orders.modal.subtotal', 'Subtotal')}</td>
                                                     <td className="p-3 text-right">{formatPrice(selectedOrder.subtotal)}</td>
                                                 </tr>
                                                 <tr className="bg-slate-50/50 font-bold">
-                                                    <td colSpan={3} className="p-3 text-right text-slate-500">Shipping Fee ({selectedOrder.shipping_courier})</td>
+                                                    <td colSpan={3} className="p-3 text-right text-slate-500">{t('backoffice.orders.modal.shipping_fee', 'Shipping Fee ({courier})').replace('{courier}', selectedOrder.shipping_courier)}</td>
                                                     <td className="p-3 text-right">{formatPrice(selectedOrder.shipping_cost)}</td>
                                                 </tr>
                                                 <tr className="bg-blue-50/30 font-extrabold border-t border-blue-100">
-                                                    <td colSpan={3} className="p-3 text-right text-blue-900">Grand Total</td>
+                                                    <td colSpan={3} className="p-3 text-right text-blue-900">{t('backoffice.orders.modal.grand_total', 'Grand Total')}</td>
                                                     <td className="p-3 text-right text-blue-950 text-sm">{formatPrice(selectedOrder.total_amount)}</td>
                                                 </tr>
                                             </tbody>
@@ -605,176 +605,176 @@ export default function Orders({ orders = [], status }) {
                                     </div>
                                 </div>
 
-                                 {/* Cancellation Request Panel */}
-                                 {selectedOrder.cancellation_status === 'pending' && (
-                                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs space-y-3">
-                                         <div className="flex items-center justify-between">
-                                             <h4 className="font-bold text-rose-800 flex items-center gap-1">
-                                                 <AlertCircle size={14} /> Pengajuan Pembatalan Pesanan
-                                             </h4>
-                                             <span className="text-[10px] font-bold text-rose-600 bg-rose-100/55 px-2 py-0.5 rounded-full uppercase">
-                                                 Pending Approval
-                                             </span>
-                                         </div>
-                                         <div className="bg-white border border-rose-100/60 p-3 rounded-xl text-slate-700 leading-relaxed">
-                                             <span className="font-bold text-slate-900 block mb-1">Alasan Pembatalan:</span>
-                                             "{selectedOrder.cancellation_reason}"
-                                         </div>
-                                         <div className="flex gap-2">
-                                             <button
-                                                 type="button"
-                                                 onClick={() => handleApproveCancel(selectedOrder.id)}
-                                                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition shadow-sm"
-                                             >
-                                                 Setujui Pembatalan (Refund & Batal)
-                                             </button>
-                                             <button
-                                                 type="button"
-                                                 onClick={() => handleRejectCancel(selectedOrder.id)}
-                                                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition border border-slate-200"
-                                             >
-                                                 Tolak Pengajuan
-                                             </button>
-                                         </div>
-                                     </div>
-                                 )}
+                                {/* Cancellation Request Panel */}
+                                {selectedOrder.cancellation_status === 'pending' && (
+                                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-bold text-rose-800 flex items-center gap-1">
+                                                <AlertCircle size={14} /> {t('backoffice.orders.cancel.panel_title', 'Pengajuan Pembatalan Pesanan')}
+                                            </h4>
+                                            <span className="text-[10px] font-bold text-rose-600 bg-rose-100/55 px-2 py-0.5 rounded-full uppercase">
+                                                {t('backoffice.orders.cancel.pending_approval', 'Pending Approval')}
+                                            </span>
+                                        </div>
+                                        <div className="bg-white border border-rose-100/60 p-3 rounded-xl text-slate-700 leading-relaxed">
+                                            <span className="font-bold text-slate-900 block mb-1">{t('backoffice.orders.cancel.reason_label', 'Alasan Pembatalan:')}</span>
+                                            "{selectedOrder.cancellation_reason}"
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleApproveCancel(selectedOrder.id)}
+                                                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition shadow-sm"
+                                            >
+                                                {t('backoffice.orders.cancel.btn_approve', 'Setujui Pembatalan (Refund & Batal)')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRejectCancel(selectedOrder.id)}
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition border border-slate-200"
+                                            >
+                                                {t('backoffice.orders.cancel.btn_reject', 'Tolak Pengajuan')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
-                                  {(selectedOrder.status === 'cancelled' || (selectedOrder.cancellation_status && selectedOrder.cancellation_status !== 'pending')) && (
-                                      <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl text-xs space-y-1">
-                                          <h4 className="font-bold text-rose-800 flex items-center gap-1">
-                                              Detail Pembatalan
-                                          </h4>
-                                          <p className="text-slate-600">
-                                              <strong>Status Pengajuan:</strong>{' '}
-                                              <span className={`font-bold uppercase ${selectedOrder.cancellation_status === 'rejected' ? 'text-rose-600' : 'text-slate-700'}`}>
-                                                  {selectedOrder.cancellation_status === 'rejected' 
-                                                      ? 'Pengajuan Pembatalan Ditolak' 
-                                                      : (selectedOrder.cancellation_status === 'approved' ? 'Disetujui' : (selectedOrder.cancellation_status || 'Disetujui'))}
-                                              </span>
-                                          </p>
-                                          <p className="text-slate-600">
-                                              <strong>Alasan:</strong> "{selectedOrder.cancellation_reason || 'Tidak ada alasan khusus atau dibatalkan otomatis oleh sistem.'}"
-                                          </p>
-                                      </div>
-                                  )}
+                                {(selectedOrder.status === 'cancelled' || (selectedOrder.cancellation_status && selectedOrder.cancellation_status !== 'pending')) && (
+                                    <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl text-xs space-y-1">
+                                        <h4 className="font-bold text-rose-800 flex items-center gap-1">
+                                            {t('backoffice.orders.cancel.detail_title', 'Detail Pembatalan')}
+                                        </h4>
+                                        <p className="text-slate-600">
+                                            <strong>{t('backoffice.orders.cancel.status_label', 'Status Pengajuan:')}</strong>{' '}
+                                            <span className={`font-bold uppercase ${selectedOrder.cancellation_status === 'rejected' ? 'text-rose-600' : 'text-slate-700'}`}>
+                                                {selectedOrder.cancellation_status === 'rejected'
+                                                    ? t('backoffice.orders.cancel.status_rejected', 'Pengajuan Pembatalan Ditolak')
+                                                    : (selectedOrder.cancellation_status === 'approved' ? t('backoffice.orders.cancel.status_approved', 'Disetujui') : (selectedOrder.cancellation_status || t('backoffice.orders.cancel.status_approved', 'Disetujui')))}
+                                            </span>
+                                        </p>
+                                        <p className="text-slate-600">
+                                            <strong>{t('backoffice.orders.cancel.reason_col', 'Alasan:')}</strong> "{selectedOrder.cancellation_reason || t('backoffice.orders.cancel.no_reason', 'Tidak ada alasan khusus atau dibatalkan otomatis oleh sistem.')}"
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Order Notes */}
                                 {selectedOrder.notes && (
                                     <div className="p-4 bg-amber-50/30 border border-amber-100 rounded-2xl text-xs">
-                                        <h4 className="font-bold text-amber-800 flex items-center gap-1"><AlertCircle size={12} /> Catatan / Logs</h4>
+                                        <h4 className="font-bold text-amber-800 flex items-center gap-1"><AlertCircle size={12} /> {t('backoffice.orders.modal.notes_logs', 'Catatan / Logs')}</h4>
                                         <p className="mt-1.5 text-slate-600 leading-normal whitespace-pre-wrap">{selectedOrder.notes}</p>
                                     </div>
                                 )}
                             </div>
 
-                             {/* Modal Footer: Status Overview & Actions */}
-                             <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
-                                 <div className="flex flex-wrap items-center gap-6">
-                                     <div className="flex items-center gap-2">
-                                         <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
-                                             <ActivityIcon size={12} /> Order Status
-                                         </span>
-                                         {getStatusBadge(selectedOrder.status)}
-                                     </div>
+                            {/* Modal Footer: Status Overview & Actions */}
+                            <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
+                                            <ActivityIcon size={12} /> {t('backoffice.orders.modal.order_status', 'Order Status')}
+                                        </span>
+                                        {getStatusBadge(selectedOrder.status)}
+                                    </div>
 
-                                     <div className="flex items-center gap-2">
-                                         <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
-                                             <DollarSign size={12} /> Payment Status
-                                         </span>
-                                         {getPaymentBadge(selectedOrder.payment_status)}
-                                         {selectedOrder.status === 'pending' && (
-                                             <label className="inline-flex items-center gap-1.5 cursor-pointer ml-3 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-200 transition text-slate-700">
-                                                 <input
-                                                     type="checkbox"
-                                                     disabled={isUpdatingStatus}
-                                                     checked={selectedOrder.payment_status === 'paid'}
-                                                     onChange={(e) => {
-                                                         const targetPaymentStatus = e.target.checked ? 'paid' : 'unpaid';
-                                                         handleUpdatePaymentStatus(selectedOrder.id, targetPaymentStatus);
-                                                     }}
-                                                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
-                                                 />
-                                                 <span className="text-[10px] font-extrabold uppercase tracking-wide">Mark as Paid</span>
-                                             </label>
-                                         )}
-                                     </div>
-                                 </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 flex items-center gap-1">
+                                            <DollarSign size={12} /> {t('backoffice.orders.modal.payment_status', 'Payment Status')}
+                                        </span>
+                                        {getPaymentBadge(selectedOrder.payment_status)}
+                                        {selectedOrder.status === 'pending' && (
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer ml-3 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-200 transition text-slate-700">
+                                                <input
+                                                    type="checkbox"
+                                                    disabled={isUpdatingStatus}
+                                                    checked={selectedOrder.payment_status === 'paid'}
+                                                    onChange={(e) => {
+                                                        const targetPaymentStatus = e.target.checked ? 'paid' : 'unpaid';
+                                                        handleUpdatePaymentStatus(selectedOrder.id, targetPaymentStatus);
+                                                    }}
+                                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                                                />
+                                                <span className="text-[10px] font-extrabold uppercase tracking-wide">{t('backoffice.orders.modal.mark_as_paid', 'Mark as Paid')}</span>
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
 
-                                  <div className="flex items-center gap-3">
-                                      {/* Manual Status Change Dropdown (untuk Testing & Management) */}
-                                      <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm text-xs font-semibold">
-                                          <span className="text-slate-500 mr-2">Ubah Status:</span>
-                                          <select
-                                              disabled={isUpdatingStatus}
-                                              value={selectedOrder.status}
-                                              onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
-                                              className="bg-transparent border-none p-0 text-xs font-bold text-slate-800 outline-none focus:ring-0 pr-8 cursor-pointer"
-                                          >
-                                              <option value="pending">Pending</option>
-                                              <option value="processing">Processing</option>
-                                              <option value="shipped">Shipped</option>
-                                              <option value="completed">Completed</option>
-                                              <option value="cancelled">Cancelled</option>
-                                          </select>
-                                      </div>
+                                <div className="flex items-center gap-3">
+                                    {/* Manual Status Change Dropdown (untuk Testing & Management) */}
+                                    <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm text-xs font-semibold">
+                                        <span className="text-slate-500 mr-2">{t('backoffice.orders.modal.change_status_label', 'Ubah Status:')}</span>
+                                        <select
+                                            disabled={isUpdatingStatus}
+                                            value={selectedOrder.status}
+                                            onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
+                                            className="bg-transparent border-none p-0 text-xs font-bold text-slate-800 outline-none focus:ring-0 pr-8 cursor-pointer"
+                                        >
+                                            <option value="pending">{t('backoffice.orders.status.pending', 'Pending')}</option>
+                                            <option value="processing">{t('backoffice.orders.status.processing', 'Processing')}</option>
+                                            <option value="shipped">{t('backoffice.orders.status.shipped', 'Shipped')}</option>
+                                            <option value="completed">{t('backoffice.orders.status.completed', 'Completed')}</option>
+                                            <option value="cancelled">{t('backoffice.orders.status.cancelled', 'Cancelled')}</option>
+                                        </select>
+                                    </div>
 
-                                     {selectedOrder.status === 'pending' && (
-                                         <button
-                                             type="button"
-                                             disabled={isUpdatingStatus}
-                                             onClick={() => handleUpdateStatus(selectedOrder.id, 'processing')}
-                                             className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
-                                         >
-                                             <span>Proses Pesanan</span>
-                                         </button>
-                                     )}
+                                    {selectedOrder.status === 'pending' && (
+                                        <button
+                                            type="button"
+                                            disabled={isUpdatingStatus}
+                                            onClick={() => handleUpdateStatus(selectedOrder.id, 'processing')}
+                                            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                                        >
+                                            <span>{t('backoffice.orders.modal.btn_process_order', 'Proses Pesanan')}</span>
+                                        </button>
+                                    )}
 
-                                     {selectedOrder.status === 'processing' && !selectedOrder.tracking_number && (
-                                         <div className="flex flex-col items-end gap-1">
-                                             <button
-                                                 type="button"
-                                                 disabled={bookingShipmentId === selectedOrder.id || !selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id}
-                                                 onClick={() => handleCreateBiteshipShipment(selectedOrder.id)}
-                                                 className="px-5 py-2 bg-blue-950 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
-                                             >
-                                                 <Truck size={12} />
-                                                 <span>{bookingShipmentId === selectedOrder.id ? 'Booking...' : 'Book Biteship Shipment'}</span>
-                                             </button>
-                                             {(!selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id) && (
-                                                 <span className="text-[9px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-100 mt-1">
-                                                     {!selectedOrder.store_branch?.area_id && !selectedOrder.user?.area_id 
-                                                         ? 'Lengkapi Area ID Gudang & Pelanggan' 
-                                                         : (!selectedOrder.store_branch?.area_id ? 'Lengkapi Area ID Gudang' : 'Lengkapi Area ID Pelanggan')}
-                                                 </span>
-                                             )}
-                                         </div>
-                                     )}
+                                    {selectedOrder.status === 'processing' && !selectedOrder.tracking_number && (
+                                        <div className="flex flex-col items-end gap-1">
+                                            <button
+                                                type="button"
+                                                disabled={bookingShipmentId === selectedOrder.id || !selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id}
+                                                onClick={() => handleCreateBiteshipShipment(selectedOrder.id)}
+                                                className="px-5 py-2 bg-blue-950 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Truck size={12} />
+                                                <span>{bookingShipmentId === selectedOrder.id ? t('backoffice.orders.modal.btn_booking', 'Booking...') : t('backoffice.orders.modal.btn_book_shipment', 'Book Biteship Shipment')}</span>
+                                            </button>
+                                            {(!selectedOrder.store_branch?.area_id || !selectedOrder.user?.area_id) && (
+                                                <span className="text-[9px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-100 mt-1">
+                                                    {!selectedOrder.store_branch?.area_id && !selectedOrder.user?.area_id
+                                                        ? t('backoffice.orders.modal.err_complete_both_area', 'Lengkapi Area ID Gudang & Pelanggan')
+                                                        : (!selectedOrder.store_branch?.area_id ? t('backoffice.orders.modal.err_complete_warehouse_area', 'Lengkapi Area ID Gudang') : t('backoffice.orders.modal.err_complete_customer_area', 'Lengkapi Area ID Pelanggan'))}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
-                                     {selectedOrder.status === 'shipped' && (
-                                         <a
-                                             href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                             target="_blank"
-                                             rel="noopener noreferrer"
-                                             className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
-                                         >
-                                             <Truck size={12} />
-                                             <span>Lacak Pengiriman</span>
-                                         </a>
-                                     )}
+                                    {selectedOrder.status === 'shipped' && (
+                                        <a
+                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                        >
+                                            <Truck size={12} />
+                                            <span>{t('backoffice.orders.modal.btn_track_shipment', 'Lacak Pengiriman')}</span>
+                                        </a>
+                                    )}
 
-                                     {selectedOrder.status === 'completed' && (
-                                         <a
-                                             href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                             target="_blank"
-                                             rel="noopener noreferrer"
-                                             className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
-                                         >
-                                             <Truck size={12} />
-                                             <span>Lacak & Lihat POD</span>
-                                         </a>
-                                     )}
-                                 </div>
-                             </div>
+                                    {selectedOrder.status === 'completed' && (
+                                        <a
+                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                        >
+                                            <Truck size={12} />
+                                            <span>{t('backoffice.orders.modal.btn_track_pod', 'Lacak & Lihat POD')}</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
 
 
                         </motion.div>

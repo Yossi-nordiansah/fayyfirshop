@@ -289,6 +289,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'visitorCountryCode' => fn () => $this->getVisitorCountryCode($request),
+            'visitorLatitude' => fn () => $this->getVisitorLocation($request)['lat'] ?? null,
+            'visitorLongitude' => fn () => $this->getVisitorLocation($request)['lon'] ?? null,
+            'activeStoreBranches' => fn () => \Illuminate\Support\Facades\Schema::hasTable('store_branches')
+                ? \App\Models\StoreBranch::where('is_active', true)->get()
+                : [],
             'flash' => [
                 'login_status' => $request->session()->get('login_status'),
                 'logout_status' => $request->session()->get('logout_status'),
@@ -325,7 +330,7 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    protected function getVisitorCountryCode(Request $request): string
+    protected function getVisitorLocation(Request $request): ?array
     {
         $ip = $request->header('CF-Connecting-IP')
             ?: ($request->header('X-Forwarded-For')
@@ -341,8 +346,8 @@ class HandleInertiaRequests extends Middleware
         $cacheKey = 'visitor_location_' . str_replace([':', '.'], '_', $ip);
         $location = \Illuminate\Support\Facades\Cache::get($cacheKey);
 
-        if ($location && isset($location['countryCode'])) {
-            return strtoupper($location['countryCode']);
+        if ($location && isset($location['countryCode']) && isset($location['lat']) && isset($location['lon'])) {
+            return $location;
         }
 
         try {
@@ -350,20 +355,28 @@ class HandleInertiaRequests extends Middleware
             if ($response->successful()) {
                 $data = $response->json();
                 if (($data['status'] ?? '') === 'success') {
-                    $countryCode = strtoupper($data['countryCode'] ?? 'ID');
-                    \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                    $location = [
                         'country' => $data['country'] ?? 'Unknown',
                         'countryCode' => $data['countryCode'] ?? 'Unknown',
                         'regionName' => $data['regionName'] ?? 'Unknown',
                         'city' => $data['city'] ?? 'Unknown',
-                    ], now()->addDay());
-                    return $countryCode;
+                        'lat' => $data['lat'] ?? null,
+                        'lon' => $data['lon'] ?? null,
+                    ];
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, $location, now()->addDay());
+                    return $location;
                 }
             }
         } catch (\Exception $e) {
             // Ignore
         }
 
-        return 'ID';
+        return null;
+    }
+
+    protected function getVisitorCountryCode(Request $request): string
+    {
+        $location = $this->getVisitorLocation($request);
+        return $location['countryCode'] ?? 'ID';
     }
 }

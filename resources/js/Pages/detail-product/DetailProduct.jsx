@@ -248,7 +248,77 @@ const parseWeightJs = (variant, product) => {
 
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
-    const { auth, visitorCountryCode = 'ID' } = usePage().props;
+    const { auth, visitorCountryCode = 'ID', visitorLatitude, visitorLongitude } = usePage().props;
+
+    const product =
+        initialProduct ||
+        (slug ? products.find((p) => p.slug === slug) : null) ||
+        products[0];
+
+    // Haversine formula to calculate distance between two coordinates
+    const calculateDistance = React.useCallback((lat1, lon1, lat2, lon2) => {
+        const toRad = (value) => (value * Math.PI) / 180;
+        const R = 6371; // km
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) *
+                Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) *
+                Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }, []);
+
+    // Resolve the best matching branch for the visitor
+    const resolvedBranchInfo = React.useMemo(() => {
+        const branchStocksList = product.branch_stocks || product.branchStocks || [];
+        const branches = branchStocksList.map(bs => bs.branch).filter(Boolean);
+
+        if (branches.length === 0) {
+            return { branch: null, distance: null, method: 'none' };
+        }
+
+        // A. Coba cari cabang dengan kode negara yang sama dulu (ID, MY, SA)
+        const countryMatch = branches.find(b => b.country_code === visitorCountryCode);
+        if (countryMatch) {
+            return { branch: countryMatch, distance: null, method: 'country_code' };
+        }
+
+        // B. Jika tidak ada kecocokan negara, coba hitung jarak terdekat menggunakan koordinat IP
+        const visLat = parseFloat(visitorLatitude);
+        const visLon = parseFloat(visitorLongitude);
+        if (!isNaN(visLat) && !isNaN(visLon)) {
+            let nearestBranch = null;
+            let minDistance = Infinity;
+
+            branches.forEach(b => {
+                const branchLat = parseFloat(b.latitude);
+                const branchLon = parseFloat(b.longitude);
+                if (!isNaN(branchLat) && !isNaN(branchLon)) {
+                    const dist = calculateDistance(visLat, visLon, branchLat, branchLon);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        nearestBranch = b;
+                    }
+                }
+            });
+
+            if (nearestBranch) {
+                return { branch: nearestBranch, distance: minDistance, method: 'distance' };
+            }
+        }
+
+        // C. Fallback: cari cabang default
+        const defaultMatch = branches.find(b => b.is_default);
+        if (defaultMatch) {
+            return { branch: defaultMatch, distance: null, method: 'default' };
+        }
+
+        // D. Fallback terakhir: cabang pertama
+        return { branch: branches[0], distance: null, method: 'first' };
+    }, [product, visitorCountryCode, visitorLatitude, visitorLongitude, calculateDistance]);
 
     const getBranchStockForUser = React.useCallback((item) => {
         if (!item) return 0;
@@ -257,9 +327,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             return item.stock || 0;
         }
         
-        const match = branchStocksList.find(bs => bs.branch?.country_code === visitorCountryCode);
-        if (match) {
-            return match.stock || 0;
+        const selectedBranch = resolvedBranchInfo.branch;
+        if (selectedBranch) {
+            const match = branchStocksList.find(bs => Number(bs.store_branch_id) === Number(selectedBranch.id));
+            if (match) {
+                return match.stock || 0;
+            }
         }
 
         const defaultMatch = branchStocksList.find(bs => bs.branch?.is_default);
@@ -268,12 +341,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         }
 
         return branchStocksList[0]?.stock || 0;
-    }, [visitorCountryCode]);
-
-    const product =
-        initialProduct ||
-        (slug ? products.find((p) => p.slug === slug) : null) ||
-        products[0];
+    }, [resolvedBranchInfo]);
 
     // Tentukan apakah produk ini berasal dari database Eloquent
     const isDbProduct = React.useMemo(() => {
@@ -855,11 +923,27 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     }, [displayStock, currentUnit, parentStockUnit, isParentStockMode, locale, t]);
 
     const warehouseLabel = React.useMemo(() => {
-        if (visitorCountryCode === 'ID') return t('product.detail.warehouse.id', 'Gudang Indonesia');
-        if (visitorCountryCode === 'MY') return t('product.detail.warehouse.my', 'Gudang Malaysia');
-        if (visitorCountryCode === 'SA') return t('product.detail.warehouse.sa', 'Gudang Saudi Arabia');
-        return t('product.detail.warehouse.default', 'Gudang Utama');
-    }, [visitorCountryCode, t]);
+        const { branch, distance, method } = resolvedBranchInfo;
+        if (!branch) {
+            return t('product.detail.warehouse.default', 'Gudang Utama');
+        }
+
+        if (method === 'country_code') {
+            if (branch.country_code === 'ID') return t('product.detail.warehouse.id', 'Gudang Indonesia');
+            if (branch.country_code === 'MY') return t('product.detail.warehouse.my', 'Gudang Malaysia');
+            if (branch.country_code === 'SA') return t('product.detail.warehouse.sa', 'Gudang Saudi Arabia');
+        }
+
+        if (method === 'distance' && distance !== null) {
+            const formattedDistance = new Intl.NumberFormat(locale === 'indonesia' ? 'id-ID' : 'en-US', {
+                maximumFractionDigits: 0
+            }).format(distance);
+            return `${t('product.detail.warehouse.nearest', 'Gudang Terdekat')}: ${branch.name} (~${formattedDistance} km)`;
+        }
+
+        // Fallback default
+        return branch.name || t('product.detail.warehouse.default', 'Gudang Utama');
+    }, [resolvedBranchInfo, locale, t]);
 
     const handleQuantityChange = (type) => {
         if (type === "minus" && quantity > 1) setQuantity(quantity - 1);
@@ -1111,7 +1195,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     };
 
     const handleWhatsAppInquiry = () => {
-        const phone = "6285655230897";
+        const phone = resolvedBranchInfo.branch?.whatsapp_number || "6285655230897";
         const variantName = activeVariant ? formatFullVariantName(activeVariant, locale) : "";
         const formattedPrice = formatPrice(currentPrice);
         const productUrl = window.location.href;
@@ -1683,9 +1767,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     onClick={handleWhatsAppInquiry}
                                     className="flex-[2] flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-[#25D366] hover:bg-[#22c35e] text-white font-bold text-sm transition-all shadow-md shadow-[#25d366]/20 border border-green-400/20 text-nowrap"
                                 >
-                                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.456L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.451 5.403.002 9.803-4.394 9.806-9.799.002-2.597-1.01-5.038-2.85-6.88-1.839-1.843-4.283-2.859-6.883-2.86-5.404 0-9.807 4.393-9.81 9.8-.001 1.97.525 3.897 1.52 5.623l-.991 3.624 3.702-.97c.002 0-.001 0 0 0zm10.741-6.953c-.301-.15-1.78-.879-2.056-.979-.275-.1-.475-.15-.675.15-.2.3-.775.979-.95 1.179-.175.2-.35.225-.65.075-1.04-.52-1.78-.9-2.485-2.11-.2-.35-.2-.175.1-.475.2-.2.35-.45.475-.6.125-.15.05-.3-.025-.45-.075-.15-.675-1.625-.925-2.225-.244-.589-.496-.589-.675-.597-.175-.008-.375-.01-.575-.01-.2 0-.525.075-.8.375-.275.3-1.05 1.025-1.05 2.5s1.075 2.9 1.225 3.1c.15.2 2.11 3.22 5.11 4.52.714.31 1.272.495 1.708.634.717.228 1.368.196 1.884.119.575-.085 1.78-.727 2.03-1.429.25-.701.25-1.301.175-1.429-.075-.125-.275-.225-.575-.375z" />
-                                    </svg>
+                                    <img src="/images/icons/whatsapp.svg" className="w-5 h-5" alt="WhatsApp" />
                                     <span className="text-center md:text-base text-xs font-semibold">{t("product.detail.whatsapp_btn", "Tanyakan Produk")}</span>
                                 </motion.button>
                             </div>
@@ -1922,6 +2004,27 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 }}
                 t={t}
             />
+
+            {/* Floating WhatsApp Button */}
+            <motion.a
+                href={`https://wa.me/${resolvedBranchInfo.branch?.whatsapp_number || "6285655230897"}?text=${encodeURIComponent(
+                    `Halo Fayyfir Shop, saya ingin bertanya tentang produk ini:\n\n` +
+                    `*Nama Produk*: ${displayName}\n` +
+                    (activeVariant ? `*Varian*: ${formatFullVariantName(activeVariant, locale)}\n` : "") +
+                    `*Harga*: ${formatPrice(currentPrice)}\n` +
+                    `*Link*: ${window.location.href}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="fixed bottom-6 right-6 z-[99] flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-lg hover:bg-[#20ba5a] transition-all focus:outline-none focus:ring-4 focus:ring-green-300"
+                title="Chat via WhatsApp"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+            >
+                <img src="/images/icons/whatsapp.svg" className="w-8 h-8" alt="WhatsApp Inquiry" />
+            </motion.a>
 
         </MainLayout>
     );

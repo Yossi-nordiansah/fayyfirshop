@@ -455,6 +455,7 @@ class ProductController extends Controller
                 'sku'              => $v->sku,
                 'price'            => $v->price,
                 'unit_id'          => $v->unit_id,
+                'weight'           => $v->weight,
                 'image'            => $v->image,
                 'name_translations' => array_merge(
                     ['indonesia' => '', 'english' => '', 'arabic' => ''],

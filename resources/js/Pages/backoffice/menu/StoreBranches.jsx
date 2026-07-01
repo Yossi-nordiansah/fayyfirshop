@@ -42,7 +42,7 @@ export default function StoreBranches({ storeBranches, status, statusAction }) {
                 show={Boolean(pendingDelete)}
                 title={t('backoffice.store_branches.confirm_delete', 'Delete store branch')}
                 message={`${t('backoffice.store_branches.confirm_delete', 'Delete store branch')} "${pendingDelete?.name}"?`}
-                confirmLabel={t('backoffice.store_branches.form.buttons.cancel', 'Hapus') === 'Cancel' ? 'Hapus' : t('backoffice.store_branches.form.buttons.cancel', 'Hapus')}
+                confirmLabel={t('backoffice.customer.button.delete', 'Hapus')}
                 cancelLabel={t('backoffice.store_branches.form.buttons.cancel', 'Batal')}
                 onConfirm={confirmRemoveBranch}
                 onCancel={() => setPendingDelete(null)}

@@ -23,6 +23,7 @@ export default function StoreBranchForm({ storeBranch = null, countries = [], st
         district: storeBranch?.district ?? '',
         province: storeBranch?.province ?? '',
         detail_address: storeBranch?.detail_address ?? '',
+        whatsapp_number: storeBranch?.whatsapp_number ?? '',
     });
 
     const submit = (event) => {
@@ -242,6 +243,14 @@ export default function StoreBranchForm({ storeBranch = null, countries = [], st
                                         error={form.errors.province}
                                     />
                                 </div>
+
+                                <FormField
+                                    label={t('backoffice.store_branches.form.fields.whatsapp_number', 'WhatsApp Number')}
+                                    placeholder="e.g. 6285655230897"
+                                    value={form.data.whatsapp_number}
+                                    onChange={(value) => form.setData('whatsapp_number', value)}
+                                    error={form.errors.whatsapp_number}
+                                />
 
                                 <div>
                                     <label className="block mb-2 text-sm font-semibold text-blue-950">

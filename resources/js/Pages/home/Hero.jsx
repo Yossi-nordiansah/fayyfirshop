@@ -34,7 +34,7 @@ const HeroSlider = () => {
             subtitle: t('hero.perfume.subtitle', 'Eau de Parfum & Fragrance Spray'),
             description: t('hero.perfume.description', 'Koleksi wewangian premium dengan konsentrasi tinggi yang memikat, dirancang untuk memancarkan pesona sepanjang hari.'),
             image: "/images/hero/bg-perfume.jpg",
-            productImage: "/images/hero/perfume.png",
+            productImage: "/images/hero/Perfume-web-(1).webp",
             icon: <Sparkles size={24} />,
             theme: "from-blue-900/60",
             slug: "parfum"
@@ -46,7 +46,7 @@ const HeroSlider = () => {
             subtitle: t('hero.oil.subtitle', 'Dehn Oud & Campuran Minyak Pilihan'),
             description: t('hero.oil.description', 'Tetesan kemurnian dari alam, memberikan ketenangan dan kepercayaan diri dengan aroma yang mendalam.'),
             image: "/images/hero/aromatic-oil2.jpg",
-            productImage: "/images/hero/oil.png",
+            productImage: "/images/hero/Aromatic-Oil-web.webp",
             icon: <Droplets size={24} />,
             theme: "from-blue-800/60",
             slug: "minyak-aromatik"
@@ -58,7 +58,7 @@ const HeroSlider = () => {
             subtitle: t('hero.bakhoor.subtitle', 'Dupa Arab Tradisional & Kayu Oud'),
             description: t('hero.bakhoor.description', 'Ciptakan suasana hangat dan spiritual di rumah Anda dengan asap wangi dari tradisi Timur Tengah yang kaya.'),
             image: "/images/hero/bakhoor.jpg",
-            productImage: "/images/hero/oud.png",
+            productImage: "/images/hero/Bukhur-web.webp",
             icon: <Flame size={24} />,
             theme: "from-amber-900/60",
             slug: "bakhoor-dan-oud"
@@ -137,7 +137,7 @@ const HeroSlider = () => {
                                         <img
                                             src={slide.productImage}
                                             alt={slide.title}
-                                            className="w-48 md:w-96 mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating"
+                                            className={`${slide.productImage?.includes('Perfume') ? 'w-40 md:w-64' : 'w-48 md:w-96'} mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating`}
                                         />
                                     </div>
 

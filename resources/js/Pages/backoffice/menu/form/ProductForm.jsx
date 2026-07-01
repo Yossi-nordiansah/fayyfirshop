@@ -1203,6 +1203,7 @@ export default function ProductForm({
                                     onAdd={handleAddImages}
                                     onRemove={handleRemoveImage}
                                     onSetPrimary={handleSetPrimary}
+                                    errors={form.errors}
                                     t={t}
                                 />
 
