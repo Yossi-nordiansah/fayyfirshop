@@ -69,13 +69,7 @@ class Order extends Model
             $variant = $item->product_variant_id ? ProductVariant::find($item->product_variant_id) : null;
             $branchId = $this->store_branch_id;
 
-            $capacity = 1;
-            if ($variant) {
-                preg_match('/(\d+(?:\.\d+)?)/', $variant->name, $matches);
-                if (!empty($matches)) {
-                    $capacity = (float) $matches[1];
-                }
-            }
+            $capacity = $this->parseCapacity($variant);
 
             if ($product && $product->stock_type === 'parent') {
                 $deduction = $capacity * $item->quantity;
@@ -176,13 +170,7 @@ class Order extends Model
             $variant = $item->product_variant_id ? ProductVariant::find($item->product_variant_id) : null;
             $branchId = $this->store_branch_id;
 
-            $capacity = 1;
-            if ($variant) {
-                preg_match('/(\d+(?:\.\d+)?)/', $variant->name, $matches);
-                if (!empty($matches)) {
-                    $capacity = (float) $matches[1];
-                }
-            }
+            $capacity = $this->parseCapacity($variant);
 
             if ($product && $product->stock_type === 'parent') {
                 $deduction = $capacity * $item->quantity;
@@ -245,6 +233,34 @@ class Order extends Model
                 }
             }
         }
+    }
+
+    /**
+     * Parse the capacity from a variant name.
+     */
+    private function parseCapacity(?ProductVariant $variant): float
+    {
+        if (!$variant) {
+            return 1.0;
+        }
+
+        $textToParse = $variant->name;
+
+        // Match a number in the string (possibly in parentheses, e.g. "Merah (50 ml)")
+        preg_match('/(\d+(?:\.\d+)?)\s*(kilogram|kg|gram|gr|g|ml|l|liter|pcs)?/i', $textToParse, $matches);
+
+        if (!empty($matches)) {
+            $value_str = $matches[1];
+            $unit = isset($matches[2]) ? strtolower($matches[2]) : '';
+            
+            $isLargeUnit = in_array($unit, ['kg', 'kilogram', 'l', 'liter']);
+            if (!$isLargeUnit && preg_match('/\.\d{3}$/', $value_str)) {
+                $value_str = str_replace('.', '', $value_str);
+            }
+            return (float) $value_str;
+        }
+
+        return 1.0;
     }
 }
 

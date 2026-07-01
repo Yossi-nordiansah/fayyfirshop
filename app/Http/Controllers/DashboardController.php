@@ -121,8 +121,26 @@ class DashboardController extends Controller
         $logs = \App\Models\VisitorLog::latest('id')
             ->paginate(15);
 
+        $countryStats = \App\Models\VisitorLog::select('country', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->groupBy('country')
+            ->orderByDesc('count')
+            ->get();
+
+        $timeStats = \App\Models\VisitorLog::select(\Illuminate\Support\Facades\DB::raw('DATE(created_at) as date'), \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => date('d M', strtotime($item->date)),
+                    'count' => $item->count,
+                ];
+            });
+
         return Inertia::render('backoffice/visitor-logs/Index', [
             'logs' => $logs,
+            'countryStats' => $countryStats,
+            'timeStats' => $timeStats,
         ]);
     }
 }

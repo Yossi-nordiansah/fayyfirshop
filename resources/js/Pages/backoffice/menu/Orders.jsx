@@ -717,7 +717,6 @@ export default function Orders({ orders = [], status }) {
                                             <option value="cancelled">{t('backoffice.orders.status.cancelled', 'Cancelled')}</option>
                                         </select>
                                     </div>
-
                                     {selectedOrder.status === 'pending' && (
                                         <button
                                             type="button"
@@ -729,7 +728,7 @@ export default function Orders({ orders = [], status }) {
                                         </button>
                                     )}
 
-                                    {selectedOrder.status === 'processing' && !selectedOrder.tracking_number && (
+                                    {selectedOrder.status === 'processing' && !selectedOrder.tracking_number && selectedOrder.store_branch?.country_code === 'ID' && (
                                         <div className="flex flex-col items-end gap-1">
                                             <button
                                                 type="button"
@@ -775,8 +774,6 @@ export default function Orders({ orders = [], status }) {
                                     )}
                                 </div>
                             </div>
-
-
                         </motion.div>
                     </div>
                 )}

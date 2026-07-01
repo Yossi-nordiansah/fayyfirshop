@@ -3,8 +3,17 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import { Globe, Calendar, MapPin, Monitor } from 'lucide-react';
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts';
 
-export default function Index({ logs }) {
+export default function Index({ logs, countryStats, timeStats }) {
     const { t } = useLanguage();
 
     const formatDate = (dateStr) => {
@@ -40,6 +49,110 @@ export default function Index({ logs }) {
                                 </p>
                             </div>
                         </section>
+
+                        {/* Charts Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Time Access Chart */}
+                            <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                <div>
+                                    <h3 className="font-bold text-blue-950 text-base">
+                                        {t('backoffice.visitor_logs.charts.time_title', 'Aktivitas Kunjungan (Harian)')}
+                                    </h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {t('backoffice.visitor_logs.charts.time_subtitle', 'Frekuensi akses website berdasarkan tanggal')}
+                                    </p>
+                                </div>
+                                <div className="h-64">
+                                    {timeStats && timeStats.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={timeStats} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                                <XAxis 
+                                                    dataKey="date" 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                                                />
+                                                <YAxis 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                                    allowDecimals={false}
+                                                />
+                                                <Tooltip 
+                                                    cursor={{ fill: '#f8fafc' }}
+                                                    contentStyle={{
+                                                        border: '1px solid #f1f5f9',
+                                                        borderRadius: '12px',
+                                                        backgroundColor: '#ffffff',
+                                                        boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)',
+                                                    }}
+                                                />
+                                                <Bar dataKey="count" name={t('backoffice.visitor_logs.charts.visits', 'Kunjungan')} fill="#1e40af" radius={[4, 4, 0, 0]} barSize={28} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-slate-400 italic text-xs">
+                                            {t('backoffice.visitor_logs.charts.no_data', 'Tidak ada data untuk ditampilkan')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Country Access Chart */}
+                            <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                <div>
+                                    <h3 className="font-bold text-blue-950 text-base">
+                                        {t('backoffice.visitor_logs.charts.country_title', 'Kunjungan per Negara')}
+                                    </h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {t('backoffice.visitor_logs.charts.country_subtitle', 'Negara asal pengunjung paling aktif')}
+                                    </p>
+                                </div>
+                                <div className="h-64">
+                                    {countryStats && countryStats.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart 
+                                                data={countryStats} 
+                                                layout="vertical"
+                                                margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                                <XAxis 
+                                                    type="number"
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                                    allowDecimals={false}
+                                                />
+                                                <YAxis 
+                                                    dataKey="country" 
+                                                    type="category"
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }}
+                                                    width={90}
+                                                />
+                                                <Tooltip 
+                                                    cursor={{ fill: '#f8fafc' }}
+                                                    contentStyle={{
+                                                        border: '1px solid #f1f5f9',
+                                                        borderRadius: '12px',
+                                                        backgroundColor: '#ffffff',
+                                                        boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)',
+                                                    }}
+                                                />
+                                                <Bar dataKey="count" name={t('backoffice.visitor_logs.charts.visits', 'Kunjungan')} fill="#0284c7" radius={[0, 4, 4, 0]} barSize={16} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-slate-400 italic text-xs">
+                                            {t('backoffice.visitor_logs.charts.no_data', 'Tidak ada data untuk ditampilkan')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
                         <section className="overflow-hidden bg-white border border-blue-100 rounded-lg shadow-sm">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-blue-100">

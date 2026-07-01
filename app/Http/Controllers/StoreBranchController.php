@@ -95,7 +95,7 @@ class StoreBranchController extends Controller
 
         // Auto resolve Biteship Area ID if country is Indonesia
         $areaId = $this->resolveBiteshipAreaId(
-            $validated['code'],
+            $validated['country_code'],
             $validated['district'] ?? null,
             $validated['city'] ?? null,
             $validated['province'] ?? null,
@@ -119,7 +119,7 @@ class StoreBranchController extends Controller
 
         // Auto resolve Biteship Area ID if country is Indonesia
         $areaId = $this->resolveBiteshipAreaId(
-            $validated['code'],
+            $validated['country_code'],
             $validated['district'] ?? null,
             $validated['city'] ?? null,
             $validated['province'] ?? null,
