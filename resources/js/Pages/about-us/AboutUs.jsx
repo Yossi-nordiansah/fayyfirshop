@@ -366,7 +366,7 @@ export default function AboutUs() {
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-xs font-black uppercase text-amber-600 block">{text.phone}</span>
-                                        <p className="text-sm text-slate-600 font-medium leading-relaxed">+62 821-2244-6688</p>
+                                        <p className="text-sm text-slate-600 font-medium leading-relaxed">+62 812-9000-7740</p>
                                     </div>
                                 </div>
                             </div>

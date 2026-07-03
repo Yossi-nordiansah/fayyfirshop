@@ -1284,5 +1284,16 @@
     "backoffice.orders.modal.btn_track_shipment": "Track Shipment",
     "backoffice.orders.modal.btn_track_pod": "Track & View POD",
     "backoffice.orders.confirm.approve_cancel": "Are you sure you want to approve this order cancellation? Product stock will be restored.",
-    "backoffice.orders.confirm.reject_cancel": "Are you sure you want to reject this order cancellation?"
+    "backoffice.orders.confirm.reject_cancel": "Are you sure you want to reject this order cancellation?",
+    "auth.modal.btnGoogle": "Sign in with Google",
+    "backoffice.login.tab_title": "Backoffice Login",
+    "backoffice.login.top_tag": "Backoffice",
+    "backoffice.login.title": "Admin Dashboard",
+    "backoffice.login.subtitle": "Sign in to access the administration panel.",
+    "backoffice.login.label_email": "Email",
+    "backoffice.login.label_password": "Password",
+    "backoffice.login.show_password": "Show password",
+    "backoffice.login.hide_password": "Hide password",
+    "backoffice.login.remember_me": "Remember me",
+    "backoffice.login.btn_submit": "Sign In"
 }

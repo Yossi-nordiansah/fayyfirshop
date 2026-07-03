@@ -1288,5 +1288,16 @@
     "backoffice.orders.modal.btn_track_shipment": "Lacak Pengiriman",
     "backoffice.orders.modal.btn_track_pod": "Lacak & Lihat POD",
     "backoffice.orders.confirm.approve_cancel": "Apakah Anda yakin ingin menyetujui pembatalan pesanan ini? Stok produk akan dikembalikan.",
-    "backoffice.orders.confirm.reject_cancel": "Apakah Anda yakin ingin menolak pembatalan pesanan ini?"
+    "backoffice.orders.confirm.reject_cancel": "Apakah Anda yakin ingin menolak pembatalan pesanan ini?",
+    "auth.modal.btnGoogle": "Masuk dengan Google",
+    "backoffice.login.tab_title": "Login Backoffice",
+    "backoffice.login.top_tag": "Backoffice",
+    "backoffice.login.title": "Dashboard Admin",
+    "backoffice.login.subtitle": "Sign in untuk mengakses panel administrasi.",
+    "backoffice.login.label_email": "Email",
+    "backoffice.login.label_password": "Kata Sandi",
+    "backoffice.login.show_password": "Tampilkan kata sandi",
+    "backoffice.login.hide_password": "Sembunyikan kata sandi",
+    "backoffice.login.remember_me": "Ingat saya",
+    "backoffice.login.btn_submit": "Masuk"
 }

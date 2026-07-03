@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
 import CardProduct from "@/Components/product/CardProduct";
@@ -21,6 +21,29 @@ import {
 export default function Products({ category = null, subCategory = null, products = [] }) {
     const { t, locale } = useLanguage();
     const { navCategories = [] } = usePage().props;
+    const { url } = usePage();
+
+    const bannerRef = useRef(null);
+    const [showStickyFilter, setShowStickyFilter] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setShowStickyFilter(!entry.isIntersecting);
+            },
+            { threshold: 0 }
+        );
+
+        if (bannerRef.current) {
+            observer.observe(bannerRef.current);
+        }
+
+        return () => {
+            if (bannerRef.current) {
+                observer.unobserve(bannerRef.current);
+            }
+        };
+    }, []);
 
     // Helper functions to map selected database category and subcategory to the format in productsData (data_products_30.json)
     const getProductCategoryKey = (catNameOrSlug) => {
@@ -136,13 +159,13 @@ export default function Products({ category = null, subCategory = null, products
                 return (a.sort_order ?? 0) - (b.sort_order ?? 0);
             });
             return sortedImages.map(img => {
-                if (!img.image_path) return '/images/logo-footer.png';
+                if (!img.image_path) return '/images/logo-footer.webp';
                 return img.image_path.startsWith('http') || img.image_path.startsWith('/')
                     ? img.image_path
                     : `/storage/${img.image_path}`;
             });
         }
-        return '/images/logo-footer.png';
+        return '/images/logo-footer.webp';
     };
 
     const matchCategory = (prod, selectedCatSlug) => {
@@ -205,7 +228,13 @@ export default function Products({ category = null, subCategory = null, products
     // Core filtering & sorting states
     const [selectedCat, setSelectedCat] = useState(category);
     const [selectedSub, setSelectedSub] = useState(subCategory);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("q") || params.get("search") || "";
+        }
+        return "";
+    });
     const [sortBy, setSortBy] = useState("popular");
 
     // Mobile controls
@@ -222,6 +251,29 @@ export default function Products({ category = null, subCategory = null, products
         setSelectedCat(getNormalizedCategorySlug(category));
         setSelectedSub(subCategory);
     }, [category, subCategory, navCategories]);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            setSearchQuery(params.get("q") || params.get("search") || "");
+        }
+    }, [url]);
+
+    // Listen to changes from Navbar search input
+    useEffect(() => {
+        const handleNavbarSearch = (e) => {
+            setSearchQuery(e.detail);
+        };
+        window.addEventListener('navbar-search', handleNavbarSearch);
+        return () => {
+            window.removeEventListener('navbar-search', handleNavbarSearch);
+        };
+    }, []);
+
+    // Sync local searchQuery back to Navbar search input
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('product-search', { detail: searchQuery }));
+    }, [searchQuery]);
 
     // Expand category on sidebar if active
     useEffect(() => {
@@ -417,7 +469,7 @@ export default function Products({ category = null, subCategory = null, products
 
             <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 {/* 1. Luxurious Banner Header */}
-                <div className="relative pt-28 pb-20 px-6 bg-gradient-to-br from-slate-950 via-blue-950 to-zinc-950 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center">
+                <div ref={bannerRef} className="relative pt-28 pb-20 px-6 bg-gradient-to-br from-slate-950 via-blue-950 to-zinc-950 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center">
                     {/* Arabesque Geometric Overlay */}
                     <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
@@ -795,13 +847,21 @@ export default function Products({ category = null, subCategory = null, products
                 </div>
 
                 {/* Sticky/Fixed Side Tab Button for Mobile */}
-                <button
-                    onClick={() => setMobileFiltersOpen(true)}
-                    className="lg:hidden fixed left-0 top-[35%] -translate-y-1/2 z-[90] flex items-center justify-center w-11 h-12 bg-blue-950 text-white rounded-r-2xl shadow-xl border-y border-r border-amber-500/30 active:scale-95 transition-all focus:outline-none"
-                    title="Filter Kategori"
-                >
-                    <Filter size={18} className="text-amber-400" />
-                </button>
+                <AnimatePresence>
+                    {showStickyFilter && (
+                        <motion.button
+                            initial={{ x: -50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -50, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={() => setMobileFiltersOpen(true)}
+                            className="lg:hidden fixed left-0 top-[35%] -translate-y-1/2 z-[90] flex items-center justify-center w-11 h-12 bg-blue-950 text-white rounded-r-2xl shadow-xl border-y border-r border-amber-500/30 active:scale-95 transition-all focus:outline-none"
+                            title="Filter Kategori"
+                        >
+                            <Filter size={18} className="text-amber-400" />
+                        </motion.button>
+                    )}
+                </AnimatePresence>
 
                 {/* Mobile Slide-in Drawer */}
                 <MobileFilterDrawer

@@ -14,22 +14,22 @@ const CategorySection = () => {
     const categories = [
         {
             title: t("nav.perfume"),
-            image: "/images/category-background/perfume.png",
+            image: "/images/category-background/perfume.webp",
             slug: "parfum",
         },
         {
             title: t("nav.aromaticOil"),
-            image: "/images/category-background/oudoil.jpg",
+            image: "/images/category-background/oudoil.webp",
             slug: "minyak-aromatik",
         },
         {
             title: t("nav.bakhoor"),
-            image: "/images/category-background/oud.jpg",
+            image: "/images/category-background/oud.webp",
             slug: "bakhoor-dan-oud",
         },
         {
             title: t("nav.nutrition"),
-            image: "/images/category-background/healty.jpg",
+            image: "/images/category-background/healty.webp",
             slug: "kesehatan-dan-nutrisi",
         },
     ];

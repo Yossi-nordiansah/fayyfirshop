@@ -1291,5 +1291,16 @@
     "backoffice.orders.modal.btn_track_shipment": "تتبع الشحنة",
     "backoffice.orders.modal.btn_track_pod": "تتبع وعرض إثبات التسليم (POD)",
     "backoffice.orders.confirm.approve_cancel": "هل أنت متأكد من رغبتك في الموافقة على إلغاء هذا الطلب؟ سيتم استعادة مخزون المنتج.",
-    "backoffice.orders.confirm.reject_cancel": "هل أنت متأكد من رغبتك في رفض إلغاء هذا الطلب؟"
+    "backoffice.orders.confirm.reject_cancel": "هل أنت متأكد من رغبتك في رفض إلغاء هذا الطلب؟",
+    "auth.modal.btnGoogle": "تسجيل الدخول بواسطة جوجل",
+    "backoffice.login.tab_title": "تسجيل دخول لوحة التحكم",
+    "backoffice.login.top_tag": "المكتب الخلفي",
+    "backoffice.login.title": "لوحة تحكم المسؤول",
+    "backoffice.login.subtitle": "سجّل الدخول للوصول إلى لوحة الإدارة.",
+    "backoffice.login.label_email": "البريد الإلكتروني",
+    "backoffice.login.label_password": "كلمة المرور",
+    "backoffice.login.show_password": "إظهار كلمة المرور",
+    "backoffice.login.hide_password": "إخفاء كلمة المرور",
+    "backoffice.login.remember_me": "تذكرني",
+    "backoffice.login.btn_submit": "تسجيل الدخول"
 }

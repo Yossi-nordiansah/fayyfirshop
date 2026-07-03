@@ -26,12 +26,7 @@ const Footer = () => {
         { name: t("nav.perfume", "Perfume"), href: "#" },
     ];
 
-    const customerService = [
-        { name: "FAQ", href: "#" },
-        { name: "Shipping Policy", href: "#" },
-        { name: "Terms & Conditions", href: "#" },
-        { name: "Privacy Policy", href: "#" },
-    ];
+
 
     const socialLinks = [
         // { icon: Instagram, href: "#" },
@@ -41,11 +36,11 @@ const Footer = () => {
     return (
         <footer className="bg-zinc-950 text-zinc-400 pt-16 pb-8 border-t border-zinc-900 font-sans">
             <div className="max-w-7xl mx-auto px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
                     {/* Brand Section */}
                     <div className="space-y-6">
                         <img
-                            src="/images/logo-footer.png"
+                            src="/images/logo-footer.webp"
                             alt="Fayyfir Shop"
                             className="h-12 w-auto brightness-110"
                         />
@@ -88,29 +83,6 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Customer Service */}
-                    <div className="space-y-6">
-                        <h4 className="text-white font-bold tracking-wider text-sm uppercase">
-                            {t("footer.customer_service")}
-                        </h4>
-                        <ul className="space-y-4">
-                            {customerService.map((link, idx) => (
-                                <li key={idx}>
-                                    <a
-                                        href={link.href}
-                                        className="text-xs hover:text-amber-500 flex items-center group transition-colors duration-300"
-                                    >
-                                        <ArrowUpRight
-                                            size={14}
-                                            className="mr-2 opacity-0 -ml-5 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300"
-                                        />
-                                        {link.name}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
                     {/* Contact & Newsletter */}
                     <div className="space-y-6">
                         <h4 className="text-white font-bold tracking-wider text-sm uppercase">
@@ -123,7 +95,7 @@ const Footer = () => {
                                     className="text-amber-600 shrink-0 mt-0.5"
                                 />
                                 <a href="https://share.google/RTqWfDBuWnTAvMOxb" target="_blank" className="leading-relaxed hover:text-amber-600 transition-colors">
-                                    Aljazeerah signature, Jl. Ternate No.03, Citarum, Kec. Bandung Wetan, Kota Bandung, Jawa Barat 40115
+                                    Jl. Ternate No.03, Citarum, Kec. Bandung Wetan, Kota Bandung, Jawa Barat 40115
                                 </a>
                             </div>
                             <div className="flex items-center gap-3">
@@ -139,21 +111,7 @@ const Footer = () => {
                             </a>
                         </div>
 
-                        {/* Newsletter Mini */}
-                        <div className="pt-2">
-                            <div className="relative">
-                                <input
-                                    type="email"
-                                    placeholder={t(
-                                        "footer.newsletter.placeholder",
-                                    )}
-                                    className="w-full bg-zinc-900 border-zinc-800 rounded-lg py-3 px-4 text-[10px] text-zinc-300 focus:ring-amber-500 focus:border-amber-500"
-                                />
-                                <button className="absolute right-2 top-1.5 bottom-1.5 bg-amber-600 hover:bg-amber-700 text-white px-3 rounded-md transition-colors duration-300">
-                                    <Send size={14} />
-                                </button>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
 

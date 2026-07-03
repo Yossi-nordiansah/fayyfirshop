@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import {
     Search,
     ShoppingCart,
@@ -28,7 +28,8 @@ import UserVouchersModal from "./UserVouchersModal";
 
 const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => {
     // Ambil data auth global dari shared props Inertia (Laravel Breeze)
-    const { auth, navCategories = [], activeEvents = [], notifications = [] } = usePage().props;
+    const { props, url } = usePage();
+    const { auth, navCategories = [], activeEvents = [], notifications = [] } = props;
     const user = auth?.user;
     const isProfileIncomplete = user && (!user.phone || !user.address || !user.city || !user.postal_code || !user.receiver_name);
 
@@ -41,6 +42,77 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
     const [showVouchersModal, setShowVouchersModal] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [cartCount, setCartCount] = useState(0);
+
+    const [searchVal, setSearchVal] = useState(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("q") || params.get("search") || "";
+        }
+        return "";
+    });
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            setSearchVal(params.get("q") || params.get("search") || "");
+        }
+    }, [url]);
+
+    // Sync input value with updates from products page search input
+    useEffect(() => {
+        const handleProductSearch = (e) => {
+            setSearchVal(e.detail);
+        };
+        window.addEventListener('product-search', handleProductSearch);
+        return () => {
+            window.removeEventListener('product-search', handleProductSearch);
+        };
+    }, []);
+
+    // Perform live search when typing
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentQ = urlParams.get("q") || urlParams.get("search") || "";
+
+        if (searchVal.trim() === currentQ.trim()) {
+            return;
+        }
+
+        const onProductsPage = window.location.pathname.startsWith('/products');
+
+        if (onProductsPage) {
+            // Live client-side updates (instant)
+            window.dispatchEvent(new CustomEvent('navbar-search', { detail: searchVal }));
+            const urlObj = new URL(window.location.href);
+            if (searchVal.trim()) {
+                urlObj.searchParams.set('q', searchVal.trim());
+            } else {
+                urlObj.searchParams.delete('q');
+            }
+            window.history.replaceState({}, '', urlObj.pathname + urlObj.search);
+        } else {
+            // Debounced redirect if typing from homepage/other pages
+            const handler = setTimeout(() => {
+                const trimmed = searchVal.trim();
+                if (trimmed) {
+                    router.visit(`/products?q=${encodeURIComponent(trimmed)}`);
+                }
+            }, 600); // 600ms debounce
+
+            return () => clearTimeout(handler);
+        }
+    }, [searchVal]);
+
+    const handleSearchSubmit = (e) => {
+        if (e) e.preventDefault();
+        const trimmed = searchVal.trim();
+        if (trimmed) {
+            router.visit(`/products?q=${encodeURIComponent(trimmed)}`);
+        } else {
+            router.visit('/products');
+        }
+        setIsOpen(false);
+    };
 
     const [showEventPopup, setShowEventPopup] = useState(false);
     const [toast, setToast] = useState(null); // { message, actionLabel, actionUrl }
@@ -286,7 +358,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                         <div className="flex items-center flex-shrink-0">
                             <Link href="/" className="flex items-center gap-2 group">
                                 <img
-                                    src="/images/logo-footer.png"
+                                    src="/images/logo-footer.webp"
                                     alt="logo fayyfir"
                                     className="h-12 md:h-16"
                                 />
@@ -432,18 +504,23 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                             </div>
 
                             {/* Search */}
-                            <div
+                            <form
+                                onSubmit={handleSearchSubmit}
                                 className="flex items-center w-10 px-2 py-2 overflow-hidden transition-all duration-300 bg-transparent rounded-full group hover:w-64 hover:bg-white/30"
                                 onMouseEnter={() => setShowSearch(true)}
                                 onMouseLeave={() => setShowSearch(false)}
                             >
-                                <Search size={20} className="text-white shrink-0" />
+                                <button type="submit" className="focus:outline-none">
+                                    <Search size={20} className="text-white shrink-0 cursor-pointer" />
+                                </button>
                                 <input
                                     type="text"
+                                    value={searchVal}
+                                    onChange={(e) => setSearchVal(e.target.value)}
                                     className="w-full p-0 ml-2 text-sm text-white bg-transparent border-none outline-none placeholder-white/70 focus:ring-0"
                                     placeholder={t("nav.searchPlaceholder", "Search parameters...")}
                                 />
-                            </div>
+                            </form>
 
                             {/* Notification Dropdown Container */}
                             <div
@@ -503,13 +580,13 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                                                                 >
                                                                     <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border ${n.type === 'profile' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                                                                         n.type === 'order' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                                        n.type === 'review_reminder' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                                                                            'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                            n.type === 'review_reminder' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                                                                'bg-emerald-50 text-emerald-600 border-emerald-100'
                                                                         }`}>
                                                                         {n.type === 'profile' ? <AlertCircle size={16} /> :
                                                                             n.type === 'order' ? <ShoppingBag size={16} /> :
-                                                                            n.type === 'review_reminder' ? <MessageSquare size={16} /> :
-                                                                                <Gift size={16} />}
+                                                                                n.type === 'review_reminder' ? <MessageSquare size={16} /> :
+                                                                                    <Gift size={16} />}
                                                                     </div>
                                                                     <div className="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
                                                                         <div className="flex items-start justify-between gap-2">
@@ -707,14 +784,18 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                         >
                             <div className="p-6 space-y-6 text-white" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
                                 {/* Search Bar */}
-                                <div className="relative">
-                                    <Search size={18} className={`absolute ${locale === 'arabic' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-white/50`} />
+                                <form onSubmit={handleSearchSubmit} className="relative">
+                                    <button type="submit" className={`absolute ${locale === 'arabic' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 focus:outline-none`}>
+                                        <Search size={18} className="text-white/50 cursor-pointer" />
+                                    </button>
                                     <input
                                         type="text"
+                                        value={searchVal}
+                                        onChange={(e) => setSearchVal(e.target.value)}
                                         placeholder={t("nav.searchPlaceholder", "Cari produk...")}
                                         className={`w-full bg-white/10 border border-white/10 rounded-xl ${locale === 'arabic' ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3 text-sm text-white placeholder-white/50 outline-none focus:border-blue-500/50 transition-all`}
                                     />
-                                </div>
+                                </form>
 
                                 {/* Navigation Links */}
                                 <div className="space-y-4">
@@ -1130,13 +1211,13 @@ const MobileNotificationsMenu = ({ notifications, unreadCount, markAllAsRead, ma
                                         >
                                             <div className={`flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border shrink-0 ${n.type === 'profile' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                                                 n.type === 'order' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                                                n.type === 'review_reminder' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
-                                                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                    n.type === 'review_reminder' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                                        'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                                                 }`}>
                                                 {n.type === 'profile' ? <AlertCircle size={14} /> :
                                                     n.type === 'order' ? <ShoppingBag size={14} /> :
-                                                    n.type === 'review_reminder' ? <MessageSquare size={14} /> :
-                                                        <Gift size={14} />}
+                                                        n.type === 'review_reminder' ? <MessageSquare size={14} /> :
+                                                            <Gift size={14} />}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
                                                 <div className="flex items-start justify-between gap-2">

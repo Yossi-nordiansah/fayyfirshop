@@ -9,7 +9,7 @@ export default function MainLayout({ children, alwaysSolid = true, showWhatsAppF
             <Navbar alwaysSolid={alwaysSolid} />
             <div
                 className="relative w-full bg-fixed bg-[length:550px_550px] bg-repeat pt-[0px]"
-                style={{ backgroundImage: 'url("/images/bg4.png")' }}
+                style={{ backgroundImage: 'url("/images/bg4.webp")' }}
             >
                 {children}
             </div>

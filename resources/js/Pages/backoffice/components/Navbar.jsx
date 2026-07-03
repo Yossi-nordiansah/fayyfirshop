@@ -196,7 +196,7 @@ export default function Navbar() {
                     {t('backoffice.navbar.section', 'Backoffice')}
                 </p>
                 <h2 className="text-2xl font-bold tracking-normal text-blue-950">
-                    {t('backoffice.navbar.title', 'Dashboard Admin')}
+                    {user?.name || t('backoffice.navbar.title', 'Dashboard Admin')}
                 </h2>
             </div>
 
@@ -396,14 +396,14 @@ export default function Navbar() {
                     )}
                 </div>
             </div>
-            <AuthStatusModal />
-            <LogoutConfirmModal
-                isOpen={showLogoutConfirm}
-                onClose={() => setShowLogoutConfirm(false)}
-                t={t}
-                isAdmin={true}
-            />
         </header>
+        <AuthStatusModal />
+        <LogoutConfirmModal
+            isOpen={showLogoutConfirm}
+            onClose={() => setShowLogoutConfirm(false)}
+            t={t}
+            isAdmin={true}
+        />
         </>
     );
 }

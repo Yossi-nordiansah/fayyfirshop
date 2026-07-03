@@ -83,7 +83,10 @@ const menuItems = [
 
 export default function Sidebar() {
     const { t } = useLanguage();
-    const { notifications = [] } = usePage().props;
+    const { auth, notifications = [] } = usePage().props;
+    const user = auth?.user;
+    const isAdmin = user?.role === 'admin';
+
     const [readNotifIds, setReadNotifIds] = useState([]);
 
     useEffect(() => {
@@ -103,6 +106,10 @@ export default function Sidebar() {
     const currentPath =
         typeof window !== 'undefined' ? window.location.pathname : '';
 
+    const filteredMenuItems = isAdmin
+        ? menuItems.filter(item => !['/backoffice/admin', '/backoffice/store-branches', '/backoffice/reports', '/backoffice/visitor-logs'].includes(item.href))
+        : menuItems;
+
     return (
         <aside className="sticky top-0 flex flex-col h-screen max-h-screen px-4 py-6 overflow-y-auto text-white border-r border-blue-800 w-54 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800">
             <div className="px-3 pb-8">
@@ -114,7 +121,7 @@ export default function Sidebar() {
             </div>
 
             <nav className="flex flex-col flex-1 gap-1">
-                {menuItems.map((item) => {
+                {filteredMenuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = item.checkActive
                         ? item.checkActive(currentPath)

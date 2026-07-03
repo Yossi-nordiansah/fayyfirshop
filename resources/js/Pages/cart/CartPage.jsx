@@ -104,7 +104,9 @@ export default function CartPage() {
         const checkoutItems = cartItems.filter(item => checkedKeys.includes(getItemKey(item)));
         if (checkoutItems.length === 0) return;
 
+        const sourceKey = user ? `fayyfir_checkout_source_${user.id}` : "fayyfir_checkout_source";
         localStorage.setItem(checkoutKey, JSON.stringify(checkoutItems));
+        localStorage.setItem(sourceKey, 'cart');
         router.visit('/checkout');
     };
 

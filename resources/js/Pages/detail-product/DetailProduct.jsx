@@ -264,9 +264,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(toRad(lat1)) *
-                Math.cos(toRad(lat2)) *
-                Math.sin(dLon / 2) *
-                Math.sin(dLon / 2);
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }, []);
@@ -326,7 +326,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         if (branchStocksList.length === 0) {
             return item.stock || 0;
         }
-        
+
         const selectedBranch = resolvedBranchInfo.branch;
         if (selectedBranch) {
             const match = branchStocksList.find(bs => Number(bs.store_branch_id) === Number(selectedBranch.id));
@@ -1188,7 +1188,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         };
 
         // Simpan hanya item ini ke checkout agar checkout hanya memproses produk ini saja
+        const sourceKey = auth?.user ? `fayyfir_checkout_source_${auth.user.id}` : "fayyfir_checkout_source";
         localStorage.setItem(checkoutKey, JSON.stringify([cartItem]));
+        localStorage.setItem(sourceKey, 'detail');
         window.dispatchEvent(new Event("fayyfir-cart-updated"));
 
         router.visit('/checkout');
@@ -1738,9 +1740,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                             {t("product.detail.stock_out", "Stok habis")}
                                         </span>
                                     ) : (
-                                        <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5 flex-wrap">
-                                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                                            <span>
+                                        <span className="text-emerald-600 text-sm font-semibold flex items-center gap-1.5">
+                                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 sm:block hidden" />
+                                            <span className="">
                                                 {stockStatusText}{" "}
                                                 <span className="text-xs text-slate-400 font-medium font-sans">
                                                     ({warehouseLabel})

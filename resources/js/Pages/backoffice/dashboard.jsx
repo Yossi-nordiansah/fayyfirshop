@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowRight,
@@ -94,6 +94,9 @@ function GrowthBadge({ value }) {
 
 export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProducts = [], monthlySales = [] }) {
     const { t, locale } = useLanguage();
+    const { auth } = usePage().props;
+    const user = auth?.user;
+    const isAdmin = user?.role === 'admin';
 
     const formatRupiah = (value) => {
         if (value >= 1_000_000_000) {
@@ -149,6 +152,10 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
         },
     ];
 
+    const filteredSummaryCards = isAdmin
+        ? summaryCards.filter(card => card.icon !== TrendingUp)
+        : summaryCards;
+
     const containerVariants = {
         hidden: { opacity: 0 },
         show: {
@@ -189,8 +196,8 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
                         </motion.section>
 
                         {/* Summary Cards */}
-                        <motion.section variants={itemVariants} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            {summaryCards.map((card) => {
+                        <motion.section variants={itemVariants} className={`grid gap-4 sm:grid-cols-2 ${isAdmin ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
+                            {filteredSummaryCards.map((card) => {
                                 const Icon = card.icon;
                                 return (
                                     <article
@@ -222,22 +229,24 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
                         </motion.section>
 
                         {/* Monthly Sales Chart */}
-                        <motion.section variants={itemVariants} className="p-6 bg-white border border-slate-100 shadow-sm rounded-2xl">
-                            <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                                <div>
-                                    <p className="text-xs font-bold tracking-wider uppercase text-blue-500">
-                                        {t('chart.trend_title', 'Revenue Trend')}
-                                    </p>
-                                    <h3 className="mt-1 text-lg font-bold tracking-tight text-blue-950">
-                                        {t('chart.monthly_sales', 'Monthly Revenue (Last 12 Months)')}
-                                    </h3>
+                        {!isAdmin && (
+                            <motion.section variants={itemVariants} className="p-6 bg-white border border-slate-100 shadow-sm rounded-2xl">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                                    <div>
+                                        <p className="text-xs font-bold tracking-wider uppercase text-blue-500">
+                                            {t('chart.trend_title', 'Revenue Trend')}
+                                        </p>
+                                        <h3 className="mt-1 text-lg font-bold tracking-tight text-blue-950">
+                                            {t('chart.monthly_sales', 'Monthly Revenue (Last 12 Months)')}
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/50 rounded-lg">
+                                        {t('chart.real_data', 'Live Data')}
+                                    </span>
                                 </div>
-                                <span className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/50 rounded-lg">
-                                    {t('chart.real_data', 'Live Data')}
-                                </span>
-                            </div>
-                            <SalesTrendChart data={monthlySales} locale={locale} t={t} />
-                        </motion.section>
+                                <SalesTrendChart data={monthlySales} locale={locale} t={t} />
+                            </motion.section>
+                        )}
 
                         {/* Bottom Grid: Pending Orders + Low Stock */}
                         <motion.section variants={itemVariants} className="grid gap-6 lg:grid-cols-2">

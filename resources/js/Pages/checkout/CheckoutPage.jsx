@@ -111,16 +111,25 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
     const [notes, setNotes] = useState("");
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [backUrl, setBackUrl] = useState("/cart");
 
     // Load Cart Items and Check Branch Stock levels
     useEffect(() => {
         const checkoutKey = user ? `fayyfir_checkout_${user.id}` : "fayyfir_checkout";
+        const sourceKey = user ? `fayyfir_checkout_source_${user.id}` : "fayyfir_checkout_source";
         const items = JSON.parse(localStorage.getItem(checkoutKey) || "[]");
         setCartItems(items);
 
         if (items.length === 0) {
             router.visit('/cart');
             return;
+        }
+
+        const source = localStorage.getItem(sourceKey);
+        if (source === 'detail' && items.length > 0 && items[0].slug) {
+            setBackUrl(`/product/${items[0].slug}`);
+        } else {
+            setBackUrl('/cart');
         }
 
         // Fetch stock levels for all branches
@@ -542,7 +551,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                 <div className="px-2 mx-auto w-full sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
-                        <Link href="/cart" className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200">
+                        <Link href={backUrl} className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200">
                             <ArrowLeft size={18} />
                         </Link>
                         <div>
