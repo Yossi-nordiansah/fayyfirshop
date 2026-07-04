@@ -15,10 +15,12 @@ import {
     CreditCard,
     ExternalLink,
     MapPin,
-    DollarSign
+    DollarSign,
+    Copy
 } from "lucide-react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import ReviewOrderModal from "./ReviewOrderModal";
+import Toast from "@/Components/Toast";
 
 function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPay, t }) {
     const [timeLeft, setTimeLeft] = useState("");
@@ -93,11 +95,29 @@ export default function OrderCard({
 }) {
     const { t, locale } = useLanguage();
     const [isReviewOpen, setIsReviewOpen] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
+
+    const copyText = (text, e) => {
+        if (e) e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setToastMessage(t("payment.copied", "Berhasil disalin ke clipboard!"));
+        setShowToast(true);
+    };
+
+    useEffect(() => {
+        if (showToast) {
+            const timer = setTimeout(() => {
+                setShowToast(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [showToast]);
     const statusInfo = getStatusStyle(order.status, order.payment_status, order.cancellation_status);
 
     const isOrderReviewed = order.items.some(item => {
         if (!item.product) return false;
-        return item.product.reviews && item.product.reviews.some(r => 
+        return item.product.reviews && item.product.reviews.some(r =>
             Number(r.order_id) === Number(order.id) &&
             Number(r.product_id) === Number(item.product_id) &&
             (item.product_variant_id ? Number(r.product_variant_id) === Number(item.product_variant_id) : true)
@@ -107,6 +127,63 @@ export default function OrderCard({
     const getFirstProductSlug = (order) => {
         const firstItem = order.items?.[0];
         return firstItem?.product?.slug || null;
+    };
+
+    const getOrderItemImage = (item) => {
+        if (item.variant?.image) {
+            const img = item.variant.image;
+            if (
+                img.startsWith("http://") ||
+                img.startsWith("https://") ||
+                img.startsWith("data:") ||
+                img.startsWith("/images/") ||
+                img.startsWith("images/") ||
+                img.startsWith("/storage/") ||
+                img.startsWith("storage/")
+            ) {
+                if (img.startsWith("images/")) return `/${img}`;
+                if (img.startsWith("storage/")) return `/${img}`;
+                return img;
+            }
+            return `/storage/${img}`;
+        }
+
+        if (item.product?.images && item.product.images.length > 0) {
+            const primaryImg = item.product.images.find(img => !!img.is_primary && img.is_primary !== '0' && img.is_primary !== 0) || item.product.images[0];
+            return primaryImg.image_path.startsWith("http") || primaryImg.image_path.startsWith("/")
+                ? primaryImg.image_path
+                : `/storage/${primaryImg.image_path}`;
+        }
+
+        if (item.product?.image) {
+            const img = item.product.image;
+            if (
+                img.startsWith("http://") ||
+                img.startsWith("https://") ||
+                img.startsWith("data:") ||
+                img.startsWith("/images/") ||
+                img.startsWith("images/") ||
+                img.startsWith("/storage/") ||
+                img.startsWith("storage/")
+            ) {
+                if (img.startsWith("images/")) return `/${img}`;
+                if (img.startsWith("storage/")) return `/${img}`;
+                return img;
+            }
+            return `/storage/${img}`;
+        }
+
+        return null;
+    };
+
+    const navigateToProduct = (e, item) => {
+        e.stopPropagation();
+        if (!item.product?.slug) return;
+        const variantId = item.product_variant_id || item.variant?.id;
+        const url = variantId
+            ? `/product/${item.product.slug}?variant=${variantId}`
+            : `/product/${item.product.slug}`;
+        router.visit(url);
     };
 
     const handleShopAgain = (e, order) => {
@@ -124,27 +201,31 @@ export default function OrderCard({
             onClick={() => onToggle(order.id)}
             className="bg-white border border-slate-200/80 shadow-xs rounded-2xl overflow-hidden hover:shadow-sm transition-shadow cursor-pointer p-4 space-y-3"
         >
-            {/* Card Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 bg-white">
-                <div className="flex items-center gap-1.5">
-                    <Store size={15} className="text-slate-500 shrink-0" />
-                    <span className="font-semibold text-slate-800 text-xs md:text-sm select-none">
-                        {order.store_branch?.name || "Fayyfir Shop"}
-                    </span>
-                    <ChevronRight size={14} className="text-slate-400 shrink-0" />
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100 bg-white">
+                {/* Left Side: Store Branch and Copyable Invoice Number */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-0">
+                    <div className="flex items-center gap-1.5">
+                        <Store size={15} className="text-slate-500 shrink-0" />
+                        <span className="font-semibold text-slate-800 text-xs md:text-sm select-none">
+                            {order.store_branch?.name || "Fayyfir Shop"}
+                        </span>
+                        <ChevronRight size={14} className="text-slate-400 shrink-0" />
+                    </div>
 
-                    <div className="hidden sm:flex items-center gap-2.5 ml-2 border-l border-slate-200 pl-3">
-                        <span className="font-mono text-[10px] bg-slate-50 border border-slate-200 text-slate-500 px-2 py-0.5 rounded-lg">
-                            {order.invoice_number}
-                        </span>
-                        <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                            <Calendar size={11} />
-                            <span>{formatDate(order.created_at)}</span>
-                        </span>
+                    <div className="sm:ml-2 sm:border-l sm:border-slate-200 sm:pl-3">
+                        <button
+                            onClick={(e) => copyText(order.invoice_number, e)}
+                            className="flex items-center gap-1 font-mono text-[11px] bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition text-slate-500 px-2 py-0.5 rounded-lg group cursor-pointer"
+                            title={t('payment.copy_invoice', "Salin Nomor Invoice")}
+                        >
+                            <span>{order.invoice_number}</span>
+                            <Copy size={9} className="text-slate-400 group-hover:scale-110 transition shrink-0" />
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Right Side: Status Badge and Order Date */}
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <span className={`text-xs font-bold uppercase tracking-wider ${order.payment_status === "unpaid" && order.status === "pending"
                         ? "text-blue-900"
                         : order.status === "cancelled"
@@ -155,6 +236,10 @@ export default function OrderCard({
                         }`}>
                         {statusInfo.label}
                     </span>
+                    <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                        <Calendar size={11} />
+                        <span>{formatDate(order.created_at)}</span>
+                    </span>
                 </div>
             </div>
 
@@ -163,29 +248,27 @@ export default function OrderCard({
                 {order.items.map((item, idx) => (
                     <div key={idx} className="flex gap-3 items-start">
                         {/* Image thumbnail placeholder */}
-                        <div className="w-16 h-16 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center flex-shrink-0">
-                            {item.product?.images && item.product.images.length > 0 ? (
-                                (() => {
-                                    const primaryImg = item.product.images.find(img => !!img.is_primary && img.is_primary !== '0' && img.is_primary !== 0) || item.product.images[0];
-                                    const src = primaryImg.image_path.startsWith("http") || primaryImg.image_path.startsWith("/")
-                                        ? primaryImg.image_path
-                                        : `/storage/${primaryImg.image_path}`;
-                                    return (
-                                        <img
-                                            src={src}
-                                            alt={item.product.title}
-                                            className="max-w-full max-h-full object-contain rounded-lg"
-                                        />
-                                    );
-                                })()
+                        <div
+                            onClick={(e) => navigateToProduct(e, item)}
+                            className="w-16 h-16 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                            {getOrderItemImage(item) ? (
+                                <img
+                                    src={getOrderItemImage(item)}
+                                    alt={item.product?.title || "Product"}
+                                    className="max-w-full max-h-full object-contain rounded-lg"
+                                />
                             ) : (
                                 <Package className="text-slate-400" size={20} />
                             )}
                         </div>
 
                         {/* Item Details */}
-                        <div className="flex-1 min-w-0">
-                            <h4 className="text-xs md:text-sm font-medium text-slate-800 leading-snug line-clamp-2">
+                        <div
+                            onClick={(e) => navigateToProduct(e, item)}
+                            className="flex-1 min-w-0 cursor-pointer group"
+                        >
+                            <h4 className="text-xs md:text-sm font-medium text-slate-800 leading-snug line-clamp-2 group-hover:text-blue-900 transition-colors">
                                 {getLocalizedValue(item.product?.name_translations, item.product?.title)}
                             </h4>
                             {item.variant && (
@@ -493,6 +576,13 @@ export default function OrderCard({
                 isOpen={isReviewOpen}
                 onClose={() => setIsReviewOpen(false)}
                 order={order}
+            />
+
+            {/* Toast Notification */}
+            <Toast
+                show={showToast}
+                message={toastMessage}
+                onClose={() => setShowToast(false)}
             />
         </div>
     );

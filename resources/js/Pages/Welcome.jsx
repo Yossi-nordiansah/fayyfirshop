@@ -7,10 +7,14 @@ import BestSeller from "./home/BestSeller";
 import MainLayout from "@/Layouts/MainLayout";
 import FeaturedProduct from "./home/FeaturedProduct";
 import CustomerRating from "./home/CustomerRating";
+import { useLanguage } from "@/Contexts/LanguageContext";
+
 export default function Welcome({ auth, laravelVersion, phpVersion, newProducts = [], bestSellerProducts = [], reviews = [] }) {
+    const { t } = useLanguage();
+
     return (
         <div className="min-h-screen">
-            <Head title="Home" />
+            <Head title={`Fayyfir - ${t("nav.home", "Beranda")}`} />
             <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 <HeroSlider />
                 <CategorySection />

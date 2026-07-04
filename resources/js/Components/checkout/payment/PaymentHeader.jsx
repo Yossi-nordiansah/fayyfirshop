@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function PaymentHeader({ t, isRtl }) {
     return (
-        <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
+        <div className="flex items-center gap-3 pb-4 md:pb-12 border-b border-slate-200/60">
             <button
                 onClick={() => router.visit(route("orders.index"), { data: { tab: "unpaid" } })}
                 className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200 shadow-xs shrink-0"

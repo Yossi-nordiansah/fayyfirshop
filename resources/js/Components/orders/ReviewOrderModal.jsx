@@ -17,7 +17,11 @@ export default function ReviewOrderModal({ isOpen, onClose, order }) {
                 product_id: item.product_id,
                 product_variant_id: item.product_variant_id || null,
                 title: item.product?.title || "Product",
-                image: item.product?.images?.[0]?.image_path || null,
+                image: item.variant?.image || 
+                       item.product?.images?.find(img => !!img.is_primary && img.is_primary !== '0' && img.is_primary !== 0)?.image_path ||
+                       item.product?.images?.[0]?.image_path || 
+                       item.product?.image || 
+                       null,
                 variantName: item.variant?.name || null,
                 rating: 5,
                 comment: ""

@@ -154,7 +154,7 @@ export default function EditProfile({ auth, mustVerifyEmail, status, flash, addr
 
     return (
         <div className="min-h-screen text-slate-900 font-sans selection:bg-amber-500 selection:text-white lg:pt-20">
-            <Head title={t("nav.account.profile", "Edit Profil")} />
+            <Head title={`Fayyfir - ${t("nav.account.profile", "Edit Profil")}`} />
 
             {/* Full-screen loading overlay */}
             {processing && (

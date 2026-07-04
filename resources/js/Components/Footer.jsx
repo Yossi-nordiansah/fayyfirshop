@@ -34,11 +34,11 @@ const Footer = () => {
     ];
 
     return (
-        <footer className="bg-zinc-950 text-zinc-400 pt-16 pb-8 border-t border-zinc-900 font-sans">
+        <footer className="bg-zinc-950 text-zinc-400 pt-8 lg:pt-16 pb-8 border-t border-zinc-900 font-sans">
             <div className="max-w-7xl mx-auto px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-12 mb-10 lg:mb-16">
                     {/* Brand Section */}
-                    <div className="space-y-6">
+                    <div className="space-y-2 lg:space-y-6">
                         <img
                             src="/images/logo-footer.webp"
                             alt="Fayyfir Shop"
@@ -61,7 +61,7 @@ const Footer = () => {
                     </div>
 
                     {/* Quick Links */}
-                    <div className="space-y-6">
+                    <div className="space-y-1 lg:space-y-6">
                         <h4 className="text-white font-bold tracking-wider text-sm uppercase">
                             {t("footer.quick_links")}
                         </h4>
@@ -84,7 +84,7 @@ const Footer = () => {
                     </div>
 
                     {/* Contact & Newsletter */}
-                    <div className="space-y-6">
+                    <div className="space-y-2 lg:space-y-6">
                         <h4 className="text-white font-bold tracking-wider text-sm uppercase">
                             {t("footer.contact_us")}
                         </h4>
@@ -116,7 +116,7 @@ const Footer = () => {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-zinc-600 text-center md:text-left">
+                <div className="pt-2 lg:pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-zinc-600 text-center md:text-left">
                     <p>{t("footer.rights")}</p>
                     <div className="flex items-center gap-6 opacity-40">
                         <span className="tracking-widest uppercase">

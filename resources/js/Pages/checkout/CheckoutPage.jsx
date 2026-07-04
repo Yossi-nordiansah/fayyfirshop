@@ -545,7 +545,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
 
     return (
         <MainLayout>
-            <Head title={`${t("checkout.title", "Checkout")} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${t("checkout.title", "Checkout")}`} />
 
             <div className="min-h-screen pb-20 font-sans bg-slate-50 pt-28">
                 <div className="px-2 mx-auto w-full sm:px-6 lg:px-8">

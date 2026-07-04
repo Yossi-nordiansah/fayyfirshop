@@ -37,7 +37,7 @@ export default function PaymentInstructions({ order, activeAccordion, setActiveA
     if (!isVA && !isQris && !isEWallet && !isRetail) return null;
 
     return (
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="space-y-4">
             <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <HelpCircle className="text-blue-900" size={18} />
                 <span>{t("instructions.title", "Cara Pembayaran")}</span>

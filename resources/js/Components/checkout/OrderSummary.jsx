@@ -171,7 +171,7 @@ export default function OrderSummary({
             >
                 {isPlacingOrder ? (
                     <>
-                        <Activity size={16} className="animate-spin text-amber-400" />
+                        <img src="/images/load.gif" alt="loading" className="w-4 h-4 object-contain shrink-0" />
                         <span>{t("checkout.button.processing", "Memproses Pesanan...")}</span>
                     </>
                 ) : (

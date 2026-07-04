@@ -131,7 +131,7 @@ export default function CartPage() {
 
     return (
         <MainLayout>
-            <Head title={`${t("cart.title", "Keranjang Belanja")} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${t("cart.title", "Keranjang Belanja")}`} />
 
             <div className="min-h-screen pb-16 font-sans bg-white pt-28">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">

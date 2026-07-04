@@ -115,7 +115,7 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
         const isReviewed = (order) => {
             return order.items.some(item => {
                 if (!item.product) return false;
-                return item.product.reviews && item.product.reviews.some(r => 
+                return item.product.reviews && item.product.reviews.some(r =>
                     Number(r.order_id) === Number(order.id) &&
                     Number(r.product_id) === Number(item.product_id) &&
                     (item.product_variant_id ? Number(r.product_variant_id) === Number(item.product_variant_id) : true)
@@ -173,6 +173,27 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
         });
         return res;
     }, [orders]);
+
+    const tabs = useMemo(() => [
+        { id: "all", label: t("orders.tabs.all", "Semua"), count: counts.all },
+        { id: "unpaid", label: t("orders.tabs.unpaid", "Belum Bayar"), count: counts.unpaid },
+        { id: "processing", label: t("orders.tabs.processing", "Diproses"), count: counts.processing },
+        { id: "shipped", label: t("orders.tabs.shipped", "Dikirim"), count: counts.shipped },
+        { id: "completed", label: t("orders.tabs.completed", "Selesai"), count: counts.completed },
+        { id: "cancelled", label: t("orders.tabs.cancelled", "Dibatalkan"), count: counts.cancelled },
+    ], [counts, locale]);
+
+    // Auto-scroll active tab button into view on mobile
+    useEffect(() => {
+        const activeBtn = document.getElementById(`tab-btn-${activeTab}`);
+        if (activeBtn) {
+            activeBtn.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+                inline: "center",
+            });
+        }
+    }, [activeTab]);
 
     const toggleExpand = (orderId) => {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
@@ -396,23 +417,16 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
         return `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`;
     };
 
-    const tabs = [
-        { id: "all", label: t("orders.tabs.all", "Semua"), count: counts.all },
-        { id: "unpaid", label: t("orders.tabs.unpaid", "Belum Bayar"), count: counts.unpaid },
-        { id: "processing", label: t("orders.tabs.processing", "Diproses"), count: counts.processing },
-        { id: "shipped", label: t("orders.tabs.shipped", "Dikirim"), count: counts.shipped },
-        { id: "completed", label: t("orders.tabs.completed", "Selesai"), count: counts.completed },
-        { id: "cancelled", label: t("orders.tabs.cancelled", "Dibatalkan"), count: counts.cancelled },
-    ];
+
 
     return (
         <MainLayout>
-            <Head title={`${t("orders.title", "Pesanan Saya")} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${t("orders.title", "Pesanan Saya")}`} />
 
-            <div className="min-h-screen bg-slate-100 pb-10 pt-28" dir={isRtl ? "rtl" : "ltr"}>
-                <div className="mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-slate-100 pb-6 lg:pb-10 pt-20 lg:pt-28" dir={isRtl ? "rtl" : "ltr"}>
+                <div className="mx-auto px-2 sm:px-6 lg:px-8">
                     {/* Header */}
-                    <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
+                    <div className="flex items-center gap-3 pb-0 lg:pb-6 mb-4 lg:mb-8 border-b border-slate-200/60">
                         <Link href="/products" className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200">
                             <ArrowLeft size={18} className={isRtl ? "rotate-180" : ""} />
                         </Link>
@@ -427,13 +441,14 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
                     </div>
 
                     {/* Tabs Navigation */}
-                    <div className="flex overflow-x-auto pb-2 mb-6 scrollbar-hide border-b border-slate-200/80 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="flex overflow-x-auto pb-2 mb-6 scrollbar-hide border-b border-slate-200/80 -mx-2 px-2 sm:mx-0 sm:px-0">
                         <div className="flex space-x-2 md:space-x-4 min-w-max">
                             {tabs.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <button
                                         key={tab.id}
+                                        id={`tab-btn-${tab.id}`}
                                         onClick={() => {
                                             setActiveTab(tab.id);
                                             setExpandedOrderId(null);
@@ -465,7 +480,7 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
 
                     {/* Orders List Container */}
                     <div
-                        className="space-y-4 min-h-[450px]"
+                        className="space-y-4 min-h-[400px]"
                         onTouchStart={handleTouchStart}
                         onTouchEnd={handleTouchEnd}
                     >

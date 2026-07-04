@@ -64,12 +64,16 @@ export default function ChangeMethodModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden relative z-10"
+                        className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden relative z-10"
                     >
                         {/* Modal Header */}
-                        <div className="p-4.5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                        <div className="p-2 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
                             <h3 className="font-extrabold text-sm text-blue-950 flex items-center gap-2">
-                                <RefreshCw size={15} className={`text-blue-900 ${loadingChange ? 'animate-spin' : ''}`} />
+                                {loadingChange ? (
+                                    <img src="/images/load.gif" alt="loading" className="w-4 h-4 object-contain shrink-0" />
+                                ) : (
+                                    <RefreshCw size={15} className="text-blue-900 shrink-0" />
+                                )}
                                 <span>{t("checkout.modal.title", "Pilih Metode Pembayaran Baru")}</span>
                             </h3>
                             <button
@@ -85,7 +89,7 @@ export default function ChangeMethodModal({
                         <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-white">
                             {loadingChange ? (
                                 <div className="flex flex-col items-center justify-center py-14 space-y-3">
-                                    <RefreshCw className="animate-spin text-blue-900" size={32} />
+                                    <img src="/images/load.gif" alt="loading" className="w-10 h-10 object-contain" />
                                     <span className="text-xs text-slate-500 font-bold text-center px-4 max-w-md leading-relaxed">
                                         {t("checkout.modal.loading", "Mengubah metode pembayaran & menghubungi Midtrans...")}
                                     </span>
@@ -108,15 +112,15 @@ export default function ChangeMethodModal({
                                                             disabled={isSelected || loadingChange}
                                                             onClick={() => onMethodChange(method.id)}
                                                             className={`flex items-center gap-2.5 p-2.5 border rounded-xl text-left transition-all ${isSelected
-                                                                    ? "border-blue-900 bg-blue-50/20 text-blue-950 shadow-xs ring-1 ring-blue-900 cursor-not-allowed opacity-90"
-                                                                    : "border-slate-150 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/30"
+                                                                ? "border-blue-900 bg-blue-50/20 text-blue-950 shadow-xs ring-1 ring-blue-900 cursor-not-allowed opacity-90"
+                                                                : "border-slate-150 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/30"
                                                                 }`}
                                                         >
                                                             {/* Radio dot */}
                                                             <div
                                                                 className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected
-                                                                        ? "border-blue-900 bg-blue-900"
-                                                                        : "border-slate-300 bg-white"
+                                                                    ? "border-blue-900 bg-blue-900"
+                                                                    : "border-slate-300 bg-white"
                                                                     }`}
                                                             >
                                                                 {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}

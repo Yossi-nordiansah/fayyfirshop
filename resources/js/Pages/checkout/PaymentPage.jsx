@@ -9,9 +9,9 @@ export default function PaymentPage({ order, midtransClientKey, isProduction }) 
 
     return (
         <MainLayout>
-            <Head title={`${t("payment.page_title", "Detail Pembayaran")} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${t("payment.page_title", "Detail Pembayaran")}`} />
 
-            <div className="min-h-screen bg-slate-50 pb-20 pt-28">
+            <div className="min-h-screen bg-slate-50 pb-8 pt-24">
                 <Payment
                     order={order}
                     midtransClientKey={midtransClientKey}

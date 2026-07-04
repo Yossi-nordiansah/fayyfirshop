@@ -86,7 +86,7 @@ export default function ShippingServiceOptions({
                             exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center py-10 text-center text-slate-500"
                         >
-                            <Activity size={26} className="mb-2.5 animate-spin text-blue-700" />
+                            <img src="/images/load.gif" alt="loading" className="w-10 h-10 object-contain mb-2.5" />
                             <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
                                 {t("checkout.loading_rates", "Memuat Layanan Pengiriman...")}
                             </p>

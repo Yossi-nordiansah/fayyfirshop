@@ -26,7 +26,7 @@ export default function PaymentCodeCard({
     };
 
     return (
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="space-y-6">
             {/* Card Header */}
             <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div>
@@ -37,9 +37,14 @@ export default function PaymentCodeCard({
                         {getPaymentMethodName(order.payment_method)}
                     </p>
                 </div>
-                <div className="bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-xl font-mono text-[10px] lg:text-xs font-extrabold text-blue-950">
-                    {order.invoice_number}
-                </div>
+                <button
+                    onClick={() => copyText(order.invoice_number)}
+                    className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition px-2.5 py-1.5 rounded-xl font-mono text-[10px] lg:text-xs font-extrabold text-blue-950 group"
+                    title={t("payment.copy_invoice", "Salin Nomor Invoice")}
+                >
+                    <span>{order.invoice_number}</span>
+                    <Copy size={12} className="text-blue-900 group-hover:scale-110 transition" />
+                </button>
             </div>
 
             {/* 1. Virtual Account (non-mandiri) */}
@@ -178,7 +183,7 @@ export default function PaymentCodeCard({
                                 >
                                     {isPayingOvo ? (
                                         <>
-                                            <RefreshCw size={13} className="animate-spin" />
+                                            <img src="/images/load.gif" alt="loading" className="w-3.5 h-3.5 object-contain shrink-0" />
                                             <span>{t("payment.ovo.sending", "Mengirim Notifikasi...")}</span>
                                         </>
                                     ) : (
@@ -345,7 +350,7 @@ export default function PaymentCodeCard({
                     >
                         {isPayingCard ? (
                             <>
-                                <RefreshCw size={14} className="animate-spin" />
+                                <img src="/images/load.gif" alt="loading" className="w-3.5 h-3.5 object-contain shrink-0" />
                                 <span>{t("payment.cc.processing", "Memproses Pembayaran...")}</span>
                             </>
                         ) : (

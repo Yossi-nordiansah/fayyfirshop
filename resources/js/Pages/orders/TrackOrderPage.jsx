@@ -50,10 +50,34 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
     // Mock/Fallback timeline steps if Biteship has no tracking logs yet
     const getFallbackTimeline = () => {
         const timeline = [
-            { title: "Pesanan Dibuat", desc: "Pesanan Anda berhasil dicatat oleh sistem", date: order.created_at, active: activeStep >= 0 },
-            { title: "Diproses Penjual", desc: "Produk sedang disiapkan di gudang " + (order.store_branch?.name ?? ''), date: order.status !== 'pending' ? order.updated_at : null, active: activeStep >= 1 },
-            { title: "Paket Dikirim", desc: order.tracking_number ? `Barang diserahkan ke ${order.shipping_courier}. No Resi: ${order.tracking_number}` : "Menunggu penyerahan barang ke kurir", date: activeStep >= 2 ? order.updated_at : null, active: activeStep >= 2 },
-            { title: "Selesai", desc: "Paket telah sampai di tujuan dan diterima pembeli", date: activeStep >= 3 ? order.updated_at : null, active: activeStep >= 3 },
+            {
+                title: t("orders.track.step1.title", "Pesanan Dibuat"),
+                desc: t("orders.track.step1.desc", "Pesanan Anda berhasil dicatat oleh sistem"),
+                date: order.created_at,
+                active: activeStep >= 0
+            },
+            {
+                title: t("orders.track.step2.title", "Diproses Penjual"),
+                desc: `${t("orders.track.step2.desc", "Produk sedang disiapkan di gudang")} ${order.store_branch?.name ?? ''}`,
+                date: order.status !== 'pending' ? order.updated_at : null,
+                active: activeStep >= 1
+            },
+            {
+                title: t("orders.track.step3.title", "Paket Dikirim"),
+                desc: order.tracking_number
+                    ? t("orders.track.step3.desc_shipped", "Barang diserahkan ke {courier}. No Resi: {tracking_number}")
+                        .replace("{courier}", order.shipping_courier)
+                        .replace("{tracking_number}", order.tracking_number)
+                    : t("orders.track.step3.desc_waiting", "Menunggu penyerahan barang ke kurir"),
+                date: activeStep >= 2 ? order.updated_at : null,
+                active: activeStep >= 2
+            },
+            {
+                title: t("orders.track.step4.title", "Selesai"),
+                desc: t("orders.track.step4.desc", "Paket telah sampai di tujuan dan diterima pembeli"),
+                date: activeStep >= 3 ? order.updated_at : null,
+                active: activeStep >= 3
+            },
         ];
 
         return timeline;
@@ -63,15 +87,18 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
     return (
         <MainLayout>
-            <Head title={`${t("orders.track.page_title", "Lacak Pesanan")} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${t("orders.track.page_title", "Lacak Pesanan")}`} />
 
-            <div className="min-h-screen bg-slate-50 pb-20 pt-28 ">
+            <div className="min-h-screen bg-slate-50 pb-20 pt-20 lg:pt-28 ">
                 <div className="max-w-4xl mx-auto px-4">
                     {/* Header */}
-                    <div className="flex items-center gap-3 pb-6 mb-8 border-b border-slate-200/60">
-                        <Link href="/products" className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200">
-                            <ArrowLeft size={18} />
-                        </Link>
+                    <div className="flex items-center gap-3 pb-2 lg:pb-6 mb-2 lg:mb-8 border-b border-slate-200/60">
+                        <button
+                            onClick={() => window.history.back()}
+                            className="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-full text-slate-500 hover:text-blue-700 border-slate-200 cursor-pointer"
+                        >
+                            <ArrowLeft size={18} className={locale === "arabic" ? "rotate-180" : ""} />
+                        </button>
                         <div>
                             <h1 className="text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
                                 {t("orders.track.title", "Lacak Pengiriman")}
@@ -88,7 +115,9 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
                             {/* Shipment Logs Timeline */}
                             <section className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl">
-                                <h3 className="text-sm font-extrabold text-slate-900 mb-6 uppercase tracking-wider text-slate-400">Riwayat Perjalanan Paket</h3>
+                                <h3 className="text-sm font-extrabold text-slate-900 mb-6 uppercase tracking-wider text-slate-400">
+                                    {t("orders.track.timeline_title", "Riwayat Perjalanan Paket")}
+                                </h3>
 
                                 {trackingLogs.length > 0 ? (
                                     <div className="relative border-l border-slate-200/80 ml-3 pl-6 space-y-6">
@@ -122,7 +151,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                                         ))}
                                         {order.status === 'processing' && (
                                             <div className="p-3 bg-blue-50/50 border border-blue-100 text-[11px] text-blue-800 rounded-xl">
-                                                Penjual sedang menyiapkan barang di gudang. Riwayat pelacakan kurir terperinci akan muncul di sini segera setelah paket dijemput.
+                                                {t("orders.track.processing_desc", "Penjual sedang menyiapkan barang di gudang. Riwayat pelacakan kurir terperinci akan muncul di sini segera setelah paket dijemput.")}
                                             </div>
                                         )}
                                     </div>
@@ -134,16 +163,18 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                         <aside className="space-y-6">
                             {/* Brief Info */}
                             <div className="p-5 border shadow-sm rounded-3xl border-slate-100 bg-white">
-                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Detail Invoice</h3>
+                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">
+                                    {t("orders.track.invoice_detail", "Detail Invoice")}
+                                </h3>
 
                                 <div className="mt-4 space-y-3.5 text-xs">
                                     <div>
-                                        <span className="text-slate-400 block">No. Invoice</span>
+                                        <span className="text-slate-400 block">{t("orders.track.invoice_number", "No. Invoice")}</span>
                                         <strong className="text-blue-950 font-mono text-sm block mt-0.5">{order.invoice_number}</strong>
                                     </div>
 
                                     <div>
-                                        <span className="text-slate-400 block">Gudang Pengirim</span>
+                                        <span className="text-slate-400 block">{t("orders.track.sender_warehouse", "Gudang Pengirim")}</span>
                                         <div className="flex items-center gap-1 mt-1 text-slate-800 font-bold">
                                             <Store size={13} className="text-blue-700" />
                                             <span>{order.store_branch?.name ?? '-'}</span>
@@ -151,7 +182,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                                     </div>
 
                                     <div>
-                                        <span className="text-slate-400 block">Kurir & Layanan</span>
+                                        <span className="text-slate-400 block">{t("orders.track.courier_service", "Kurir & Layanan")}</span>
                                         <div className="flex items-center gap-1 mt-1 text-slate-800 font-bold uppercase">
                                             <Truck size={13} className="text-blue-700" />
                                             <span>{order.shipping_courier} ({order.shipping_service})</span>
@@ -160,13 +191,13 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
                                     {order.tracking_number && (
                                         <div>
-                                            <span className="text-slate-400 block">No. Resi (AWB)</span>
+                                            <span className="text-slate-400 block">{t("orders.track.tracking_number", "No. Resi (AWB)")}</span>
                                             <strong className="text-slate-800 font-mono text-sm block mt-0.5">{order.tracking_number}</strong>
                                         </div>
                                     )}
 
                                     <div className="pt-3 border-t border-slate-100">
-                                        <span className="text-slate-400 block">Total Transaksi</span>
+                                        <span className="text-slate-400 block">{t("orders.track.total_amount", "Total Transaksi")}</span>
                                         <strong className="text-blue-900 text-sm font-black block mt-0.5">{formatPrice(order.total_amount)}</strong>
                                     </div>
                                 </div>
@@ -174,13 +205,15 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
                             {/* Destination Info */}
                             <div className="p-5 border shadow-sm rounded-3xl border-slate-100 bg-white">
-                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">Penerima</h3>
+                                <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">
+                                    {t("orders.track.receiver", "Penerima")}
+                                </h3>
 
                                 <div className="mt-4 space-y-3.5 text-xs text-slate-600">
                                     <div className="flex gap-2">
                                         <User size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <span className="text-slate-400">Penerima</span>
+                                            <span className="text-slate-400">{t("orders.track.receiver", "Penerima")}</span>
                                             <strong className="text-slate-900 block mt-0.5">{order.user?.receiver_name || order.user?.name}</strong>
                                             <span className="text-slate-500 font-semibold block">{order.user?.phone}</span>
                                         </div>
@@ -189,7 +222,7 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                                     <div className="flex gap-2 pt-3 border-t border-slate-100">
                                         <MapPin size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <span className="text-slate-400">Alamat Pengiriman</span>
+                                            <span className="text-slate-400">{t("orders.track.shipping_address", "Alamat Pengiriman")}</span>
                                             {order.user?.address ? (
                                                 <p className="text-slate-600 mt-1 leading-normal">
                                                     {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}

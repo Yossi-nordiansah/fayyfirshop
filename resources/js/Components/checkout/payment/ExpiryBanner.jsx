@@ -12,7 +12,7 @@ export default function ExpiryBanner({ order, timeLeft, t }) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
             <div className="flex items-center gap-2.5 sm:gap-3">
                 <Clock className="text-amber-600 animate-pulse shrink-0 w-5 h-5 sm:w-6 sm:h-6" />

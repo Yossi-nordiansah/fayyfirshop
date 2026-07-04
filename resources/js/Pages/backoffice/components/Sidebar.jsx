@@ -114,7 +114,7 @@ export default function Sidebar() {
         <aside className="sticky top-0 flex flex-col h-screen max-h-screen px-4 py-6 overflow-y-auto text-white border-r border-blue-800 w-54 bg-gradient-to-b from-blue-950 via-blue-900 to-blue-800">
             <div className="px-3 pb-8">
                 <img
-                    src="/images/logo-footer.png"
+                    src="/images/logo-footer.webp"
                     alt="Logo"
                     className="w-auto h-10 mt-4"
                 />

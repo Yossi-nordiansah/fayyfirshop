@@ -115,7 +115,7 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+            <Head title={`Fayyfir - ${t("auth.login_title", "Masuk")}`} />
 
             <AuthStatusModal
                 isOpen={showFailureModal}

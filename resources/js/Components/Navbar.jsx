@@ -353,7 +353,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                     }`}
             >
                 <div className="px-6 mx-auto max-w-7xl lg:px-12">
-                    <div className="flex items-center justify-between h-20">
+                    <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Logo */}
                         <div className="flex items-center flex-shrink-0">
                             <Link href="/" className="flex items-center gap-2 group">
@@ -780,7 +780,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="lg:hidden absolute top-20 left-0 right-0 bg-blue-950/95 backdrop-blur-2xl border-t border-white/10 shadow-2xl z-[90] overflow-y-auto max-h-[calc(100vh-5rem)]"
+                            className="lg:hidden absolute top-16 left-0 right-0 bg-blue-950/95 backdrop-blur-2xl border-t border-white/10 shadow-2xl z-[90] overflow-y-auto max-h-[calc(100vh-5rem)]"
                         >
                             <div className="p-6 space-y-6 text-white" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
                                 {/* Search Bar */}

@@ -9,6 +9,7 @@ import PaymentInstructions from "@/Components/checkout/payment/PaymentInstructio
 import OrderSummaryCard from "@/Components/checkout/payment/OrderSummaryCard";
 import ActionPanel from "@/Components/checkout/payment/ActionPanel";
 import ChangeMethodModal from "@/Components/checkout/payment/ChangeMethodModal";
+import Toast from "@/Components/Toast";
 
 export default function Payment({ order, midtransClientKey, isProduction, t, locale }) {
     const isRtl = locale === "arabic";
@@ -20,6 +21,8 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
     const [isPayingCard, setIsPayingCard] = useState(false);
     const [loadingChange, setLoadingChange] = useState(false);
     const [activeAccordion, setActiveAccordion] = useState(null);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
 
     /* ── Credit Card Form State ── */
     const [cardForm, setCardForm] = useState({
@@ -53,8 +56,19 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
 
     const copyText = (text) => {
         navigator.clipboard.writeText(text);
-        alert(t("payment.copied", "Berhasil disalin ke clipboard!"));
+        setToastMessage(t("payment.copied", "Berhasil disalin ke clipboard!"));
+        setShowToast(true);
     };
+
+    // Auto-dismiss toast
+    useEffect(() => {
+        if (showToast) {
+            const timer = setTimeout(() => {
+                setShowToast(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [showToast]);
 
     /* ── Change Categories (for modal) ── */
     const changeCategories = [
@@ -62,33 +76,33 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
             id: "e_wallet",
             title: t("checkout.payment.e_wallet", "E-Wallet"),
             methods: [
-                { id: "gopay", name: "GoPay", desc: "Bayar menggunakan aplikasi Gojek", logo: "/images/payment/gopay.svg" },
-                { id: "shopeepay", name: "ShopeePay", desc: "Bayar menggunakan aplikasi Shopee", logo: "/images/payment/shopeepay.svg" },
-                { id: "ovo", name: "OVO", desc: "Bayar menggunakan aplikasi OVO", logo: "/images/payment/ovo.svg" },
-                { id: "dana", name: "DANA", desc: "Bayar menggunakan aplikasi DANA", logo: "/images/payment/dana.svg" },
+                { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
+                { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
+                { id: "ovo", name: "OVO", desc: t("checkout.payment.desc.ovo", "Bayar menggunakan aplikasi OVO"), logo: "/images/payment/ovo.svg" },
+                { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
             ],
         },
         {
             id: "qris",
             title: t("checkout.payment.qris", "QRIS"),
             methods: [
-                { id: "qris", name: "QRIS", desc: "Scan QR menggunakan aplikasi e-wallet", logo: "/images/payment/qris.svg" },
+                { id: "qris", name: "QRIS", desc: t("checkout.payment.desc.qris", "Scan QR menggunakan aplikasi e-wallet"), logo: "/images/payment/qris.svg" },
             ],
         },
         {
             id: "virtual_account",
             title: t("checkout.payment.virtual_account", "Virtual Account (Verifikasi Otomatis)"),
             methods: [
-                { id: "bca_va", name: "BCA Virtual Account", desc: "Transfer Virtual Account BCA", logo: "/images/payment/bca.svg" },
-                { id: "bri_va", name: "BRI Virtual Account", desc: "Transfer Virtual Account BRI", logo: "/images/payment/bri.svg" },
-                { id: "bni_va", name: "BNI Virtual Account", desc: "Transfer Virtual Account BNI", logo: "/images/payment/bni.svg" },
-                { id: "mandiri_va", name: "Mandiri Bill Payment", desc: "Transfer Mandiri Bill Payment", logo: "/images/payment/mandiri.svg" },
-                { id: "permata_va", name: "Permata Virtual Account", desc: "Transfer Virtual Account Permata", logo: "/images/payment/permata.svg" },
-                { id: "cimb_va", name: "CIMB Niaga Virtual Account", desc: "Transfer Virtual Account CIMB Niaga", logo: "/images/payment/cimb.svg" },
-                { id: "seabank_va", name: "SeaBank Virtual Account", desc: "Transfer Virtual Account SeaBank", logo: "/images/payment/seabank.svg" },
-                { id: "danamon_va", name: "Danamon Virtual Account", desc: "Transfer Virtual Account Danamon", logo: "/images/payment/danamon.svg" },
-                { id: "bsi_va", name: "BSI Virtual Account", desc: "Transfer Virtual Account BSI", logo: "/images/payment/bsi.svg" },
-                { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: "Transfer Virtual Account Bank Saqu", logo: "/images/payment/saqu.svg" },
+                { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca_va", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" },
+                { id: "bri_va", name: "BRI Virtual Account", desc: t("checkout.payment.desc.bri_va", "Transfer Virtual Account BRI"), logo: "/images/payment/bri.svg" },
+                { id: "bni_va", name: "BNI Virtual Account", desc: t("checkout.payment.desc.bni_va", "Transfer Virtual Account BNI"), logo: "/images/payment/bni.svg" },
+                { id: "mandiri_va", name: "Mandiri Bill Payment", desc: t("checkout.payment.desc.mandiri_va", "Transfer Mandiri Bill Payment"), logo: "/images/payment/mandiri.svg" },
+                { id: "permata_va", name: "Permata Virtual Account", desc: t("checkout.payment.desc.permata_va", "Transfer Virtual Account Permata"), logo: "/images/payment/permata.svg" },
+                { id: "cimb_va", name: "CIMB Niaga Virtual Account", desc: t("checkout.payment.desc.cimb_va", "Transfer Virtual Account CIMB Niaga"), logo: "/images/payment/cimb.svg" },
+                { id: "seabank_va", name: "SeaBank Virtual Account", desc: t("checkout.payment.desc.seabank_va", "Transfer Virtual Account SeaBank"), logo: "/images/payment/seabank.svg" },
+                { id: "danamon_va", name: "Danamon Virtual Account", desc: t("checkout.payment.desc.danamon_va", "Transfer Virtual Account Danamon"), logo: "/images/payment/danamon.svg" },
+                { id: "bsi_va", name: "BSI Virtual Account", desc: t("checkout.payment.desc.bsi_va", "Transfer Virtual Account BSI"), logo: "/images/payment/bsi.svg" },
+                { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu_va", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" },
             ],
         },
         {
@@ -102,8 +116,8 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
             id: "retail",
             title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
             methods: [
-                { id: "alfamart", name: "Alfamart", desc: "Bayar di gerai Alfamart terdekat", logo: "/images/payment/alfamart.svg" },
-                { id: "indomaret", name: "Indomaret", desc: "Bayar di gerai Indomaret terdekat", logo: "/images/payment/indomaret.svg" },
+                { id: "alfamart", name: "Alfamart", desc: t("checkout.payment.desc.alfamart", "Bayar di gerai Alfamart terdekat"), logo: "/images/payment/alfamart.svg" },
+                { id: "indomaret", name: "Indomaret", desc: t("checkout.payment.desc.indomaret", "Bayar di gerai Indomaret terdekat"), logo: "/images/payment/indomaret.svg" },
             ],
         },
     ];
@@ -147,9 +161,9 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
             const target = expiry
                 ? new Date(expiry.includes("T") ? expiry : expiry.replace(" ", "T") + "+07:00")
                 : new Date(new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000);
-            
+
             let difference = target.getTime() - new Date().getTime();
-            
+
             if (isNaN(difference)) {
                 const fallbackTarget = new Date(new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000);
                 difference = fallbackTarget.getTime() - new Date().getTime();
@@ -284,51 +298,68 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
 
     /* ── Render ── */
     return (
-        <div className="max-w-4xl lg:max-w-5xl mx-auto px-4 py-8" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="max-w-4xl lg:max-w-5xl mx-auto px-1 md:px-4 py-2" dir={isRtl ? "rtl" : "ltr"}>
 
             <PaymentHeader t={t} isRtl={isRtl} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-transparent border border-slate-100 rounded-3xl overflow-hidden flex flex-col lg:grid lg:grid-cols-3 lg:divide-x lg:divide-slate-100 divide-y lg:divide-y-0 divide-slate-100">
 
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-6">
-                    <ExpiryBanner order={order} timeLeft={timeLeft} t={t} />
+                {/* Left Column Wrapper */}
+                <div className="contents lg:flex lg:flex-col lg:col-span-2 lg:divide-y lg:divide-slate-100">
 
-                    <PaymentCodeCard
-                        order={order}
-                        details={details}
-                        qrCodeUrl={qrCodeUrl}
-                        cardForm={cardForm}
-                        setCardForm={setCardForm}
-                        isPayingCard={isPayingCard}
-                        isPayingOvo={isPayingOvo}
-                        ovoPhone={ovoPhone}
-                        setOvoPhone={setOvoPhone}
-                        handleCardPay={handleCardPay}
-                        handleOvoPay={handleOvoPay}
-                        copyText={copyText}
-                        t={t}
-                    />
+                    {/* Batas Waktu */}
+                    <div className="order-2 lg:order-none p-5 sm:p-6 bg-gradient-to-br from-amber-50/40 to-orange-50/40">
+                        <ExpiryBanner order={order} timeLeft={timeLeft} t={t} />
+                    </div>
 
-                    <PaymentInstructions
-                        order={order}
-                        activeAccordion={activeAccordion}
-                        setActiveAccordion={setActiveAccordion}
-                        t={t}
-                    />
+                    {/* Kode Pembayaran */}
+                    <div className="order-3 lg:order-none p-5 sm:p-6">
+                        <PaymentCodeCard
+                            order={order}
+                            details={details}
+                            qrCodeUrl={qrCodeUrl}
+                            cardForm={cardForm}
+                            setCardForm={setCardForm}
+                            isPayingCard={isPayingCard}
+                            isPayingOvo={isPayingOvo}
+                            ovoPhone={ovoPhone}
+                            setOvoPhone={setOvoPhone}
+                            handleCardPay={handleCardPay}
+                            handleOvoPay={handleOvoPay}
+                            copyText={copyText}
+                            t={t}
+                        />
+                    </div>
+
+                    {/* Cara Pembayaran */}
+                    <div className="order-4 lg:order-none p-5 sm:p-6">
+                        <PaymentInstructions
+                            order={order}
+                            activeAccordion={activeAccordion}
+                            setActiveAccordion={setActiveAccordion}
+                            t={t}
+                        />
+                    </div>
                 </div>
 
-                {/* Right Column */}
-                <div className="space-y-6">
-                    <OrderSummaryCard order={order} formatPrice={formatPrice} t={t} />
+                {/* Right Column Wrapper */}
+                <div className="contents lg:flex lg:flex-col lg:col-span-1 lg:divide-y lg:divide-slate-100 bg-slate-50/[0.15]">
 
-                    <ActionPanel
-                        order={order}
-                        formatPrice={formatPrice}
-                        onChangeMethod={() => setIsChangingMethod(true)}
-                        timeLeft={timeLeft}
-                        t={t}
-                    />
+                    {/* Total Pembayaran (Rincian) */}
+                    <div className="order-1 lg:order-none p-5 sm:p-6">
+                        <OrderSummaryCard order={order} formatPrice={formatPrice} t={t} />
+                    </div>
+
+                    {/* Action Panel (Ubah Metode & Help Admin) */}
+                    <div className="order-5 lg:order-none p-5 sm:p-6 bg-slate-50/30 lg:bg-transparent">
+                        <ActionPanel
+                            order={order}
+                            formatPrice={formatPrice}
+                            onChangeMethod={() => setIsChangingMethod(true)}
+                            timeLeft={timeLeft}
+                            t={t}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -340,6 +371,13 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
                 onMethodChange={handleMethodChange}
                 currentMethod={order.payment_method}
                 t={t}
+            />
+
+            {/* Toast Notification */}
+            <Toast
+                show={showToast}
+                message={toastMessage}
+                onClose={() => setShowToast(false)}
             />
         </div>
     );

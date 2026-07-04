@@ -4,7 +4,7 @@ export default function OrderSummaryCard({ order, formatPrice, t }) {
     const isPaid = order.payment_status === "paid";
 
     return (
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xl space-y-5">
+        <div className="space-y-5">
             {/* Card Header */}
             <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="font-extrabold text-sm text-slate-900">

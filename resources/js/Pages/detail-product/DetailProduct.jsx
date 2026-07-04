@@ -720,10 +720,53 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     // Sinkronisasi state ketika produk / locale / image pool berubah
     useEffect(() => {
         setSwipeDirection("none");
+        
+        // Parse variant ID from URL query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlVariantId = urlParams.get("variant") || urlParams.get("variant_id");
+
         if (isDbProduct) {
             setSelectedColor(null);
             setSelectedSize(null);
-            if (groupedVariants && groupedVariants.length > 0) {
+            
+            let matchedParent = null;
+            let matchedSub = null;
+
+            if (urlVariantId && groupedVariants && groupedVariants.length > 0) {
+                for (const parent of groupedVariants) {
+                    if (String(parent.id) === String(urlVariantId)) {
+                        matchedParent = parent;
+                        break;
+                    }
+                    const sub = parent.sub_variants?.find(s => String(s.id) === String(urlVariantId));
+                    if (sub) {
+                        matchedParent = parent;
+                        matchedSub = sub;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedParent) {
+                setSelectedParentKey(matchedParent.key);
+                if (matchedSub) {
+                    setSelectedVariantId(matchedSub.id);
+                    if (matchedSub.image) {
+                        setActiveImage(matchedSub.image);
+                    } else if (matchedParent.image) {
+                        setActiveImage(matchedParent.image);
+                    } else {
+                        setActiveImage(allImages[0] || null);
+                    }
+                } else {
+                    setSelectedVariantId(matchedParent.id);
+                    if (matchedParent.image) {
+                        setActiveImage(matchedParent.image);
+                    } else {
+                        setActiveImage(allImages[0] || null);
+                    }
+                }
+            } else if (groupedVariants && groupedVariants.length > 0) {
                 const firstParent = groupedVariants[0];
                 setSelectedParentKey(firstParent.key);
                 if (firstParent.has_sub_variants && firstParent.sub_variants.length > 0) {
@@ -752,15 +795,31 @@ export default function DetailProduct({ product: initialProduct, slug }) {
         } else {
             setSelectedParentKey(null);
             setSelectedVariantId(null);
-            const nextColors = Array.from(
-                new Set(product.variants?.map((v) => v.color).filter(Boolean)),
-            );
-            const nextSizes = Array.from(
-                new Set(product.variants?.map((v) => v.size).filter(Boolean)),
-            );
-            setSelectedColor(nextColors[0] || null);
-            setSelectedSize(nextSizes[0] || null);
-            setActiveImage(allImages[0] || null);
+            
+            let targetVariant = null;
+            if (urlVariantId && product.variants) {
+                targetVariant = product.variants.find(v => String(v.id) === String(urlVariantId));
+            }
+
+            if (targetVariant) {
+                setSelectedColor(targetVariant.color || null);
+                setSelectedSize(targetVariant.size || null);
+                if (targetVariant.image) {
+                    setActiveImage(targetVariant.image);
+                } else {
+                    setActiveImage(allImages[0] || null);
+                }
+            } else {
+                const nextColors = Array.from(
+                    new Set(product.variants?.map((v) => v.color).filter(Boolean)),
+                );
+                const nextSizes = Array.from(
+                    new Set(product.variants?.map((v) => v.size).filter(Boolean)),
+                );
+                setSelectedColor(nextColors[0] || null);
+                setSelectedSize(nextSizes[0] || null);
+                setActiveImage(allImages[0] || null);
+            }
         }
         setQuantity(1);
     }, [product, isDbProduct, allImages, groupedVariants]);
@@ -1255,7 +1314,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     return (
         <MainLayout>
-            <Head title={`${displayName} - Fayyfir Shop`} />
+            <Head title={`Fayyfir - ${displayName}`} />
 
             <div className="min-h-screen pt-24 pb-20 font-sans bg-white">
                 {/* Breadcrumbs */}

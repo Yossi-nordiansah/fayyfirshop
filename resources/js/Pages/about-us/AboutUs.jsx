@@ -146,7 +146,7 @@ export default function AboutUs() {
 
     return (
         <MainLayout alwaysSolid={true} showWhatsAppFloatingButton={true}>
-            <Head title={text.title} />
+            <Head title={`Fayyfir - ${text.title}`} />
 
             <div className="pb-16 pt-20 text-slate-800 selection:bg-blue-900 selection:text-white" dir={isRtl ? 'rtl' : 'ltr'}>
                 {/* ── HERO BANNER SECTION ─────────────────────────────────── */}
