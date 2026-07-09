@@ -19,7 +19,8 @@ function useSlidesToShow() {
         if (w <= 480) return 2;
         if (w <= 768) return 2;
         if (w <= 1024) return 2;
-        return 4;
+        if (w <= 1439) return 4;
+        return 5;
     };
 
     const [slidesToShow, setSlidesToShow] = useState(getSlides);

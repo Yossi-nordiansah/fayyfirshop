@@ -1163,14 +1163,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const handleBuyNow = () => {
         if (!canBuy) return;
 
-        if (!auth?.user) {
-            setIsPendingBuyNow(true);
-            setIsLoginModalOpen(true);
-            return;
-        }
-
-        const checkoutKey = auth?.user ? `fayyfir_checkout_${auth.user.id}` : "fayyfir_checkout";
-
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryNameResolved = typeof product.category === 'object' && product.category !== null
             ? (product.category.name_translations?.[locale] || product.category.name)
@@ -1246,8 +1238,18 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             weight: parseWeightJs(activeVariant, product),
         };
 
-        // Simpan hanya item ini ke checkout agar checkout hanya memproses produk ini saja
-        const sourceKey = auth?.user ? `fayyfir_checkout_source_${auth.user.id}` : "fayyfir_checkout_source";
+        if (!auth?.user) {
+            setIsPendingBuyNow(true);
+            localStorage.setItem("fayyfir_checkout", JSON.stringify([cartItem]));
+            localStorage.setItem("fayyfir_checkout_source", 'detail');
+            localStorage.setItem("fayyfir_checkout_pending", "true");
+            window.dispatchEvent(new Event("fayyfir-cart-updated"));
+            setIsLoginModalOpen(true);
+            return;
+        }
+
+        const checkoutKey = `fayyfir_checkout_${auth.user.id}`;
+        const sourceKey = `fayyfir_checkout_source_${auth.user.id}`;
         localStorage.setItem(checkoutKey, JSON.stringify([cartItem]));
         localStorage.setItem(sourceKey, 'detail');
         window.dispatchEvent(new Event("fayyfir-cart-updated"));

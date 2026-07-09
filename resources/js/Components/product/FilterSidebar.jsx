@@ -61,7 +61,7 @@ const FilterSidebar = ({
     const { t, locale } = useLanguage();
 
     return (
-        <aside className="sticky hidden lg:block overflow-hidden border shadow-xl w-72 shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
+        <aside className="sticky hidden lg:block overflow-hidden border shadow-xl w-72 2xl:w-fit shrink-0 top-24 bg-white/80 backdrop-blur-md border-zinc-100 rounded-3xl p-7 shadow-zinc-200/50">
             {/* Heading */}
             <div className="flex items-center justify-between pb-5 mb-6 border-b border-zinc-100">
                 <span className="font-bold text-xs uppercase tracking-[0.2em] text-zinc-900 flex items-center gap-2">

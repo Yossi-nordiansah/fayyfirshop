@@ -23,7 +23,8 @@ class RegisteredUserController extends Controller
     public function create(): Response
     {
         $user = auth()->user();
-        if ($user && $user->phone && $user->address && $user->city && $user->receiver_name) {
+        $defaultAddress = $user ? ($user->addresses()->where('is_default', true)->first() ?? $user->addresses()->first()) : null;
+        if ($user && $user->phone && $defaultAddress && $defaultAddress->address && $defaultAddress->city && $defaultAddress->receiver_name && $defaultAddress->postal_code) {
             return redirect('/');
         }
         return Inertia::render('register/Register');

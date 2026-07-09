@@ -9,7 +9,6 @@ import { useLanguage } from "@/Contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
-    SlidersHorizontal,
     ChevronRight,
     X,
     ShoppingBag,
@@ -583,7 +582,7 @@ export default function Products({ category = null, subCategory = null, products
                 </div>
 
                 {/* 2. Main Page Layout (Sidebar + Grid) */}
-                <div className="max-w-7xl mx-auto px-1 md:px-6 py-12 lg:py-16">
+                <div className="max-w-7xl 2xl:max-w-none mx-auto px-1 md:px-6 py-12 lg:py-16">
                     <div className="flex flex-col lg:flex-row gap-8 items-start">
                         {/* 2a. Sidebar — Desktop sticky + Mobile drawer */}
                         <SidebarFilter

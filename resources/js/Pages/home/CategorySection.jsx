@@ -36,7 +36,7 @@ const CategorySection = () => {
 
     return (
         <section className="bg-transparent py-10 px-6 relative overflow-hidden">
-            <div className="max-w-7xl mx-auto relative z-10">
+            <div className="max-w-8xl mx-auto relative z-10">
                 {/* Categories Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {categories.map((cat, index) => (

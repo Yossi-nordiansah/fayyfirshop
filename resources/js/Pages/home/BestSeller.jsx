@@ -31,7 +31,7 @@ const BestSeller = ({ products = [] }) => {
 
     return (
         <section className="bg-transparent mb-12 pt-3 pb-8 px-2 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl 2xl:max-w-none mx-auto">
                 {/* Section Header */}
                 <div className="flex items-center justify-center md:justify-start gap-2 mb-3 px-8">
                     <span className="text-blue-600 text-xs font-bold tracking-[0.4em] uppercase">
@@ -79,7 +79,7 @@ const BestSeller = ({ products = [] }) => {
                             ))}
                         </SlickSlider>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:px-16 px-8 max-w-7xl mx-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:px-16 px-8 max-w-7xl 2xl:max-w-none mx-auto">
                             {products.map((product) => (
                                 <ProductCard
                                     id={product.id}

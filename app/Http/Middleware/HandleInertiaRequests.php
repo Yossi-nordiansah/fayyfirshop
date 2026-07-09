@@ -152,7 +152,8 @@ class HandleInertiaRequests extends Middleware
                 // Customer notifications
                 
                 // 1. Profile incomplete notification
-                $isProfileIncomplete = !$user->phone || !$user->address || !$user->city || !$user->postal_code || !$user->receiver_name;
+                $defaultAddress = $user->addresses()->where('is_default', true)->first() ?? $user->addresses()->first();
+                $isProfileIncomplete = !$user->phone || !$defaultAddress || !$defaultAddress->address || !$defaultAddress->city || !$defaultAddress->postal_code || !$defaultAddress->receiver_name;
                 
                 if ($isProfileIncomplete) {
                     $notifications[] = [

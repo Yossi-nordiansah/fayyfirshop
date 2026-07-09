@@ -3,6 +3,27 @@ import { usePage } from "@inertiajs/react";
 
 export default function WhatsAppFloatingButton() {
     const { activeStoreBranches = [], visitorCountryCode = 'ID', visitorLatitude, visitorLongitude } = usePage().props;
+    const [isVisible, setIsVisible] = React.useState(true);
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            const hero = document.getElementById("hero-section");
+            if (hero) {
+                const heroHeight = hero.getBoundingClientRect().height;
+                if (window.scrollY > heroHeight * 0.8) {
+                    setIsVisible(true);
+                } else {
+                    setIsVisible(false);
+                }
+            } else {
+                setIsVisible(true);
+            }
+        };
+
+        handleScroll();
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     // Resolve the best matching branch for the visitor
     const resolvedBranch = React.useMemo(() => {
@@ -33,9 +54,9 @@ export default function WhatsAppFloatingButton() {
                 const a =
                     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                     Math.cos(toRad(lat1)) *
-                        Math.cos(toRad(lat2)) *
-                        Math.sin(dLon / 2) *
-                        Math.sin(dLon / 2);
+                    Math.cos(toRad(lat2)) *
+                    Math.sin(dLon / 2) *
+                    Math.sin(dLon / 2);
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                 return R * c;
             };
@@ -77,7 +98,9 @@ export default function WhatsAppFloatingButton() {
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 z-[99] flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-lg hover:bg-[#20ba5a] transition-all focus:outline-none focus:ring-4 focus:ring-green-300"
+            className={`fixed bottom-6 right-6 z-[99] flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-lg hover:bg-[#20ba5a] transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-green-300 ${
+                isVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+            }`}
             title="Chat via WhatsApp"
         >
             <img src="/images/icons/whatsapp.svg" className="w-8 h-8" alt="WhatsApp" />

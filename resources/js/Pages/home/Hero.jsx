@@ -70,7 +70,7 @@ const HeroSlider = () => {
             subtitle: t('hero.nutrition.subtitle', 'Madu Sidr & Saffron Premium'),
             description: t('hero.nutrition.description', 'Nutrisi alami berkualitas tinggi untuk gaya hidup sehat Anda, langsung dari sumber terbaik di tanah Arab.'),
             image: "/images/hero/bg-honey.webp",
-            productImage: "/images/hero/honey.png",
+            productImage: "/images/hero/honey.webp",
             icon: <Leaf size={24} />,
             theme: "from-blue-900/60",
             slug: "kesehatan-dan-nutrisi"
@@ -97,7 +97,7 @@ const HeroSlider = () => {
     }, [nextSlide]);
 
     return (
-        <section className="relative w-full h-screen lg:max-h-screen overflow-hidden bg-zinc-950 select-none">
+        <section id="hero-section" className="relative w-full h-screen lg:max-h-screen overflow-hidden bg-zinc-950 select-none">
             <motion.div
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
@@ -121,8 +121,8 @@ const HeroSlider = () => {
                             isActive={index === currentSlide}
                         >
                             {/* Content Area */}
-                            <div className="h-full lg:max-w-7xl w-full mx-auto px-6 lg:px-12 flex flex-col justify-center items-start text-white">
-                                <div className={`max-w-3xl lg:mx-0 mx-auto md:space-y-4 space-y-2 transition-all duration-700 transform ${index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-10 opacity-0'
+                            <div className="h-full w-full mx-auto px-6 lg:px-14 xl:px-20 2xl:px-32 flex flex-col justify-center items-start text-white">
+                                <div className={`max-w-3xl 2xl:max-w-5xl lg:mx-0 mx-auto md:space-y-4 space-y-2 transition-all duration-700 transform ${index === currentSlide ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-10 opacity-0'
                                     }`}>
 
                                     {/* Category Badge */}
@@ -137,20 +137,20 @@ const HeroSlider = () => {
                                         <img
                                             src={slide.productImage}
                                             alt={slide.title}
-                                            className={`${slide.productImage?.includes('Perfume') ? 'w-40 md:w-64' : 'w-48 md:w-96'} mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating`}
+                                            className={`${slide.productImage?.includes('Perfume') ? 'w-40 md:w-64' : slide.productImage?.includes('honey') ? 'w-36 md:w-64' : 'w-48 md:w-96'} mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating`}
                                         />
                                     </div>
 
                                     {/* Main Heading */}
-                                    <h1 className="text-2xl md:text-3xl lg:text-5xl font-['Amiri'] lg:text-left text-center font-bold leading-tight">
+                                    <h1 className="text-xl md:text-3xl lg:text-3xl xl:text-5xl 2xl:text-7xl font-['Amiri'] lg:text-left text-center font-bold leading-tight">
                                         {slide.title}
-                                        <span className="block text-2xl md:text-3xl lg:text-4xl text-white mt-4 font-normal italic opacity-90 font-serif">
+                                        <span className="block text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl text-white mt-4 font-normal italic opacity-90 font-serif">
                                             {slide.subtitle}
                                         </span>
                                     </h1>
 
                                     {/* Description */}
-                                    <p className="lg:text-left text-center text-zinc-300 text-sm md:text-xl max-w-xl leading-relaxed font-light">
+                                    <p className="lg:text-left text-center text-zinc-300 text-sm md:text-xl xl:text-xl max-w-xl 2xl:text-2xl 2xl:max-w-3xl leading-relaxed font-light">
                                         {slide.description}
                                     </p>
 

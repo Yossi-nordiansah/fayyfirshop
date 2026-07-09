@@ -29,26 +29,28 @@ const HeroBackground = ({ image, theme, isActive, children, productImage, classN
 
             {/* 3. Floating Product Image (Optional) */}
             {productImage && (
-                <motion.div
-                    initial={{ x: 50, opacity: 0 }}
-                    animate={{
-                        x: isActive ? 0 : 50,
-                        opacity: isActive ? 1 : 0,
-                        y: [0, -15, 0]
-                    }}
-                    transition={{
-                        x: { duration: 1.2, delay: 0.5 },
-                        opacity: { duration: 1.2, delay: 0.5 },
-                        y: { repeat: Infinity, duration: 6, ease: "easeInOut" }
-                    }}
-                    className="absolute right-[10%] bottom-32 -translate-y-1/2 z-20 hidden md:block w-1/3"
-                >
-                    <img
-                        src={productImage}
-                        alt="Product"
-                        className={`lg:block hidden ${productImage?.includes('Perfume') ? "w-10 lg:w-80" : "lg:w-96"} drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]`}
-                    />
-                </motion.div>
+                <div
+                    className={`${productImage?.includes('Bukhur') ? "right-10 xl:right-20 2xl:right-16" : productImage?.includes('honey') ? "right-10" : productImage?.includes('Perfume') ? "right-10" : "right-[10%] 2xl:right-[5%]"} absolute top-1/2 -translate-y-1/2 z-20 hidden lg:block w-1/3`}>
+                    <motion.div
+                        initial={{ x: 50, opacity: 0 }}
+                        animate={{
+                            x: isActive ? 0 : 50,
+                            opacity: isActive ? 1 : 0,
+                            y: [0, -15, 0]
+                        }}
+                        transition={{
+                            x: { duration: 1.2, delay: 0.5 },
+                            opacity: { duration: 1.2, delay: 0.5 },
+                            y: { repeat: Infinity, duration: 6, ease: "easeInOut" }
+                        }}
+                    >
+                        <img
+                            src={productImage}
+                            alt="Product"
+                            className={`lg:block hidden ${productImage?.includes('Perfume') ? "w-10 lg:w-80 2xl:w-[420px]" : productImage?.includes('honey') ? "w-10 lg:w-56 2xl:w-72" : "lg:w-96 2xl:w-[480px]"} drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]`}
+                        />
+                    </motion.div>
+                </div>
             )}
 
             {/* 4. Content Slot */}

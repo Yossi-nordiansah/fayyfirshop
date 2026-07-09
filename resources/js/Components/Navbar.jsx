@@ -251,6 +251,26 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
         }
     }, [toast]);
 
+    // Handle pending checkout redirect upon login
+    useEffect(() => {
+        if (user) {
+            const pendingCheckout = localStorage.getItem("fayyfir_checkout_pending");
+            if (pendingCheckout === "true") {
+                localStorage.removeItem("fayyfir_checkout_pending");
+                const guestItems = localStorage.getItem("fayyfir_checkout");
+                const guestSource = localStorage.getItem("fayyfir_checkout_source");
+                if (guestItems) {
+                    const userCheckoutKey = `fayyfir_checkout_${user.id}`;
+                    const userSourceKey = `fayyfir_checkout_source_${user.id}`;
+                    localStorage.setItem(userCheckoutKey, guestItems);
+                    localStorage.setItem(userSourceKey, guestSource || 'detail');
+                    window.dispatchEvent(new Event("fayyfir-cart-updated"));
+                }
+                router.visit('/checkout');
+            }
+        }
+    }, [user]);
+
     const { locale, setLocale, t } = useLanguage();
     const isAr = locale === "arabic";
     const fwBold = isAr ? "font-medium" : "font-bold";
@@ -352,7 +372,7 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
                     : "bg-transparent"
                     }`}
             >
-                <div className="px-6 mx-auto max-w-7xl lg:px-12">
+                <div className="px-6 mx-auto max-w-8xl lg:px-12 xl:px-20">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Logo */}
                         <div className="flex items-center flex-shrink-0">

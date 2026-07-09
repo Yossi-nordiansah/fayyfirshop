@@ -24,8 +24,11 @@ class CheckoutController extends Controller
     {
         $user = auth()->user();
 
+        // Retrieve user's default address or first address
+        $defaultAddress = $user ? ($user->addresses()->where('is_default', true)->first() ?? $user->addresses()->first()) : null;
+
         // Cek apakah user telah melengkapi data profil (untuk pengiriman)
-        if ($user && (!$user->phone || !$user->address || !$user->city || !$user->postal_code || !$user->receiver_name)) {
+        if ($user && (!$user->phone || !$defaultAddress || !$defaultAddress->address || !$defaultAddress->city || !$defaultAddress->postal_code || !$defaultAddress->receiver_name)) {
             return redirect()->guest(route('register'))->with('error', 'checkout.complete_profile_warning');
         }
 

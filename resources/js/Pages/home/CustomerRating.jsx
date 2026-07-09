@@ -68,39 +68,39 @@ const CustomerRating = ({ reviews: dbReviews = [] }) => {
 
     const activeReviews = dbReviews.length > 0
         ? dbReviews.map((r) => {
-              const nameTranslations = r.product?.name_translations;
-              let productTitle = r.product?.title || "";
-              if (nameTranslations) {
-                  let parsed = nameTranslations;
-                  if (typeof nameTranslations === 'string') {
-                      try {
-                          parsed = JSON.parse(nameTranslations);
-                      } catch (e) {
-                          parsed = {};
-                      }
-                  }
-                  productTitle = parsed[locale] || r.product?.title || "";
-              }
+            const nameTranslations = r.product?.name_translations;
+            let productTitle = r.product?.title || "";
+            if (nameTranslations) {
+                let parsed = nameTranslations;
+                if (typeof nameTranslations === 'string') {
+                    try {
+                        parsed = JSON.parse(nameTranslations);
+                    } catch (e) {
+                        parsed = {};
+                    }
+                }
+                productTitle = parsed[locale] || r.product?.title || "";
+            }
 
-              return {
-                  id: r.id,
-                  name: r.user?.name || "Customer",
-                  role: t("rating.verified", "Verified Buyer"),
-                  avatar: r.user?.avatar
-                      ? r.user.avatar.startsWith("http") || r.user.avatar.startsWith("/")
-                          ? r.user.avatar
-                          : `/storage/${r.user.avatar}`
-                      : "/images/default-profile.png",
-                  rating: r.rating,
-                  comment: r.comment,
-                  productName: productTitle
-              };
-          })
+            return {
+                id: r.id,
+                name: r.user?.name || "Customer",
+                role: t("rating.verified", "Verified Buyer"),
+                avatar: r.user?.avatar
+                    ? r.user.avatar.startsWith("http") || r.user.avatar.startsWith("/")
+                        ? r.user.avatar
+                        : `/storage/${r.user.avatar}`
+                    : "/images/default-profile.png",
+                rating: r.rating,
+                comment: r.comment,
+                productName: productTitle
+            };
+        })
         : staticReviews;
 
     return (
         <section className="bg-transparent pb-14 pt-4 px-2 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl 2xl:max-w-none mx-auto">
                 {/* Section Header */}
                 <div className="text-center max-w-3xl mx-auto mb-5 space-y-2">
                     <span className="text-blue-600 text-xs font-bold uppercase block tracking-[0.4em]">
