@@ -158,7 +158,7 @@ const HeroSlider = () => {
                                     <div className="pt-6 md:pt-10">
                                         <Link
                                             href={`/products/${slide.slug}`}
-                                            className="lg:mx-0 mx-auto flex block px-5 py-4 rounded-lg group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
+                                            className="lg:mx-0 mx-auto flex px-5 py-4 group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
                                         >
                                             <span className="relative z-10 tracking-[0.2em] uppercase text-sm">
                                                 {t('hero.explore', 'Jelajahi Koleksi')}
