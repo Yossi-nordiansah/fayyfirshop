@@ -8,25 +8,43 @@ import {
     Droplets,
     Flame
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useLanguage } from '@/Contexts/LanguageContext';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Link } from '@inertiajs/react';
+import HeroBackground from '@/Components/HeroBackground';
 
 /**
  * HeroSlider Component
- * Premium Middle Eastern aesthetic design for Fayyfir Shop.
- * Updated with Lucide React icons and Arabic-inspired typography.
+ * Dynamic Multi-Language Hero Slider powered by Backoffice data.
  */
-
-import HeroBackground from '@/Components/HeroBackground';
-
-const HeroSlider = () => {
-    const { t } = useLanguage();
+const HeroSlider = ({ heroSlides = [] }) => {
+    const { t, locale } = useLanguage();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
 
-    const SLIDES = [
+    const renderIcon = (iconName) => {
+        switch (iconName) {
+            case 'Droplets': return <Droplets size={24} />;
+            case 'Flame': return <Flame size={24} />;
+            case 'Leaf': return <Leaf size={24} />;
+            case 'Coffee': return <Coffee size={24} />;
+            default: return <Sparkles size={24} />;
+        }
+    };
+
+    const getTranslatedText = (transObj, fallbackVal, currentLocale) => {
+        if (!transObj) return fallbackVal || '';
+        if (currentLocale === 'arabic' || currentLocale === 'ar') {
+            return transObj.ar || transObj.en || transObj.id || fallbackVal || '';
+        }
+        if (currentLocale === 'english' || currentLocale === 'en') {
+            return transObj.en || transObj.id || fallbackVal || '';
+        }
+        return transObj.id || fallbackVal || '';
+    };
+
+    const defaultSlides = [
         {
             id: 1,
             category: t('hero.perfume.category', 'Parfum Mewah'),
@@ -77,6 +95,31 @@ const HeroSlider = () => {
         }
     ];
 
+    const SLIDES = useMemo(() => {
+        if (heroSlides && heroSlides.length > 0) {
+            return heroSlides.map((slide) => {
+                const categoryText = getTranslatedText(slide.category_translations, slide.category, locale);
+                const titleText = getTranslatedText(slide.title_translations, slide.title, locale);
+                const subtitleText = getTranslatedText(slide.subtitle_translations, slide.subtitle, locale);
+                const descriptionText = getTranslatedText(slide.description_translations, slide.description, locale);
+
+                return {
+                    id: slide.id,
+                    category: categoryText,
+                    title: titleText,
+                    subtitle: subtitleText,
+                    description: descriptionText,
+                    image: slide.background_image || slide.image || "/images/hero/bg-perfume.webp",
+                    productImage: slide.product_image || slide.productImage || "/images/hero/Perfume-web-(1).webp",
+                    icon: typeof slide.icon === 'string' ? renderIcon(slide.icon) : (slide.icon || <Sparkles size={24} />),
+                    theme: slide.theme || "from-blue-900/60",
+                    slug: slide.slug || "parfum"
+                };
+            });
+        }
+        return defaultSlides;
+    }, [heroSlides, locale]);
+
     const nextSlide = useCallback(() => {
         if (isAnimating) return;
         setIsAnimating(true);
@@ -126,48 +169,74 @@ const HeroSlider = () => {
                                     }`}>
 
                                     {/* Category Badge */}
-                                    <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full w-fit backdrop-blur-md">
-                                        <span className="text-white">{slide.icon}</span>
-                                        <span className="text-white text-xs font-bold tracking-[0.3em] uppercase">
-                                            {slide.category}
-                                        </span>
-                                    </div>
+                                    {slide.category && (
+                                        <div className="flex items-center gap-2 lg:mx-0 mx-auto px-4 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full w-fit backdrop-blur-md">
+                                            <span className="text-white">{slide.icon}</span>
+                                            <span className="text-white text-xs font-bold tracking-[0.3em] uppercase">
+                                                {slide.category}
+                                            </span>
+                                        </div>
+                                    )}
 
-                                    <div className="lg:hidden block py-4">
+                                    <div className="lg:hidden block py-3">
                                         <img
                                             src={slide.productImage}
                                             alt={slide.title}
-                                            className={`${slide.productImage?.includes('Perfume') ? 'w-40 md:w-64' : slide.productImage?.includes('honey') ? 'w-36 md:w-64' : 'w-48 md:w-96'} mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating`}
+                                            className="w-auto h-auto max-w-[180px] sm:max-w-[220px] md:max-w-[260px] max-h-[180px] sm:max-h-[220px] md:max-h-[260px] object-contain mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] animate-floating"
                                         />
                                     </div>
 
                                     {/* Main Heading */}
                                     <h1 className="text-xl md:text-3xl lg:text-3xl xl:text-5xl 2xl:text-7xl font-['Amiri'] lg:text-left text-center font-bold leading-tight">
                                         {slide.title}
-                                        <span className="block text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl text-white mt-4 font-normal italic opacity-90 font-serif">
-                                            {slide.subtitle}
-                                        </span>
+                                        {slide.subtitle && (
+                                            <span className="block text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl text-white mt-4 font-normal italic opacity-90 font-serif">
+                                                {slide.subtitle}
+                                            </span>
+                                        )}
                                     </h1>
 
                                     {/* Description */}
-                                    <p className="lg:text-left text-center text-zinc-300 text-sm md:text-xl xl:text-xl max-w-xl 2xl:text-2xl 2xl:max-w-3xl leading-relaxed font-light">
-                                        {slide.description}
-                                    </p>
+                                    {slide.description && (
+                                        <p className="lg:text-left text-center text-zinc-300 text-sm md:text-xl xl:text-xl max-w-xl 2xl:text-2xl 2xl:max-w-3xl leading-relaxed font-light">
+                                            {slide.description}
+                                        </p>
+                                    )}
 
                                     {/* CTA Button */}
                                     <div className="pt-6 md:pt-10">
-                                        <Link
-                                            href={`/products/${slide.slug}`}
-                                            className="lg:mx-0 mx-auto flex px-5 py-4 group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
-                                        >
-                                            <span className="relative z-10 tracking-[0.2em] uppercase text-sm">
-                                                {t('hero.explore', 'Jelajahi Koleksi')}
-                                            </span>
-                                            <span className="relative z-10 transition-transform group-hover:translate-x-1">
-                                                <ShoppingBag size={20} />
-                                            </span>
-                                            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40 group-hover:animate-shine" />
-                                        </Link>
+                                        {(() => {
+                                            const targetUrl = slide.slug ? (slide.slug.startsWith('http://') || slide.slug.startsWith('https://') || slide.slug.startsWith('/') ? slide.slug : `/products/${slide.slug}`) : '/products';
+                                            const isFullExternal = targetUrl.startsWith('http://') || targetUrl.startsWith('https://');
+
+                                            return isFullExternal ? (
+                                                <a
+                                                    href={targetUrl}
+                                                    className="lg:mx-0 mx-auto flex px-5 py-4 group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
+                                                >
+                                                    <span className="relative z-10 tracking-[0.2em] uppercase text-sm">
+                                                        {t('hero.explore', 'Jelajahi Koleksi')}
+                                                    </span>
+                                                    <span className="relative z-10 transition-transform group-hover:translate-x-1">
+                                                        <ShoppingBag size={20} />
+                                                    </span>
+                                                    <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40 group-hover:animate-shine" />
+                                                </a>
+                                            ) : (
+                                                <Link
+                                                    href={targetUrl}
+                                                    className="lg:mx-0 mx-auto flex px-5 py-4 group relative items-center gap-4 lg:px-10 lg:py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-sm transition-all duration-500 shadow-2xl shadow-blue-900/40 overflow-hidden w-fit"
+                                                >
+                                                    <span className="relative z-10 tracking-[0.2em] uppercase text-sm">
+                                                        {t('hero.explore', 'Jelajahi Koleksi')}
+                                                    </span>
+                                                    <span className="relative z-10 transition-transform group-hover:translate-x-1">
+                                                        <ShoppingBag size={20} />
+                                                    </span>
+                                                    <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/20 opacity-40 group-hover:animate-shine" />
+                                                </Link>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>

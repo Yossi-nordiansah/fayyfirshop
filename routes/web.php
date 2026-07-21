@@ -12,6 +12,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,38 @@ Route::get('/', function () {
         ->take(10)
         ->get();
 
+    $heroSlides = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('hero_slides')) {
+        if (\App\Models\HeroSlide::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $heroSlides = \App\Models\HeroSlide::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
+    $homeCategoryCards = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('home_category_cards')) {
+        if (\App\Models\HomeCategoryCard::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $homeCategoryCards = \App\Models\HomeCategoryCard::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
+    $featuredProducts = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('featured_products')) {
+        if (\App\Models\FeaturedProductItem::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $featuredProducts = \App\Models\FeaturedProductItem::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
+    $uspItems = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('usp_items')) {
+        if (\App\Models\UspItem::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $uspItems = \App\Models\UspItem::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -40,6 +73,10 @@ Route::get('/', function () {
         'newProducts' => $newProducts,
         'bestSellerProducts' => $bestSellerProducts,
         'reviews' => $reviews,
+        'heroSlides' => $heroSlides,
+        'homeCategoryCards' => $homeCategoryCards,
+        'featuredProducts' => $featuredProducts,
+        'uspItems' => $uspItems,
     ]);
 });
 
@@ -225,6 +262,27 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::put('/promotion/referral/{id}', [PromotionController::class, 'updateReferral'])->name('backoffice.promotion.referral.update');
     Route::delete('/promotion/referral/{id}', [PromotionController::class, 'destroyReferral'])->name('backoffice.promotion.referral.destroy');
     Route::get('/promotion/referral/{id}/statistics', [PromotionController::class, 'referralStatistics'])->name('backoffice.promotion.referral.statistics');
+
+    Route::get('/content', [ContentController::class, 'index'])->name('backoffice.content');
+    Route::post('/content/hero', [ContentController::class, 'storeHero'])->name('backoffice.content.hero.store');
+    Route::post('/content/hero/{id}', [ContentController::class, 'updateHero'])->name('backoffice.content.hero.update');
+    Route::delete('/content/hero/{id}', [ContentController::class, 'destroyHero'])->name('backoffice.content.hero.destroy');
+    Route::patch('/content/hero/{id}/toggle-active', [ContentController::class, 'toggleHeroActive'])->name('backoffice.content.hero.toggle-active');
+
+    Route::post('/content/home-category', [ContentController::class, 'storeHomeCategory'])->name('backoffice.content.home-category.store');
+    Route::post('/content/home-category/{id}', [ContentController::class, 'updateHomeCategory'])->name('backoffice.content.home-category.update');
+    Route::delete('/content/home-category/{id}', [ContentController::class, 'destroyHomeCategory'])->name('backoffice.content.home-category.destroy');
+    Route::patch('/content/home-category/{id}/toggle-active', [ContentController::class, 'toggleHomeCategoryActive'])->name('backoffice.content.home-category.toggle-active');
+
+    Route::post('/content/featured-product', [ContentController::class, 'storeFeaturedProduct'])->name('backoffice.content.featured-product.store');
+    Route::post('/content/featured-product/{id}', [ContentController::class, 'updateFeaturedProduct'])->name('backoffice.content.featured-product.update');
+    Route::delete('/content/featured-product/{id}', [ContentController::class, 'destroyFeaturedProduct'])->name('backoffice.content.featured-product.destroy');
+    Route::patch('/content/featured-product/{id}/toggle-active', [ContentController::class, 'toggleFeaturedProductActive'])->name('backoffice.content.featured-product.toggle-active');
+
+    Route::post('/content/usp', [ContentController::class, 'storeUsp'])->name('backoffice.content.usp.store');
+    Route::post('/content/usp/{id}', [ContentController::class, 'updateUsp'])->name('backoffice.content.usp.update');
+    Route::delete('/content/usp/{id}', [ContentController::class, 'destroyUsp'])->name('backoffice.content.usp.destroy');
+    Route::patch('/content/usp/{id}/toggle-active', [ContentController::class, 'toggleUspActive'])->name('backoffice.content.usp.toggle-active');
 
     Route::get('/store-branches', [StoreBranchController::class, 'index'])
         ->name('backoffice.store-branches.index');

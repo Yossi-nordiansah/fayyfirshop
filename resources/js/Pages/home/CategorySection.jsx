@@ -1,38 +1,63 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { Link } from "@inertiajs/react";
 
 /**
  * CategorySection Component
- * Featuring 4 main categories: Perfume, Aromatic Oil, Bakhoor and Oud, Healthy and Nutrition.
- * Designed with a clean white background and premium image-based cards.
+ * Dynamic Category cards featuring background images & 3-language titles.
  */
-const CategorySection = () => {
-    const { t } = useLanguage();
+const CategorySection = ({ categoryCards = [] }) => {
+    const { t, locale } = useLanguage();
 
-    const categories = [
+    const getTranslatedText = (transObj, fallbackVal, currentLocale) => {
+        if (!transObj) return fallbackVal || '';
+        if (currentLocale === 'arabic' || currentLocale === 'ar') {
+            return transObj.ar || transObj.en || transObj.id || fallbackVal || '';
+        }
+        if (currentLocale === 'english' || currentLocale === 'en') {
+            return transObj.en || transObj.id || fallbackVal || '';
+        }
+        return transObj.id || fallbackVal || '';
+    };
+
+    const defaultCategories = [
         {
-            title: t("nav.perfume"),
+            title: t("nav.perfume", "Parfum"),
             image: "/images/category-background/perfume.webp",
             slug: "parfum",
         },
         {
-            title: t("nav.aromaticOil"),
+            title: t("nav.aromaticOil", "Minyak Aromatik"),
             image: "/images/category-background/oudoil.webp",
             slug: "minyak-aromatik",
         },
         {
-            title: t("nav.bakhoor"),
+            title: t("nav.bakhoor", "Bakhoor & Oud"),
             image: "/images/category-background/oud.webp",
             slug: "bakhoor-dan-oud",
         },
         {
-            title: t("nav.nutrition"),
+            title: t("nav.nutrition", "Kesehatan & Nutrisi"),
             image: "/images/category-background/healty.webp",
             slug: "kesehatan-dan-nutrisi",
         },
     ];
+
+    const categories = useMemo(() => {
+        if (categoryCards && categoryCards.length > 0) {
+            return categoryCards.map((card) => {
+                const titleText = getTranslatedText(card.title_translations, card.title, locale);
+                return {
+                    id: card.id,
+                    title: titleText,
+                    image: card.image || "/images/category-background/perfume.webp",
+                    slug: card.slug || "parfum",
+                };
+            });
+        }
+        return defaultCategories;
+    }, [categoryCards, locale, t]);
 
     return (
         <section className="bg-transparent py-10 px-6 relative overflow-hidden">
@@ -41,7 +66,7 @@ const CategorySection = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {categories.map((cat, index) => (
                         <motion.div
-                            key={index}
+                            key={cat.id || index}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
@@ -71,12 +96,26 @@ const CategorySection = () => {
 
                                     <div className="h-[1px] w-12 bg-blue-500 mx-auto mb-6 transition-all duration-500 group-hover:w-24" />
 
-                                    <Link
-                                        href={`/products/${cat.slug}`}
-                                        className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm inline-block"
-                                    >
-                                        {t("cat.viewCollection")}
-                                    </Link>
+                                    {(() => {
+                                        const targetUrl = cat.slug ? (cat.slug.startsWith('http://') || cat.slug.startsWith('https://') || cat.slug.startsWith('/') ? cat.slug : `/products/${cat.slug}`) : '/products';
+                                        const isFullExternal = targetUrl.startsWith('http://') || targetUrl.startsWith('https://');
+
+                                        return isFullExternal ? (
+                                            <a
+                                                href={targetUrl}
+                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm inline-block"
+                                            >
+                                                {t("cat.viewCollection", "Lihat Koleksi")}
+                                            </a>
+                                        ) : (
+                                            <Link
+                                                href={targetUrl}
+                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm inline-block"
+                                            >
+                                                {t("cat.viewCollection", "Lihat Koleksi")}
+                                            </Link>
+                                        );
+                                    })()}
                                 </motion.div>
                             </div>
                         </motion.div>

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 /**
  * HeroBackground Component
  * Provides a flexible, premium background for hero sections.
- * Features zoom effect, gradient overlays, and glassmorphism support.
+ * Features zoom effect, gradient overlays, and perfectly proportioned floating product image.
  */
 const HeroBackground = ({ image, theme, isActive, children, productImage, className = "" }) => {
     return (
@@ -27,27 +27,27 @@ const HeroBackground = ({ image, theme, isActive, children, productImage, classN
                 <div className="absolute inset-0 bg-black/40 backdrop-brightness-75" />
             </motion.div>
 
-            {/* 3. Floating Product Image (Optional) */}
+            {/* 3. Floating Product Image with Controlled Max Bounding Box */}
             {productImage && (
-                <div
-                    className={`${productImage?.includes('Bukhur') ? "right-10 xl:right-20 2xl:right-16" : productImage?.includes('honey') ? "right-10" : productImage?.includes('Perfume') ? "right-10" : "right-[10%] 2xl:right-[5%]"} absolute top-1/2 -translate-y-1/2 z-20 hidden lg:block w-1/3`}>
+                <div className="absolute top-1/2 right-6 xl:right-16 2xl:right-24 -translate-y-1/2 z-20 hidden lg:flex items-center justify-center pointer-events-none w-[320px] xl:w-[380px] 2xl:w-[420px] h-[320px] xl:h-[380px] 2xl:h-[420px]">
                     <motion.div
                         initial={{ x: 50, opacity: 0 }}
                         animate={{
                             x: isActive ? 0 : 50,
                             opacity: isActive ? 1 : 0,
-                            y: [0, -15, 0]
+                            y: [0, -12, 0]
                         }}
                         transition={{
                             x: { duration: 1.2, delay: 0.5 },
                             opacity: { duration: 1.2, delay: 0.5 },
                             y: { repeat: Infinity, duration: 6, ease: "easeInOut" }
                         }}
+                        className="w-full h-full flex items-center justify-center p-2"
                     >
                         <img
                             src={productImage}
                             alt="Product"
-                            className={`lg:block hidden ${productImage?.includes('Perfume') ? "w-10 lg:w-80 2xl:w-[420px]" : productImage?.includes('honey') ? "w-10 lg:w-56 2xl:w-72" : "lg:w-96 2xl:w-[480px]"} drop-shadow-[0_35px_35px_rgba(0,0,0,0.6)]`}
+                            className="max-w-full max-h-full object-contain drop-shadow-[0_25px_30px_rgba(0,0,0,0.6)]"
                         />
                     </motion.div>
                 </div>

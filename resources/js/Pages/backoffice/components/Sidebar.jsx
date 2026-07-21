@@ -12,6 +12,7 @@ import {
     LayoutDashboard,
     MessageSquareText,
     Sparkles,
+    Layers,
 } from 'lucide-react';
 
 const menuItems = [
@@ -72,6 +73,12 @@ const menuItems = [
         fallback: 'Promotion',
         href: '/backoffice/promotion',
         icon: Sparkles,
+    },
+    {
+        labelKey: 'backoffice.sidebar.content',
+        fallback: 'Content',
+        href: '/backoffice/content',
+        icon: Layers,
     },
     {
         labelKey: 'backoffice.sidebar.visitor_logs',
