@@ -771,6 +771,7 @@ export default function Products({ category = null, subCategory = null, products
                             <AnimatePresence mode="popLayout">
                                 {sortedProducts.length > 0 ? (
                                     <motion.div
+                                        key="products-grid"
                                         variants={containerVariants}
                                         initial="hidden"
                                         animate="show"
@@ -802,6 +803,7 @@ export default function Products({ category = null, subCategory = null, products
                                 ) : (
                                     /* No Products Empty State */
                                     <motion.div
+                                        key="no-products-empty"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0 }}

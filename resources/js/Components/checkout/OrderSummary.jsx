@@ -5,6 +5,7 @@ import { AlertCircle, Activity, Check, ShoppingBag } from "lucide-react";
 import SummaryItem from "./SummaryItem";
 import ShippingDetails from "./ShippingDetails";
 import VoucherSection from "./VoucherSection";
+import LoadingSpinner from "@/Components/LoadingSpinner";
 
 export default function OrderSummary({
     cartItems,
@@ -171,7 +172,7 @@ export default function OrderSummary({
             >
                 {isPlacingOrder ? (
                     <>
-                        <img src="/images/load.gif" alt="loading" className="w-4 h-4 object-contain shrink-0" />
+                        <LoadingSpinner className="w-5 h-5 shrink-0" />
                         <span>{t("checkout.button.processing", "Memproses Pesanan...")}</span>
                     </>
                 ) : (

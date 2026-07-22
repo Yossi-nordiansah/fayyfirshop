@@ -22,6 +22,7 @@ import { useLanguage } from "@/Contexts/LanguageContext";
 import axios from "axios";
 import MainLayout from "@/Layouts/MainLayout";
 import BaseRenderInput from "@/Components/register/RenderInput";
+import LoadingSpinner from "@/Components/LoadingSpinner";
 
 export default function Register({ auth, flash }) {
     const { t, locale } = useLanguage();
@@ -316,8 +317,11 @@ export default function Register({ auth, flash }) {
             <Head title={`Fayyfir - ${user ? t("register.complete_title", "Lengkapi Pendaftaran") : t("register.title", "Daftar Akun")}`} />
 
             {processing && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70 backdrop-blur-sm">
-                    <img src="/images/load.gif" alt="Loading" className="object-contain w-24 h-24" />
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 backdrop-blur-[3px]">
+                    <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/90 p-8 shadow-2xl border border-white/20">
+                        <LoadingSpinner className="w-16 h-16 animate-pulse" />
+                        <span className="text-sm font-semibold tracking-wide text-slate-700 animate-pulse">{t('processing', 'Processing...')}</span>
+                    </div>
                 </div>
             )}
 

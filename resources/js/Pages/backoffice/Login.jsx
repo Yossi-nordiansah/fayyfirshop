@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AuthStatusModal from '@/Components/AuthStatusModal';
 import { useLanguage } from '@/Contexts/LanguageContext';
 import { motion } from 'framer-motion';
+import LoadingSpinner from '@/Components/LoadingSpinner';
 
 export default function Login({ status }) {
     const { t } = useLanguage();
@@ -172,9 +173,16 @@ export default function Login({ status }) {
                             whileTap={{ scale: 0.99 }}
                             type="submit"
                             disabled={processing}
-                            className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 text-sm font-bold uppercase tracking-widest text-slate-950 transition hover:from-amber-400 hover:to-amber-500 shadow-lg shadow-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 text-sm font-bold uppercase tracking-widest text-slate-950 transition hover:from-amber-400 hover:to-amber-500 shadow-lg shadow-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
                         >
-                            {t('backoffice.login.btn_submit', 'Sign In')}
+                            {processing ? (
+                                <>
+                                    <LoadingSpinner className="w-5 h-5" />
+                                    <span>{t('backoffice.login.btn_processing', 'Signing In...')}</span>
+                                </>
+                            ) : (
+                                <span>{t('backoffice.login.btn_submit', 'Sign In')}</span>
+                            )}
                         </motion.button>
                     </form>
                 </motion.div>

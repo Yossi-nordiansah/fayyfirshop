@@ -103,16 +103,16 @@ const CategorySection = ({ categoryCards = [] }) => {
                                         return isFullExternal ? (
                                             <a
                                                 href={targetUrl}
-                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm inline-block"
+                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm flex items-center justify-center gap-2"
                                             >
-                                                {t("cat.viewCollection", "Lihat Koleksi")}
+                                                <span>{t("cat.viewCollection", "Lihat Koleksi")}</span>
                                             </a>
                                         ) : (
                                             <Link
                                                 href={targetUrl}
-                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm inline-block"
+                                                className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500 transition-all duration-300 rounded-sm flex items-center justify-center gap-2"
                                             >
-                                                {t("cat.viewCollection", "Lihat Koleksi")}
+                                                <span>{t("cat.viewCollection", "Lihat Koleksi")}</span>
                                             </Link>
                                         );
                                     })()}

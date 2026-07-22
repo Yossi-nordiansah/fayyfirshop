@@ -1050,7 +1050,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const handleAddToCart = () => {
         if (!canBuy) return;
 
-        const cartKey = auth?.user ? `fayyfir_cart_${auth.user.id}` : "fayyfir_cart";
+        if (!auth?.user) {
+            window.dispatchEvent(new Event("fayyfir-open-login"));
+            return;
+        }
+
+        const cartKey = `fayyfir_cart_${auth.user.id}`;
 
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryName = typeof product.category === 'object' && product.category !== null

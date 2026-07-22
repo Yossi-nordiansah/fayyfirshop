@@ -147,13 +147,13 @@ export default function CartPage() {
                                 {t("cart.login_required_desc", "Silakan login untuk mengakses halaman cart dan melanjutkan pesanan Anda.")}
                             </p>
                             <div className="flex flex-col gap-3 mt-6 sm:flex-row">
-                                <Link
-                                    href="/login"
-                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white transition-colors bg-blue-700 shadow-lg rounded-xl shadow-blue-900/20 hover:bg-blue-800"
+                                <button
+                                     onClick={() => window.dispatchEvent(new Event("fayyfir-open-login"))}
+                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white transition-colors bg-blue-700 shadow-lg rounded-xl shadow-blue-900/20 hover:bg-blue-800"
                                 >
                                     <Check size={17} />
                                     {t("nav.account.login", "Masuk Akun")}
-                                </Link>
+                                </button>
                                 <Link
                                     href="/products"
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold transition-colors bg-white border rounded-xl border-zinc-200 text-zinc-700 hover:border-blue-200 hover:text-blue-700"

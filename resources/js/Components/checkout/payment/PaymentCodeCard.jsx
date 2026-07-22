@@ -2,7 +2,7 @@ import React from "react";
 import {
     Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle
 } from "lucide-react";
-
+import LoadingSpinner from "@/Components/LoadingSpinner";
 export default function PaymentCodeCard({
     order,
     details,
@@ -183,7 +183,7 @@ export default function PaymentCodeCard({
                                 >
                                     {isPayingOvo ? (
                                         <>
-                                            <img src="/images/load.gif" alt="loading" className="w-3.5 h-3.5 object-contain shrink-0" />
+                                            <LoadingSpinner className="w-4 h-4 shrink-0" />
                                             <span>{t("payment.ovo.sending", "Mengirim Notifikasi...")}</span>
                                         </>
                                     ) : (
@@ -350,7 +350,7 @@ export default function PaymentCodeCard({
                     >
                         {isPayingCard ? (
                             <>
-                                <img src="/images/load.gif" alt="loading" className="w-3.5 h-3.5 object-contain shrink-0" />
+                                <LoadingSpinner className="w-5 h-5 shrink-0" />
                                 <span>{t("payment.cc.processing", "Memproses Pembayaran...")}</span>
                             </>
                         ) : (

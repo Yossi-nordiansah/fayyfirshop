@@ -236,11 +236,31 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
             }
         };
 
+        const handleOpenLogin = () => {
+            setShowLoginModal(true);
+        };
+
         window.addEventListener("fayyfir-show-toast", handleShowToast);
+        window.addEventListener("fayyfir-open-login", handleOpenLogin);
         return () => {
             window.removeEventListener("fayyfir-show-toast", handleShowToast);
+            window.removeEventListener("fayyfir-open-login", handleOpenLogin);
         };
     }, []);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("login") === "1") {
+                setShowLoginModal(true);
+                // Clean up query param to avoid repeat opening on refresh
+                params.delete("login");
+                const newQuery = params.toString();
+                const newPath = window.location.pathname + (newQuery ? `?${newQuery}` : "");
+                window.history.replaceState({}, document.title, newPath);
+            }
+        }
+    }, [url]);
 
     useEffect(() => {
         if (toast) {

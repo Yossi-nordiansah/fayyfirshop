@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, X, CreditCard, Wallet, QrCode, Store, Landmark } from "lucide-react";
+import LoadingSpinner from "@/Components/LoadingSpinner";
 
 // Logo helper — local to this modal only
 const ModalPaymentLogo = ({ logo, name }) => {
@@ -66,35 +67,35 @@ export default function ChangeMethodModal({
                         transition={{ duration: 0.2, ease: "easeOut" }}
                         className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden relative z-10"
                     >
-                        {/* Modal Header */}
-                        <div className="p-2 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-                            <h3 className="font-extrabold text-sm text-blue-950 flex items-center gap-2">
-                                {loadingChange ? (
-                                    <img src="/images/load.gif" alt="loading" className="w-4 h-4 object-contain shrink-0" />
-                                ) : (
-                                    <RefreshCw size={15} className="text-blue-900 shrink-0" />
-                                )}
-                                <span>{t("checkout.modal.title", "Pilih Metode Pembayaran Baru")}</span>
-                            </h3>
-                            <button
-                                onClick={onClose}
-                                disabled={loadingChange}
-                                className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-white">
-                            {loadingChange ? (
-                                <div className="flex flex-col items-center justify-center py-14 space-y-3">
-                                    <img src="/images/load.gif" alt="loading" className="w-10 h-10 object-contain" />
-                                    <span className="text-xs text-slate-500 font-bold text-center px-4 max-w-md leading-relaxed">
-                                        {t("checkout.modal.loading", "Mengubah metode pembayaran & menghubungi Midtrans...")}
-                                    </span>
-                                </div>
-                            ) : (
+                         {/* Modal Header */}
+                         <div className="p-2 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                             <h3 className="font-extrabold text-sm text-blue-950 flex items-center gap-2">
+                                 {loadingChange ? (
+                                     <LoadingSpinner className="w-5 h-5 shrink-0" />
+                                 ) : (
+                                     <RefreshCw size={15} className="text-blue-900 shrink-0" />
+                                 )}
+                                 <span>{t("checkout.modal.title", "Pilih Metode Pembayaran Baru")}</span>
+                             </h3>
+                             <button
+                                 onClick={onClose}
+                                 disabled={loadingChange}
+                                 className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                 <X size={16} />
+                             </button>
+                         </div>
+ 
+                         {/* Modal Body */}
+                         <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-white">
+                             {loadingChange ? (
+                                 <div className="flex flex-col items-center justify-center py-14 space-y-3">
+                                     <LoadingSpinner className="w-12 h-12" />
+                                     <span className="text-xs text-slate-500 font-bold text-center px-4 max-w-md leading-relaxed">
+                                         {t("checkout.modal.loading", "Mengubah metode pembayaran & menghubungi Midtrans...")}
+                                     </span>
+                                 </div>
+                             ) : (
                                 <div className="space-y-5">
                                     {changeCategories.map((cat) => (
                                         <div key={cat.id} className="space-y-2.5">

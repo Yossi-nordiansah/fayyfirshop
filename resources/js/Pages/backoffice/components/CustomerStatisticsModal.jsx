@@ -14,6 +14,7 @@ import {
     Gift,
 } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
+import LoadingSpinner from '@/Components/LoadingSpinner';
 
 export default function CustomerStatisticsModal({ show = false, customer, statsLoading, statsData, onClose }) {
     const { t } = useLanguage();
@@ -72,7 +73,7 @@ export default function CustomerStatisticsModal({ show = false, customer, statsL
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             {statsLoading ? (
                                 <div className="flex flex-col items-center justify-center py-20 space-y-3">
-                                    <div className="w-10 h-10 border-4 border-blue-950 border-t-transparent rounded-full animate-spin"></div>
+                                    <LoadingSpinner className="w-12 h-12" />
                                     <p className="text-sm font-semibold text-slate-500">{t('backoffice.customer.stats_modal.loading', 'Memuat statistik customer...')}</p>
                                 </div>
                             ) : statsData ? (

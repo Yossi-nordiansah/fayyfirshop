@@ -8,6 +8,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
 import { LanguageProvider } from './Contexts/LanguageContext';
+import LoadingOverlay from './Components/LoadingOverlay';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -24,6 +25,7 @@ createInertiaApp({
         root.render(
             <LanguageProvider>
                 <App {...props} />
+                <LoadingOverlay />
             </LanguageProvider>
         );
     },

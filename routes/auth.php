@@ -22,8 +22,9 @@ Route::middleware('guest')->group(function () {
     Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    Route::get('login', function () {
+        return redirect()->to('/?login=1');
+    })->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 

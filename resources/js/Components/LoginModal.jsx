@@ -3,6 +3,7 @@ import { Link, useForm } from "@inertiajs/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, X } from "lucide-react";
 import AuthStatusModal from "@/Components/AuthStatusModal";
+import LoadingSpinner from "@/Components/LoadingSpinner";
 
 const LoginModal = ({ isOpen, onClose, t }) => {
     const [showPassword, setShowPassword] = useState(false);
@@ -161,8 +162,11 @@ const LoginModal = ({ isOpen, onClose, t }) => {
                         >
                             {/* Full-screen loading overlay */}
                             {processing && (
-                                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70 backdrop-blur-sm">
-                                    <img src="/images/load.gif" alt="Loading" className="w-24 h-24 object-contain" />
+                                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 backdrop-blur-[3px]">
+                                    <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/90 p-8 shadow-2xl border border-white/20">
+                                        <LoadingSpinner className="w-16 h-16 animate-pulse" />
+                                        <span className="text-sm font-semibold tracking-wide text-slate-700 animate-pulse">{t('processing', 'Processing...')}</span>
+                                    </div>
                                 </div>
                             )}
                             <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
