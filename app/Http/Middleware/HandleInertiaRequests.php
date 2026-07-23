@@ -313,6 +313,7 @@ class HandleInertiaRequests extends Middleware
                     ->get()
                 : [],
             'navCategories' => fn () => \App\Models\ProductCategory::with('subCategories')
+                ->where('is_active', true)
                 ->orderBy('name')
                 ->get()
                 ->map(fn ($cat) => [

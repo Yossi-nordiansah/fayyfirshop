@@ -21,10 +21,18 @@ use Inertia\Inertia;
 Route::get('/', function () {
     $newProducts = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
         ->where('is_new', true)
+        ->where('is_active', true)
+        ->whereHas('category', function ($q) {
+            $q->where('is_active', true);
+        })
         ->get();
 
     $bestSellerProducts = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
         ->where('is_best_seller', true)
+        ->where('is_active', true)
+        ->whereHas('category', function ($q) {
+            $q->where('is_active', true);
+        })
         ->get();
 
     $reviews = \App\Models\ProductReview::with(['user', 'product'])
@@ -85,7 +93,18 @@ Route::get('/about', function () {
 })->name('about');
 
 Route::get('/products/{category?}', function ($category = null) {
+    if ($category) {
+        $catModel = \App\Models\ProductCategory::where('slug', $category)->first();
+        if (!$catModel || !$catModel->is_active) {
+            abort(404);
+        }
+    }
+
     $products = \App\Models\Product::with(['category', 'subCategory', 'variants.unit', 'images'])
+        ->where('is_active', true)
+        ->whereHas('category', function ($q) {
+            $q->where('is_active', true);
+        })
         ->get();
 
     return Inertia::render('products/Products', [
@@ -108,6 +127,10 @@ Route::get('/product/{slug}', function ($slug) {
         }
     ])
         ->where('slug', $slug)
+        ->where('is_active', true)
+        ->whereHas('category', function ($q) {
+            $q->where('is_active', true);
+        })
         ->first();
 
     if (!$product) {
@@ -202,6 +225,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.products.edit');
     Route::patch('/products/{product:slug}', [ProductController::class, 'update'])
         ->name('backoffice.products.update');
+    Route::patch('/products/{product:slug}/toggle-active', [ProductController::class, 'toggleActive'])
+        ->name('backoffice.products.toggle-active');
     Route::delete('/products/{product:slug}', [ProductController::class, 'destroy'])
         ->name('backoffice.products.destroy');
 
@@ -217,6 +242,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.product-categories.edit');
     Route::patch('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'update'])
         ->name('backoffice.product-categories.update');
+    Route::patch('/product-categories/{productCategory:slug}/toggle-active', [ProductCategoryController::class, 'toggleActive'])
+        ->name('backoffice.product-categories.toggle-active');
     Route::delete('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'destroy'])
         ->name('backoffice.product-categories.destroy');
 

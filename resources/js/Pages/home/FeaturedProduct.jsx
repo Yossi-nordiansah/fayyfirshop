@@ -69,10 +69,11 @@ const ICON_MAP = {
 export default function FeaturedProduct({ featuredProducts = [] }) {
     const { t, locale } = useLanguage();
 
-    // Use active item from database if available, otherwise fallback to defaults
-    const activeItem = featuredProducts && featuredProducts.length > 0
-        ? featuredProducts[0]
-        : null;
+    if (!featuredProducts || featuredProducts.length === 0) {
+        return null;
+    }
+
+    const activeItem = featuredProducts[0];
 
     const getTranslatedText = (transObj, fallbackStr) => {
         if (typeof transObj === 'object' && transObj !== null) {

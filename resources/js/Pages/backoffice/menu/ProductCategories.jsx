@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Edit3, Eye, Plus, Trash2 } from 'lucide-react';
+import { Edit3, Eye, Plus, Trash2, Power } from 'lucide-react';
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -46,6 +46,12 @@ export default function ProductCategories({ categories, status, statusAction }) 
             preserveScroll: true,
         });
         setPendingDelete(null);
+    };
+
+    const toggleActive = (category) => {
+        router.patch(route('backoffice.product-categories.toggle-active', category.slug), {}, {
+            preserveScroll: true,
+        });
     };
 
     return (
@@ -143,9 +149,20 @@ export default function ProductCategories({ categories, status, statusAction }) 
                                             categories.map((category) => (
                                                 <tr key={category.id} className="align-top">
                                                     <td className="px-5 py-4">
-                                                        <p className="font-semibold text-blue-950" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
-                                                            {getLocalizedName(category)}
-                                                        </p>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="font-semibold text-blue-950" dir={locale === 'arabic' ? 'rtl' : 'ltr'}>
+                                                                {getLocalizedName(category)}
+                                                            </p>
+                                                            {category.is_active ? (
+                                                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                                    {t('backoffice.category.active', 'Aktif')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                                                    {t('backoffice.category.inactive', 'Nonaktif')}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <div className="space-y-2">
@@ -176,6 +193,23 @@ export default function ProductCategories({ categories, status, statusAction }) 
                                                             >
                                                                 <Edit3 className="h-4 w-4" />
                                                             </Link>
+                                                            {/* Action Toggle Active Button */}
+                                                             <button
+                                                                 type="button"
+                                                                 onClick={() => toggleActive(category)}
+                                                                 className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border shadow-sm transition active:scale-90 ${
+                                                                     category.is_active
+                                                                         ? 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
+                                                                         : 'border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600'
+                                                                 }`}
+                                                                 title={
+                                                                     category.is_active
+                                                                         ? t('backoffice.category.tooltip_deactivate', 'Deactivate Category')
+                                                                         : t('backoffice.category.tooltip_activate', 'Activate Category')
+                                                                 }
+                                                             >
+                                                                 <Power className="h-4 w-4" />
+                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removeCategory(category)}

@@ -34,6 +34,7 @@ class Product extends Model
         'stock_type',
         'unit',
         'capacity',
+        'is_active',
     ];
 
     protected $casts = [
@@ -48,6 +49,7 @@ class Product extends Model
         'capacity' => 'integer',
         'is_new' => 'boolean',
         'is_best_seller' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     protected $appends = [

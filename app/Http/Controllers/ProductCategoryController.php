@@ -117,6 +117,25 @@ class ProductCategoryController extends Controller
     }
 
     /**
+     * Toggle the active status of a category.
+     */
+    public function toggleActive(ProductCategory $productCategory): RedirectResponse
+    {
+        $productCategory->update([
+            'is_active' => !$productCategory->is_active,
+        ]);
+
+        $statusMessage = $productCategory->is_active
+            ? "Kategori \"{$productCategory->name}\" berhasil diaktifkan."
+            : "Kategori \"{$productCategory->name}\" berhasil dinonaktifkan.";
+
+        return redirect()
+            ->back()
+            ->with('status', $statusMessage)
+            ->with('statusAction', 'updated');
+    }
+
+    /**
      * @return array{name: string, name_translations: array{indonesia?: string, english?: string, arabic?: string}, sub_categories: array<int, array{indonesia?: string, english?: string, arabic?: string}>}
      */
     protected function validateRequest(Request $request, ?int $ignoreId = null): array

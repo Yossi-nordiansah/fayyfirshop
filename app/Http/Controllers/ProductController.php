@@ -1048,6 +1048,23 @@ class ProductController extends Controller
     }
 
     /**
+     * Toggle the active status of a product.
+     */
+    public function toggleActive(Product $product): RedirectResponse
+    {
+        $product->update([
+            'is_active' => !$product->is_active,
+        ]);
+
+        $statusMessage = $product->is_active ? "Produk \"{$product->title}\" berhasil diaktifkan." : "Produk \"{$product->title}\" berhasil dinonaktifkan.";
+
+        return redirect()
+            ->back()
+            ->with('status', $statusMessage)
+            ->with('statusAction', 'updated');
+    }
+
+    /**
      * Recursively convert "null" and "undefined" strings to actual null values, and trim all string inputs.
      */
     private function cleanNullStrings($data)

@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { FolderTree, Plus, Search, Eye, Layers, Package, Edit3, Trash2 } from 'lucide-react';
+import { FolderTree, Plus, Search, Eye, Layers, Package, Edit3, Trash2, Power } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -31,6 +31,12 @@ export default function ProductManagement({ products = [], status, statusAction 
             preserveScroll: true,
         });
         setPendingDeleteProduct(null);
+    };
+
+    const toggleActive = (product) => {
+        router.patch(route('backoffice.products.toggle-active', product.slug), {}, {
+            preserveScroll: true,
+        });
     };
 
     // Filter produk reaktif berdasarkan pencarian SKU atau nama (default Indonesia)
@@ -193,24 +199,35 @@ export default function ProductManagement({ products = [], status, statusAction 
                                                 <tr key={product.id} className="hover:bg-slate-50/50 transition duration-150">
                                                     <td className="px-6 py-4">
                                                          <div className="flex flex-col">
-                                                             {product.name_translations?.[locale]?.trim() ? (
-                                                                 <span className="font-bold text-blue-950 text-base">
-                                                                     {product.name_translations[locale]}
-                                                                 </span>
-                                                             ) : (
-                                                                 <div className="flex flex-col">
-                                                                     <span className="font-bold text-rose-600 text-sm italic">
-                                                                         {locale === 'english'
-                                                                             ? '(no title in English)'
-                                                                             : locale === 'arabic'
-                                                                             ? '(لا يوجد عنوان باللغة العربية)'
-                                                                             : '(tidak ada judul di bahasa Indonesia)'}
+                                                             <div className="flex items-center flex-wrap gap-2">
+                                                                 {product.name_translations?.[locale]?.trim() ? (
+                                                                     <span className="font-bold text-blue-950 text-base">
+                                                                         {product.name_translations[locale]}
                                                                      </span>
-                                                                     <span className="text-xs text-slate-400 font-normal">
-                                                                         Fallback: {product.name_translations?.indonesia || product.title || 'Unnamed Product'}
+                                                                 ) : (
+                                                                     <div className="flex flex-col">
+                                                                         <span className="font-bold text-rose-600 text-sm italic">
+                                                                             {locale === 'english'
+                                                                                 ? '(no title in English)'
+                                                                                 : locale === 'arabic'
+                                                                                 ? '(لا يوجد عنوان باللغة العربية)'
+                                                                                 : '(tidak ada judul di bahasa Indonesia)'}
+                                                                         </span>
+                                                                         <span className="text-xs text-slate-400 font-normal">
+                                                                             Fallback: {product.name_translations?.indonesia || product.title || 'Unnamed Product'}
+                                                                         </span>
+                                                                     </div>
+                                                                 )}
+                                                                 {product.is_active ? (
+                                                                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                                         {t('backoffice.product.active', 'Aktif')}
                                                                      </span>
-                                                                 </div>
-                                                             )}
+                                                                 ) : (
+                                                                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/10">
+                                                                         {t('backoffice.product.inactive', 'Nonaktif')}
+                                                                     </span>
+                                                                 )}
+                                                             </div>
                                                          </div>
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -244,35 +261,53 @@ export default function ProductManagement({ products = [], status, statusAction 
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <div className="flex justify-center gap-2">
-                                                            {/* Action View Button */}
-                                                            <Link
-                                                                href={route('backoffice.products.show', product.slug)}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-950 hover:text-blue-950 active:scale-90"
-                                                                title={t('backoffice.product.tooltip_view', 'View Product Details')}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </Link>
+                                                         <div className="flex justify-center gap-2">
+                                                             {/* Action View Button */}
+                                                             <Link
+                                                                 href={route('backoffice.products.show', product.slug)}
+                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-950 hover:text-blue-950 active:scale-90"
+                                                                 title={t('backoffice.product.tooltip_view', 'View Product Details')}
+                                                             >
+                                                                 <Eye className="h-4 w-4" />
+                                                             </Link>
 
-                                                            {/* Action Edit Button */}
-                                                            <Link
-                                                                href={route('backoffice.products.edit', product.slug)}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-950 hover:text-blue-950 active:scale-90"
-                                                                title={t('backoffice.product.tooltip_edit', 'Edit Product')}
-                                                            >
-                                                                <Edit3 className="h-4 w-4" />
-                                                            </Link>
+                                                             {/* Action Edit Button */}
+                                                             <Link
+                                                                 href={route('backoffice.products.edit', product.slug)}
+                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-950 hover:text-blue-950 active:scale-90"
+                                                                 title={t('backoffice.product.tooltip_edit', 'Edit Product')}
+                                                             >
+                                                                 <Edit3 className="h-4 w-4" />
+                                                             </Link>
 
-                                                            {/* Action Delete Button */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeProduct(product)}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-white text-rose-600 shadow-sm transition hover:border-rose-600 hover:text-white hover:bg-rose-600 active:scale-90"
-                                                                title={t('backoffice.product.tooltip_delete', 'Delete Product')}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
+                                                             {/* Action Toggle Active Button */}
+                                                             <button
+                                                                 type="button"
+                                                                 onClick={() => toggleActive(product)}
+                                                                 className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition active:scale-90 ${
+                                                                     product.is_active
+                                                                         ? 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
+                                                                         : 'border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600'
+                                                                 }`}
+                                                                 title={
+                                                                     product.is_active
+                                                                         ? t('backoffice.product.tooltip_deactivate', 'Deactivate Product')
+                                                                         : t('backoffice.product.tooltip_activate', 'Activate Product')
+                                                                 }
+                                                             >
+                                                                 <Power className="h-4 w-4" />
+                                                             </button>
+
+                                                             {/* Action Delete Button */}
+                                                             <button
+                                                                 type="button"
+                                                                 onClick={() => removeProduct(product)}
+                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-white text-rose-600 shadow-sm transition hover:border-rose-600 hover:text-white hover:bg-rose-600 active:scale-90"
+                                                                 title={t('backoffice.product.tooltip_delete', 'Delete Product')}
+                                                             >
+                                                                 <Trash2 className="h-4 w-4" />
+                                                             </button>
+                                                         </div>
                                                     </td>
                                                 </tr>
                                             ))

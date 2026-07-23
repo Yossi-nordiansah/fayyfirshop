@@ -15,10 +15,12 @@ class ProductCategory extends Model
         'name',
         'name_translations',
         'slug',
+        'is_active',
     ];
 
     protected $casts = [
         'name_translations' => 'array',
+        'is_active' => 'boolean',
     ];
 
     protected static function booted(): void
