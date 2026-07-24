@@ -14,6 +14,7 @@ use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -1182,16 +1183,27 @@ class CheckoutController extends Controller
 
     public function xenditCallback(Request $request)
     {
+        Log::info('Xendit Webhook Received:', [
+            'headers' => $request->headers->all(),
+            'payload' => $request->all(),
+        ]);
+
         $token = $request->header('x-callback-token') ?? $request->header('X-CALLBACK-TOKEN');
         $configuredToken = config('services.xendit.webhook_token');
         
         if ($configuredToken && $token !== $configuredToken) {
+            Log::warning('Xendit Webhook Token Mismatch:', [
+                'received_token' => $token,
+                'configured_token' => $configuredToken,
+            ]);
             return response()->json(['message' => 'Invalid webhook token'], 403);
         }
 
-        $externalId = $request->input('external_id') ?? $request->input('externalId') ?? $request->input('reference_id') ?? $request->input('data.reference_id');
-        $invoiceId = $request->input('id') ?? $request->input('invoice_id') ?? $request->input('data.id');
-        $status = strtoupper($request->input('status') ?? $request->input('event') ?? $request->input('data.status') ?? '');
+        $externalId = $request->input('reference_id') ?? $request->input('data.reference_id') ?? $request->input('external_id') ?? $request->input('externalId');
+        $invoiceId = $request->input('data.id') ?? $request->input('id') ?? $request->input('invoice_id');
+        
+        $rawStatus = strtoupper($request->input('data.status') ?? $request->input('status') ?? '');
+        $rawEvent = strtoupper($request->input('event') ?? '');
 
         if (!$externalId && !$invoiceId) {
             return response()->json(['message' => 'Missing transaction identifier'], 400);
@@ -1211,7 +1223,8 @@ class CheckoutController extends Controller
 
         if (!$order && $invoiceId) {
             $order = Order::with('items')
-                ->where('payment_details->xendit_invoice_id', $invoiceId)
+                ->where('payment_details->xendit_pr_id', $invoiceId)
+                ->orWhere('payment_details->xendit_invoice_id', $invoiceId)
                 ->orWhere('payment_details->xendit_va_id', $invoiceId)
                 ->orWhere('payment_details->xendit_qr_id', $invoiceId)
                 ->orWhere('payment_details->xendit_retail_id', $invoiceId)
@@ -1220,26 +1233,39 @@ class CheckoutController extends Controller
         }
 
         if (!$order) {
-            return response()->json(['message' => 'Order not found'], 404);
+            Log::info('Xendit Webhook: Order not found (likely test payload or invalid invoice):', [
+                'external_id' => $externalId,
+                'invoice_id' => $invoiceId,
+            ]);
+            return response()->json(['message' => 'Webhook received successfully (Order not found in DB)'], 200);
         }
 
         $paymentStatus = 'unpaid';
         $orderStatus = $order->status;
 
-        if (in_array($status, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'QR_CODE.PAYMENT'])) {
+        $isPaid = in_array($rawStatus, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED']) ||
+                  in_array($rawEvent, ['PAYMENT_REQUEST.SUCCEEDED', 'PAYMENT.SUCCEEDED', 'QR_CODE.PAYMENT', 'INVOICE.PAID']) ||
+                  str_contains($rawEvent, 'SUCCEEDED') ||
+                  str_contains($rawEvent, 'PAID');
+
+        $isExpiredOrFailed = in_array($rawStatus, ['EXPIRED', 'EXPIRE', 'CANCELLED', 'FAILED']) ||
+                             str_contains($rawEvent, 'EXPIRED') ||
+                             str_contains($rawEvent, 'FAILED');
+
+        if ($isPaid) {
             $paymentStatus = 'paid';
             $orderStatus = 'processing';
-        } elseif (in_array($status, ['EXPIRED', 'EXPIRE', 'CANCELLED', 'FAILED'])) {
+        } elseif ($isExpiredOrFailed) {
             $paymentStatus = 'expired';
             $orderStatus = 'cancelled';
-        } elseif ($status === 'PENDING' || $status === 'ACTIVE') {
+        } elseif ($rawStatus === 'PENDING' || $rawStatus === 'ACTIVE') {
             $paymentStatus = 'unpaid';
             $orderStatus = 'pending';
         }
 
         $details = $order->payment_details ?: [];
         if (is_array($details)) {
-            $details['transaction_status'] = strtolower($status);
+            $details['transaction_status'] = strtolower($rawStatus ?: $rawEvent);
             $order->payment_details = $details;
         }
 
@@ -1615,7 +1641,7 @@ class CheckoutController extends Controller
         $amount = (float) $order->total_amount;
         $externalId = $order->invoice_number . '-' . time();
 
-        // 1. VIRTUAL ACCOUNTS (DIRECT VA API)
+        // 1. VIRTUAL ACCOUNTS (API V3 - PAYMENT REQUESTS)
         if (str_contains($paymentMethod, '_va')) {
             $bankMap = [
                 'bca_va' => 'BCA',
@@ -1632,17 +1658,27 @@ class CheckoutController extends Controller
 
             $bankCode = $bankMap[$paymentMethod] ?? 'BCA';
 
-            $response = Http::withBasicAuth($secretKey, '')
-                ->asForm()
-                ->post('https://api.xendit.co/callback_virtual_accounts', [
-                    'external_id' => $externalId,
-                    'bank_code' => $bankCode,
-                    'name' => trim($user->name),
-                    'expected_amount' => (int) $amount,
-                    'is_closed' => 'true',
-                    'is_single_use' => 'true',
-                    'expiration_date' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
-                ]);
+            $payload = [
+                'reference_id' => $externalId,
+                'currency' => 'IDR',
+                'amount' => (int) $amount,
+                'country' => 'ID',
+                'payment_method' => [
+                    'type' => 'VIRTUAL_ACCOUNT',
+                    'reusability' => 'ONE_TIME_USE',
+                    'virtual_account' => [
+                        'channel_code' => $bankCode,
+                        'channel_properties' => [
+                            'customer_name' => trim($user->name) ?: 'Pelanggan Fayyfir',
+                            'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                        ]
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders(['api-version' => '2023-03-01'])
+                ->withBasicAuth($secretKey, '')
+                ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
                 $errorMsg = $response->json('message') ?? $response->body();
@@ -1650,26 +1686,42 @@ class CheckoutController extends Controller
             }
 
             $resData = $response->json();
+            $vaData = $resData['payment_method']['virtual_account']['channel_properties'] ?? [];
+            $vaNumber = $vaData['virtual_account_number'] ?? null;
+            $expiresAt = $vaData['expires_at'] ?? null;
+
             return [
+                'xendit_pr_id' => $resData['id'] ?? null,
                 'xendit_va_id' => $resData['id'] ?? null,
-                'va_number' => $resData['account_number'] ?? null,
-                'bank' => strtolower($resData['bank_code'] ?? str_replace('_va', '', $paymentMethod)),
-                'transaction_status' => 'pending',
-                'expiry_time' => isset($resData['expiration_date']) ? date('Y-m-d H:i:s', strtotime($resData['expiration_date'])) : date('Y-m-d H:i:s', time() + 86400),
+                'va_number' => $vaNumber,
+                'bank' => strtolower($resData['payment_method']['virtual_account']['channel_code'] ?? str_replace('_va', '', $paymentMethod)),
+                'transaction_status' => strtolower($resData['status'] ?? 'pending'),
+                'expiry_time' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : date('Y-m-d H:i:s', time() + 86400),
             ];
         }
 
-        // 2. QRIS (DIRECT QRIS API)
+        // 2. QRIS (API V3 - PAYMENT REQUESTS)
         if ($paymentMethod === 'qris') {
-            $response = Http::withHeaders(['api-version' => '2022-07-31'])
+            $payload = [
+                'reference_id' => $externalId,
+                'currency' => 'IDR',
+                'amount' => (int) $amount,
+                'country' => 'ID',
+                'payment_method' => [
+                    'type' => 'QR_CODE',
+                    'reusability' => 'ONE_TIME_USE',
+                    'qr_code' => [
+                        'channel_code' => 'QRIS',
+                        'channel_properties' => [
+                            'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                        ]
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders(['api-version' => '2023-03-01'])
                 ->withBasicAuth($secretKey, '')
-                ->post('https://api.xendit.co/qr_codes', [
-                    'reference_id' => $externalId,
-                    'type' => 'DYNAMIC',
-                    'currency' => 'IDR',
-                    'amount' => (int) $amount,
-                    'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
-                ]);
+                ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
                 $errorMsg = $response->json('message') ?? $response->body();
@@ -1677,28 +1729,57 @@ class CheckoutController extends Controller
             }
 
             $resData = $response->json();
+            $qrData = $resData['payment_method']['qr_code']['channel_properties'] ?? [];
+            $qrString = $qrData['qr_string'] ?? null;
+            $expiresAt = $qrData['expires_at'] ?? null;
+
+            $qrUrl = null;
+            if (isset($resData['actions']) && is_array($resData['actions'])) {
+                foreach ($resData['actions'] as $action) {
+                    if (($action['action'] ?? '') === 'PRESENT_TO_CUSTOMER') {
+                        $qrUrl = $action['url'] ?? null;
+                    }
+                    if (!$qrString && isset($action['qr_code'])) {
+                        $qrString = $action['qr_code'];
+                    }
+                }
+            }
+
             return [
+                'xendit_pr_id' => $resData['id'] ?? null,
                 'xendit_qr_id' => $resData['id'] ?? null,
-                'qr_string' => $resData['qr_string'] ?? null,
-                'transaction_status' => 'pending',
-                'expiry_time' => isset($resData['expires_at']) ? date('Y-m-d H:i:s', strtotime($resData['expires_at'])) : date('Y-m-d H:i:s', time() + 86400),
+                'qr_string' => $qrString,
+                'qr_url' => $qrUrl,
+                'transaction_status' => strtolower($resData['status'] ?? 'pending'),
+                'expiry_time' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : date('Y-m-d H:i:s', time() + 86400),
             ];
         }
 
-        // 3. RETAIL OUTLETS (DIRECT RETAIL API - Alfamart / Indomaret)
+        // 3. RETAIL OUTLETS (API V3 - PAYMENT REQUESTS - Alfamart / Indomaret)
         if (in_array($paymentMethod, ['alfamart', 'indomaret'])) {
             $outletName = strtoupper($paymentMethod);
 
-            $response = Http::withBasicAuth($secretKey, '')
-                ->asForm()
-                ->post('https://api.xendit.co/fixed_payment_code', [
-                    'external_id' => $externalId,
-                    'retail_outlet_name' => $outletName,
-                    'name' => trim($user->name),
-                    'expected_amount' => (int) $amount,
-                    'is_single_use' => 'true',
-                    'expiration_date' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
-                ]);
+            $payload = [
+                'reference_id' => $externalId,
+                'currency' => 'IDR',
+                'amount' => (int) $amount,
+                'country' => 'ID',
+                'payment_method' => [
+                    'type' => 'RETAIL_OUTLET',
+                    'reusability' => 'ONE_TIME_USE',
+                    'retail_outlet' => [
+                        'channel_code' => $outletName,
+                        'channel_properties' => [
+                            'customer_name' => trim($user->name) ?: 'Pelanggan Fayyfir',
+                            'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                        ]
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders(['api-version' => '2023-03-01'])
+                ->withBasicAuth($secretKey, '')
+                ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
                 $errorMsg = $response->json('message') ?? $response->body();
@@ -1706,34 +1787,32 @@ class CheckoutController extends Controller
             }
 
             $resData = $response->json();
+            $retailData = $resData['payment_method']['retail_outlet']['channel_properties'] ?? [];
+            $paymentCode = $retailData['payment_code'] ?? null;
+            $expiresAt = $retailData['expires_at'] ?? null;
+
             return [
+                'xendit_pr_id' => $resData['id'] ?? null,
                 'xendit_retail_id' => $resData['id'] ?? null,
-                'payment_code' => $resData['payment_code'] ?? null,
-                'store' => strtolower($resData['retail_outlet_name'] ?? $paymentMethod),
-                'transaction_status' => 'pending',
-                'expiry_time' => isset($resData['expiration_date']) ? date('Y-m-d H:i:s', strtotime($resData['expiration_date'])) : date('Y-m-d H:i:s', time() + 86400),
+                'payment_code' => $paymentCode,
+                'store' => strtolower($resData['payment_method']['retail_outlet']['channel_code'] ?? $paymentMethod),
+                'transaction_status' => strtolower($resData['status'] ?? 'pending'),
+                'expiry_time' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : date('Y-m-d H:i:s', time() + 86400),
             ];
         }
 
-        // 4. E-WALLETS (DIRECT EWALLET API - GoPay, ShopeePay, DANA, OVO)
+        // 4. E-WALLETS (API V3 - PAYMENT REQUESTS - GoPay, ShopeePay, DANA, OVO)
         if (in_array($paymentMethod, ['gopay', 'shopeepay', 'dana', 'ovo'])) {
             $channelMap = [
-                'gopay' => 'ID_GOPAY',
-                'shopeepay' => 'ID_SHOPEEPAY',
-                'dana' => 'ID_DANA',
-                'ovo' => 'ID_OVO',
+                'gopay' => 'GOPAY',
+                'shopeepay' => 'SHOPEEPAY',
+                'dana' => 'DANA',
+                'ovo' => 'OVO',
             ];
 
             $channelCode = $channelMap[$paymentMethod];
-            $payload = [
-                'reference_id' => $externalId,
-                'currency' => 'IDR',
-                'amount' => (int) $amount,
-                'checkout_method' => 'ONE_TIME_PAYMENT',
-                'channel_code' => $channelCode,
-                'channel_properties' => [
-                    'success_redirect_url' => url('/checkout/success/' . $order->id),
-                ]
+            $channelProps = [
+                'success_return_url' => url('/checkout/success/' . $order->id),
             ];
 
             if ($paymentMethod === 'ovo') {
@@ -1743,11 +1822,27 @@ class CheckoutController extends Controller
                 } elseif (str_starts_with($cleanPhone, '62')) {
                     $cleanPhone = '0' . substr($cleanPhone, 2);
                 }
-                $payload['channel_properties']['mobile_number'] = $cleanPhone;
+                $channelProps['mobile_number'] = $cleanPhone;
             }
 
-            $response = Http::withBasicAuth($secretKey, '')
-                ->post('https://api.xendit.co/ewallets/charges', $payload);
+            $payload = [
+                'reference_id' => $externalId,
+                'currency' => 'IDR',
+                'amount' => (int) $amount,
+                'country' => 'ID',
+                'payment_method' => [
+                    'type' => 'EWALLET',
+                    'reusability' => 'ONE_TIME_USE',
+                    'ewallet' => [
+                        'channel_code' => $channelCode,
+                        'channel_properties' => $channelProps,
+                    ]
+                ]
+            ];
+
+            $response = Http::withHeaders(['api-version' => '2023-03-01'])
+                ->withBasicAuth($secretKey, '')
+                ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
                 $errorMsg = $response->json('message') ?? $response->body();
@@ -1756,6 +1851,7 @@ class CheckoutController extends Controller
 
             $resData = $response->json();
             $details = [
+                'xendit_pr_id' => $resData['id'] ?? null,
                 'xendit_ewallet_id' => $resData['id'] ?? null,
                 'transaction_status' => strtolower($resData['status'] ?? 'pending'),
                 'expiry_time' => date('Y-m-d H:i:s', time() + 86400),
@@ -1767,13 +1863,16 @@ class CheckoutController extends Controller
 
             if (isset($resData['actions']) && is_array($resData['actions'])) {
                 foreach ($resData['actions'] as $action) {
+                    $actionType = $action['action'] ?? '';
                     $urlType = $action['url_type'] ?? '';
-                    if (in_array($urlType, ['DEEPLINK', 'MOBILE_DEEPLINK'])) {
-                        $details['deeplink'] = $action['url'] ?? null;
-                    } elseif (in_array($urlType, ['WEB', 'DESKTOP_WEB', 'MOBILE_WEB'])) {
-                        $details['qr_url'] = $action['url'] ?? null;
-                    } elseif ($urlType === 'QR_CODE') {
-                        $details['qr_string'] = $action['qr_code'] ?? $action['url'] ?? null;
+                    $url = $action['url'] ?? null;
+
+                    if (in_array($actionType, ['DEEPLINK', 'MOBILE_DEEPLINK']) || in_array($urlType, ['DEEPLINK', 'MOBILE_DEEPLINK'])) {
+                        $details['deeplink'] = $url;
+                    } elseif (in_array($actionType, ['AUTH_REDIRECT', 'DESKTOP_WEB_CHECKOUT', 'MOBILE_WEB_CHECKOUT', 'PRESENT_TO_CUSTOMER']) || in_array($urlType, ['WEB', 'DESKTOP_WEB', 'MOBILE_WEB'])) {
+                        $details['qr_url'] = $url;
+                    } elseif ($actionType === 'QR_CODE' || $urlType === 'QR_CODE') {
+                        $details['qr_string'] = $action['qr_code'] ?? $url;
                     }
                 }
             }
