@@ -4,7 +4,7 @@ import MainLayout from "@/Layouts/MainLayout";
 import Payment from "@/Components/checkout/Payment";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
-export default function PaymentPage({ order, midtransClientKey, isProduction }) {
+export default function PaymentPage({ order, xenditPublicKey, isProduction }) {
     const { t, locale } = useLanguage();
 
     return (
@@ -14,7 +14,7 @@ export default function PaymentPage({ order, midtransClientKey, isProduction }) 
             <div className="min-h-screen bg-slate-50 pb-8 pt-24">
                 <Payment
                     order={order}
-                    midtransClientKey={midtransClientKey}
+                    xenditPublicKey={xenditPublicKey}
                     isProduction={isProduction}
                     t={t}
                     locale={locale}

@@ -103,7 +103,7 @@ export default function PaymentInstructions({ order, activeAccordion, setActiveA
             {isRetail && (
                 <ol className="list-decimal list-inside text-xs text-slate-500 space-y-2 leading-relaxed">
                     <li>{t("instructions.retail.step1", "Kunjungi gerai retail terdekat.")}</li>
-                    <li>{t("instructions.retail.step2", "Katakan pada kasir bahwa Anda ingin melakukan pembayaran merchant Midtrans/Online Shop.")}</li>
+                    <li>{t("instructions.retail.step2", "Katakan pada kasir bahwa Anda ingin melakukan pembayaran merchant Xendit/Online Shop.")}</li>
                     <li>{t("instructions.retail.step3", "Tunjukkan Kode Pembayaran yang tertera di atas kepada kasir.")}</li>
                     <li>{t("instructions.retail.step4", "Lakukan pembayaran tunai/debit sejumlah Grand Total transaksi.")}</li>
                     <li>{t("instructions.retail.step5", "Simpan struk pembayaran sebagai bukti transaksi.")}</li>

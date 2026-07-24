@@ -325,6 +325,7 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.store-branches.destroy');
 });
 
+Route::post('/checkout/xendit-callback', [CheckoutController::class, 'xenditCallback'])->name('checkout.xendit-callback');
 Route::post('/checkout/midtrans-callback', [CheckoutController::class, 'midtransCallback'])->name('checkout.midtrans-callback');
 
 Route::middleware('auth')->group(function () {
@@ -346,6 +347,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.place-order');
     Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout/payment/{id}', [CheckoutController::class, 'payment'])->name('checkout.payment');
+    Route::get('/checkout/payment/{id}/status', [CheckoutController::class, 'paymentStatus'])->name('checkout.payment.status');
     Route::post('/checkout/payment/{id}/change', [CheckoutController::class, 'changePaymentMethod'])->name('checkout.payment.change');
     Route::post('/checkout/payment/{id}/pay-card', [CheckoutController::class, 'payCreditCard'])->name('checkout.payment.pay-card');
     Route::post('/checkout/payment/{id}/cancel', [CheckoutController::class, 'cancelOrder'])->name('checkout.payment.cancel');

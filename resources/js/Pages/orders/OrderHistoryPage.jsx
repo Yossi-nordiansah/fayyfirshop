@@ -28,7 +28,7 @@ import { useLanguage } from "@/Contexts/LanguageContext";
 import OrderCard from "@/Components/orders/OrderCard";
 import CancelOrderModal from "@/Components/orders/CancelOrderModal";
 
-export default function OrderHistoryPage({ orders = [], midtransClientKey, isProduction }) {
+export default function OrderHistoryPage({ orders = [], xenditPublicKey, isProduction }) {
     const { t, locale } = useLanguage();
     const isRtl = locale === 'arabic';
 
@@ -323,68 +323,7 @@ export default function OrderHistoryPage({ orders = [], midtransClientKey, isPro
     };
 
     const handlePayNow = (order) => {
-        const triggerSnapPay = (snapToken) => {
-            window.snap.pay(snapToken, {
-                onSuccess: function (result) {
-                    router.reload();
-                },
-                onPending: function (result) {
-                    router.reload();
-                },
-                onError: function (result) {
-                    alert(t("orders.payment_failed", "Pembayaran gagal. Silakan coba lagi."));
-                },
-                onClose: function () {
-                    router.reload();
-                }
-            });
-        };
-
-        const loadSnapAndPay = (snapToken) => {
-            if (window.snap) {
-                triggerSnapPay(snapToken);
-                return;
-            }
-
-            const scriptId = "midtrans-snap-script";
-            let script = document.getElementById(scriptId);
-
-            if (!script) {
-                script = document.createElement("script");
-                script.src = isProduction
-                    ? "https://app.midtrans.com/snap/snap.js"
-                    : "https://app.sandbox.midtrans.com/snap/snap.js";
-                script.id = scriptId;
-                script.setAttribute("data-client-key", midtransClientKey);
-                script.async = true;
-
-                script.onload = () => {
-                    triggerSnapPay(snapToken);
-                };
-                script.onerror = () => {
-                    alert(t("orders.midtrans_load_failed", "Gagal memuat sistem pembayaran Midtrans. Coba lagi."));
-                };
-
-                document.body.appendChild(script);
-            } else {
-                script.onload = () => {
-                    triggerSnapPay(snapToken);
-                };
-            }
-        };
-
-        axios.post(route('orders.payment-token', order.id))
-            .then(res => {
-                if (res.data && res.data.snap_token) {
-                    loadSnapAndPay(res.data.snap_token);
-                } else {
-                    alert(res.data.message || t("orders.token_failed", "Gagal mendapatkan token pembayaran."));
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert(err.response?.data?.message || t("orders.payment_process_error", "Terjadi kesalahan saat memproses pembayaran."));
-            });
+        router.visit(route('checkout.payment', order.id));
     };
 
     const handleCancelOrder = (orderId) => {

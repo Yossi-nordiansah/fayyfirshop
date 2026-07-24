@@ -113,11 +113,11 @@ class OrderController extends Controller
         }
 
         try {
-            if ($order->payment_details && isset($order->payment_details['midtrans_order_id'])) {
+            if ($order->payment_details && isset($order->payment_details['xendit_invoice_id'])) {
                 try {
-                    \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
-                    \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
-                    \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                    \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
+                    $apiInstance = new \Xendit\Invoice\InvoiceApi();
+                    $apiInstance->expireInvoice($order->payment_details['xendit_invoice_id']);
                 } catch (\Exception $cancelEx) {
                     // Ignore
                 }
@@ -438,49 +438,39 @@ class OrderController extends Controller
             ], 422);
         }
 
-        if (!empty($order->payment_token)) {
+        $details = $order->payment_details ?: [];
+
+        if (!empty($details['snap_token'])) {
             return response()->json([
                 'success' => true,
-                'snap_token' => $order->payment_token
+                'snap_token' => $details['snap_token'],
+                'redirect_url' => route('checkout.payment', $order->id),
+            ]);
+        }
+
+        if (!empty($details['invoice_url']) || !empty($details['va_number']) || !empty($details['qr_string'])) {
+            return response()->json([
+                'success' => true,
+                'invoice_url' => $details['invoice_url'] ?? null,
+                'redirect_url' => route('checkout.payment', $order->id),
             ]);
         }
 
         try {
-            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
-            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
-            \Midtrans\Config::$isSanitized = true;
-            \Midtrans\Config::$is3ds = true;
-
-            $user = auth()->user();
-            $nameParts = explode(' ', trim($user->name));
-            $firstName = $nameParts[0];
-            $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
-
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $order->invoice_number,
-                    'gross_amount' => (int) $order->total_amount,
-                ],
-                'customer_details' => [
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'email' => $user->email,
-                    'phone' => $user->phone ?: '08111222333',
-                ],
-                'notification_url' => url('/checkout/midtrans-callback'),
-            ];
-
-            $snapToken = \Midtrans\Snap::getSnapToken($params);
-            $order->update(['payment_token' => $snapToken]);
+            $checkoutCtrl = new \App\Http\Controllers\CheckoutController();
+            $details = $checkoutCtrl->chargePayment($order, $order->payment_method ?: 'qris');
+            $order->update(['payment_details' => $details]);
 
             return response()->json([
                 'success' => true,
-                'snap_token' => $snapToken
+                'snap_token' => $details['snap_token'] ?? null,
+                'invoice_url' => $details['invoice_url'] ?? null,
+                'redirect_url' => route('checkout.payment', $order->id),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate payment token: ' . $e->getMessage()
+                'message' => 'Gagal mendapatkan data pembayaran: ' . $e->getMessage()
             ], 500);
         }
     }

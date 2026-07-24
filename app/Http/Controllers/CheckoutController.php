@@ -873,11 +873,11 @@ class CheckoutController extends Controller
 
                 if ($request->payment_method !== 'cod') {
                     try {
-                        $details = $this->chargeMidtrans($order, $request->payment_method);
+                        $details = $this->chargePayment($order, $request->payment_method);
                         $order->payment_details = $details;
                         $order->save();
-                    } catch (\Throwable $midtransEx) {
-                        throw new \Exception("Midtrans Error: " . $midtransEx->getMessage());
+                    } catch (\Throwable $gatewayEx) {
+                        throw new \Exception("Payment Gateway Error: " . $gatewayEx->getMessage());
                     }
                 }
 
@@ -1180,66 +1180,75 @@ class CheckoutController extends Controller
         return 1; // Default fallback to 1 to avoid division by zero
     }
 
-    public function midtransCallback(Request $request)
+    public function xenditCallback(Request $request)
     {
-        $serverKey = config('services.midtrans.server_key');
-        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+        $token = $request->header('x-callback-token') ?? $request->header('X-CALLBACK-TOKEN');
+        $configuredToken = config('services.xendit.webhook_token');
         
-        if ($hashed !== $request->signature_key) {
-            return response()->json(['message' => 'Invalid signature'], 403);
+        if ($configuredToken && $token !== $configuredToken) {
+            return response()->json(['message' => 'Invalid webhook token'], 403);
         }
 
-        $parts = explode('-', $request->order_id);
-        $invoiceNumber = implode('-', array_slice($parts, 0, 3));
-        $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
-        
+        $externalId = $request->input('external_id') ?? $request->input('externalId') ?? $request->input('reference_id') ?? $request->input('data.reference_id');
+        $invoiceId = $request->input('id') ?? $request->input('invoice_id') ?? $request->input('data.id');
+        $status = strtoupper($request->input('status') ?? $request->input('event') ?? $request->input('data.status') ?? '');
+
+        if (!$externalId && !$invoiceId) {
+            return response()->json(['message' => 'Missing transaction identifier'], 400);
+        }
+
+        $order = null;
+        if ($externalId) {
+            $parts = explode('-', $externalId);
+            if (count($parts) >= 3) {
+                $invoiceNumber = implode('-', array_slice($parts, 0, 3));
+                $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
+            }
+            if (!$order) {
+                $order = Order::with('items')->where('invoice_number', $externalId)->first();
+            }
+        }
+
+        if (!$order && $invoiceId) {
+            $order = Order::with('items')
+                ->where('payment_details->xendit_invoice_id', $invoiceId)
+                ->orWhere('payment_details->xendit_va_id', $invoiceId)
+                ->orWhere('payment_details->xendit_qr_id', $invoiceId)
+                ->orWhere('payment_details->xendit_retail_id', $invoiceId)
+                ->orWhere('payment_details->xendit_ewallet_id', $invoiceId)
+                ->first();
+        }
+
         if (!$order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        $transactionStatus = $request->transaction_status;
-        $type = $request->payment_type;
-        $fraud = $request->fraud_status;
-
         $paymentStatus = 'unpaid';
-        $status = $order->status;
+        $orderStatus = $order->status;
 
-        if ($transactionStatus == 'capture') {
-            if ($type == 'credit_card') {
-                if ($fraud == 'challenge') {
-                    $paymentStatus = 'unpaid';
-                    $status = 'pending';
-                } else {
-                    $paymentStatus = 'paid';
-                    $status = 'processing';
-                }
-            } else {
-                $paymentStatus = 'paid';
-                $status = 'processing';
-            }
-        } else if ($transactionStatus == 'settlement') {
+        if (in_array($status, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'QR_CODE.PAYMENT'])) {
             $paymentStatus = 'paid';
-            $status = 'processing';
-        } else if ($transactionStatus == 'pending') {
-            $paymentStatus = 'unpaid';
-            $status = 'pending';
-        } else if ($transactionStatus == 'deny' || $transactionStatus == 'expire' || $transactionStatus == 'cancel') {
+            $orderStatus = 'processing';
+        } elseif (in_array($status, ['EXPIRED', 'EXPIRE', 'CANCELLED', 'FAILED'])) {
             $paymentStatus = 'expired';
-            $status = 'cancelled';
+            $orderStatus = 'cancelled';
+        } elseif ($status === 'PENDING' || $status === 'ACTIVE') {
+            $paymentStatus = 'unpaid';
+            $orderStatus = 'pending';
         }
 
-        $details = $order->payment_details;
+        $details = $order->payment_details ?: [];
         if (is_array($details)) {
-            $details['transaction_status'] = $transactionStatus;
+            $details['transaction_status'] = strtolower($status);
             $order->payment_details = $details;
         }
 
         $order->update([
             'payment_status' => $paymentStatus,
-            'status' => $status
+            'status' => $orderStatus,
         ]);
 
-        return response()->json(['message' => 'Callback handled successfully']);
+        return response()->json(['message' => 'Xendit callback handled successfully']);
     }
 
     public function payment($id)
@@ -1252,8 +1261,24 @@ class CheckoutController extends Controller
 
         return Inertia::render('checkout/PaymentPage', [
             'order' => $order,
+            'activeGateway' => config('services.payment_gateway', 'xendit'),
+            'xenditPublicKey' => config('services.xendit.public_key'),
             'midtransClientKey' => config('services.midtrans.client_key'),
-            'isProduction' => config('services.midtrans.is_production'),
+            'isProduction' => app()->environment('production'),
+        ]);
+    }
+
+    public function paymentStatus($id)
+    {
+        $order = Order::select('id', 'user_id', 'status', 'payment_status')->findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return response()->json([
+            'status' => $order->status,
+            'payment_status' => $order->payment_status,
         ]);
     }
 
@@ -1278,17 +1303,24 @@ class CheckoutController extends Controller
         }
 
         try {
-            if ($order->payment_details && isset($order->payment_details['midtrans_order_id'])) {
-                try {
-                    \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
-                    \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
-                    \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
-                } catch (\Exception $cancelEx) {
-                    // Ignore cancel error if transaction not found or already cancelled on Midtrans side
+            if ($order->payment_details) {
+                if (isset($order->payment_details['xendit_invoice_id'])) {
+                    try {
+                        \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
+                        $apiInstance = new \Xendit\Invoice\InvoiceApi();
+                        $apiInstance->expireInvoice($order->payment_details['xendit_invoice_id']);
+                    } catch (\Throwable $cancelEx) {}
+                }
+                if (isset($order->payment_details['midtrans_order_id'])) {
+                    try {
+                        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                        \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                        \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                    } catch (\Throwable $cancelEx) {}
                 }
             }
 
-            $details = $this->chargeMidtrans($order, $request->payment_method, null, $request->phone_number);
+            $details = $this->chargePayment($order, $request->payment_method, $request->phone_number);
             $order->update([
                 'payment_method' => $request->payment_method,
                 'payment_details' => $details,
@@ -1308,10 +1340,6 @@ class CheckoutController extends Controller
 
     public function payCreditCard(Request $request, $id)
     {
-        $request->validate([
-            'token_id' => 'required|string',
-        ]);
-
         $order = Order::findOrFail($id);
 
         if ($order->user_id !== auth()->id()) {
@@ -1326,7 +1354,7 @@ class CheckoutController extends Controller
         }
 
         try {
-            $details = $this->chargeMidtrans($order, 'credit_card', $request->token_id);
+            $details = $this->chargePayment($order, 'credit_card');
             $order->update([
                 'payment_details' => $details,
             ]);
@@ -1334,7 +1362,7 @@ class CheckoutController extends Controller
             return response()->json([
                 'success' => true,
                 'order' => $order->load(['items.product', 'items.variant', 'storeBranch']),
-                'redirect_url' => $details['redirect_url'] ?? null,
+                'redirect_url' => $details['invoice_url'] ?? null,
             ]);
         } catch (\Throwable $e) {
             return response()->json([
@@ -1360,6 +1388,23 @@ class CheckoutController extends Controller
         }
 
         try {
+            if ($order->payment_details) {
+                if (isset($order->payment_details['xendit_invoice_id'])) {
+                    try {
+                        \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
+                        $apiInstance = new \Xendit\Invoice\InvoiceApi();
+                        $apiInstance->expireInvoice($order->payment_details['xendit_invoice_id']);
+                    } catch (\Throwable $cancelEx) {}
+                }
+                if (isset($order->payment_details['midtrans_order_id'])) {
+                    try {
+                        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                        \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                        \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                    } catch (\Throwable $cancelEx) {}
+                }
+            }
+
             $order->update([
                 'cancellation_status' => 'pending',
                 'cancellation_reason' => 'Dibatalkan oleh customer dari halaman pembayaran.'
@@ -1394,6 +1439,23 @@ class CheckoutController extends Controller
 
         try {
             DB::transaction(function () use ($order) {
+                if ($order->payment_details) {
+                    if (isset($order->payment_details['xendit_invoice_id'])) {
+                        try {
+                            \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
+                            $apiInstance = new \Xendit\Invoice\InvoiceApi();
+                            $apiInstance->expireInvoice($order->payment_details['xendit_invoice_id']);
+                        } catch (\Throwable $cancelEx) {}
+                    }
+                    if (isset($order->payment_details['midtrans_order_id'])) {
+                        try {
+                            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                            \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
+                        } catch (\Throwable $cancelEx) {}
+                    }
+                }
+
                 $order->update([
                     'status' => 'cancelled',
                     'payment_status' => 'expired',
@@ -1413,7 +1475,22 @@ class CheckoutController extends Controller
         }
     }
 
-    private function chargeMidtrans($order, $paymentMethod, $cardToken = null, $customPhone = null)
+    /**
+     * Unified Charge Gateway Dispatcher
+     */
+    public function chargePayment($order, $paymentMethod, $customPhone = null)
+    {
+        $gateway = config('services.payment_gateway', 'xendit');
+        if ($gateway === 'midtrans') {
+            return $this->chargeMidtrans($order, $paymentMethod, $customPhone);
+        }
+        return $this->chargeXendit($order, $paymentMethod, $customPhone);
+    }
+
+    /**
+     * Midtrans Charge Generator
+     */
+    public function chargeMidtrans($order, $paymentMethod, $customPhone = null)
     {
         \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
         \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
@@ -1424,191 +1501,313 @@ class CheckoutController extends Controller
         $nameParts = explode(' ', trim($user->name));
         $firstName = $nameParts[0];
         $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
-
-        $midtransOrderId = $order->invoice_number . '-' . time();
+        $phone = $customPhone ?: ($user->phone ?: '08111222333');
+        $orderId = $order->invoice_number . '-' . time();
 
         $params = [
             'transaction_details' => [
-                'order_id' => $midtransOrderId,
+                'order_id' => $orderId,
                 'gross_amount' => (int) $order->total_amount,
             ],
             'customer_details' => [
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'email' => $user->email,
-                'phone' => $user->phone ?: '08111222333',
+                'phone' => $phone,
             ],
             'notification_url' => url('/checkout/midtrans-callback'),
         ];
 
-        switch ($paymentMethod) {
-            case 'qris':
-            case 'dana':
-                $params['payment_type'] = 'qris';
-                break;
-            case 'bca_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'bca'];
-                break;
-            case 'bri_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'bri'];
-                break;
-            case 'bni_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'bni'];
-                break;
-            case 'permata_va':
-            case 'seabank_va':
-            case 'danamon_va':
-            case 'saqu_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'permata'];
-                break;
-            case 'cimb_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'cimb'];
-                break;
-            case 'bsi_va':
-                $params['payment_type'] = 'bank_transfer';
-                $params['bank_transfer'] = ['bank' => 'bsi'];
-                break;
-            case 'mandiri_va':
-                $params['payment_type'] = 'echannel';
-                $params['echannel'] = [
-                    'bill_info1' => 'Payment:',
-                    'bill_info2' => 'Order Payment'
-                ];
-                break;
-            case 'gopay':
-                $params['payment_type'] = 'gopay';
-                break;
-            case 'shopeepay':
-                $params['payment_type'] = 'shopeepay';
-                $params['shopeepay'] = [
-                    'callback_url' => url('/checkout/payment/' . $order->id)
-                ];
-                break;
-            case 'ovo':
-                $params['payment_type'] = 'ovo';
-                if ($customPhone) {
-                    // Clean and charge
-                    $phone = $customPhone;
-                    $phone = preg_replace('/[^0-9+]/', '', $phone);
-                    if (str_starts_with($phone, '+62')) {
-                        $phone = '0' . substr($phone, 3);
-                    } elseif (str_starts_with($phone, '62')) {
-                        $phone = '0' . substr($phone, 2);
-                    }
-                    $params['ovo'] = [
-                        'payer_phone_number' => $phone
-                    ];
-                } else {
-                    return [
-                        'midtrans_order_id' => $midtransOrderId,
-                        'transaction_status' => 'pending'
-                    ];
-                }
-                break;
-            case 'alfamart':
-                $params['payment_type'] = 'cstore';
-                $params['cstore'] = ['store' => 'alfamart'];
-                break;
-            case 'indomaret':
-                $params['payment_type'] = 'cstore';
-                $params['cstore'] = ['store' => 'indomaret'];
-                break;
-            case 'credit_card':
-                $params['payment_type'] = 'credit_card';
-                if ($cardToken) {
-                    $params['credit_card'] = [
-                        'token_id' => $cardToken,
-                        'secure' => true,
-                    ];
-                } else {
-                    return [
-                        'midtrans_order_id' => $midtransOrderId,
-                        'transaction_status' => 'pending'
-                    ];
-                }
-                break;
-            default:
-                throw new \Exception("Unsupported payment method: " . $paymentMethod);
-        }
-
-        $response = \Midtrans\CoreApi::charge($params);
-        
-        $details = [
-            'midtrans_order_id' => $midtransOrderId,
-            'transaction_status' => $response->transaction_status ?? 'pending',
+        $snapToken = \Midtrans\Snap::getSnapToken($params);
+        return [
+            'midtrans_order_id' => $orderId,
+            'snap_token' => $snapToken,
+            'transaction_status' => 'pending',
+            'expiry_time' => date('Y-m-d H:i:s', time() + 86400),
         ];
+    }
 
-        if (in_array($paymentMethod, ['qris', 'dana', 'gopay', 'shopeepay'])) {
-            $details['qr_string'] = $response->qr_string ?? null;
-            if (isset($response->actions)) {
-                foreach ($response->actions as $action) {
-                    $actionName = is_array($action) ? ($action['name'] ?? null) : ($action->name ?? null);
-                    $actionUrl = is_array($action) ? ($action['url'] ?? null) : ($action->url ?? null);
-                    if (in_array($actionName, ['generate-qr-code', 'generate-qr-code-v2', 'generate_qr_code'])) {
-                        $details['qr_url'] = $actionUrl;
-                    } elseif (in_array($actionName, ['deeplink-redirect', 'deeplink_redirect', 'deeplink-redirection', 'deeplink_redirection'])) {
-                        $details['deeplink'] = $actionUrl;
+    /**
+     * Midtrans Callback Handler
+     */
+    public function midtransCallback(Request $request)
+    {
+        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+        \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+        \Midtrans\Config::$isSanitized = true;
+        \Midtrans\Config::$is3ds = true;
+
+        try {
+            $notif = new \Midtrans\Notification();
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Invalid Midtrans Notification Payload'], 400);
+        }
+
+        $transaction = $notif->transaction_status;
+        $type = $notif->payment_type;
+        $orderId = $notif->order_id;
+        $fraud = $notif->fraud_status;
+
+        $parts = explode('-', $orderId);
+        $invoiceNumber = implode('-', array_slice($parts, 0, 3));
+        $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
+
+        if (!$order) {
+            $order = Order::with('items')->where('invoice_number', $orderId)->first();
+        }
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $paymentStatus = 'unpaid';
+        $orderStatus = $order->status;
+
+        if ($transaction == 'capture') {
+            if ($type == 'credit_card') {
+                if ($fraud == 'challenge') {
+                    $paymentStatus = 'unpaid';
+                } else {
+                    $paymentStatus = 'paid';
+                    $orderStatus = 'processing';
+                }
+            }
+        } else if ($transaction == 'settlement') {
+            $paymentStatus = 'paid';
+            $orderStatus = 'processing';
+        } else if ($transaction == 'pending') {
+            $paymentStatus = 'unpaid';
+            $orderStatus = 'pending';
+        } else if ($transaction == 'deny' || $transaction == 'expire' || $transaction == 'cancel') {
+            $paymentStatus = 'expired';
+            $orderStatus = 'cancelled';
+        }
+
+        $details = $order->payment_details ?: [];
+        if (is_array($details)) {
+            $details['transaction_status'] = $transaction;
+            $order->payment_details = $details;
+        }
+
+        $order->update([
+            'payment_status' => $paymentStatus,
+            'status' => $orderStatus,
+        ]);
+
+        return response()->json(['message' => 'Midtrans callback handled successfully']);
+    }
+
+    /**
+     * Xendit Charge Generator
+     */
+    public function chargeXendit($order, $paymentMethod, $customPhone = null)
+    {
+        $secretKey = config('services.xendit.secret_key');
+        if (!$secretKey) {
+            throw new \Exception("Xendit secret key is missing in .env.");
+        }
+
+        $user = $order->user;
+        $nameParts = explode(' ', trim($user->name));
+        $firstName = $nameParts[0];
+        $lastName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : '';
+        $phone = $customPhone ?: ($user->phone ?: '08111222333');
+        $amount = (float) $order->total_amount;
+        $externalId = $order->invoice_number . '-' . time();
+
+        // 1. VIRTUAL ACCOUNTS (DIRECT VA API)
+        if (str_contains($paymentMethod, '_va')) {
+            $bankMap = [
+                'bca_va' => 'BCA',
+                'bri_va' => 'BRI',
+                'bni_va' => 'BNI',
+                'mandiri_va' => 'MANDIRI',
+                'permata_va' => 'PERMATA',
+                'cimb_va' => 'CIMB',
+                'bsi_va' => 'BSI',
+                'seabank_va' => 'PERMATA',
+                'danamon_va' => 'PERMATA',
+                'saqu_va' => 'PERMATA',
+            ];
+
+            $bankCode = $bankMap[$paymentMethod] ?? 'BCA';
+
+            $response = Http::withBasicAuth($secretKey, '')
+                ->asForm()
+                ->post('https://api.xendit.co/callback_virtual_accounts', [
+                    'external_id' => $externalId,
+                    'bank_code' => $bankCode,
+                    'name' => trim($user->name),
+                    'expected_amount' => (int) $amount,
+                    'is_closed' => 'true',
+                    'is_single_use' => 'true',
+                    'expiration_date' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                ]);
+
+            if ($response->failed()) {
+                $errorMsg = $response->json('message') ?? $response->body();
+                throw new \Exception("Gagal membuat Nomor Virtual Account (" . $bankCode . "): " . $errorMsg);
+            }
+
+            $resData = $response->json();
+            return [
+                'xendit_va_id' => $resData['id'] ?? null,
+                'va_number' => $resData['account_number'] ?? null,
+                'bank' => strtolower($resData['bank_code'] ?? str_replace('_va', '', $paymentMethod)),
+                'transaction_status' => 'pending',
+                'expiry_time' => isset($resData['expiration_date']) ? date('Y-m-d H:i:s', strtotime($resData['expiration_date'])) : date('Y-m-d H:i:s', time() + 86400),
+            ];
+        }
+
+        // 2. QRIS (DIRECT QRIS API)
+        if ($paymentMethod === 'qris') {
+            $response = Http::withHeaders(['api-version' => '2022-07-31'])
+                ->withBasicAuth($secretKey, '')
+                ->post('https://api.xendit.co/qr_codes', [
+                    'reference_id' => $externalId,
+                    'type' => 'DYNAMIC',
+                    'currency' => 'IDR',
+                    'amount' => (int) $amount,
+                    'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                ]);
+
+            if ($response->failed()) {
+                $errorMsg = $response->json('message') ?? $response->body();
+                throw new \Exception("Gagal membuat QRIS: " . $errorMsg);
+            }
+
+            $resData = $response->json();
+            return [
+                'xendit_qr_id' => $resData['id'] ?? null,
+                'qr_string' => $resData['qr_string'] ?? null,
+                'transaction_status' => 'pending',
+                'expiry_time' => isset($resData['expires_at']) ? date('Y-m-d H:i:s', strtotime($resData['expires_at'])) : date('Y-m-d H:i:s', time() + 86400),
+            ];
+        }
+
+        // 3. RETAIL OUTLETS (DIRECT RETAIL API - Alfamart / Indomaret)
+        if (in_array($paymentMethod, ['alfamart', 'indomaret'])) {
+            $outletName = strtoupper($paymentMethod);
+
+            $response = Http::withBasicAuth($secretKey, '')
+                ->asForm()
+                ->post('https://api.xendit.co/fixed_payment_code', [
+                    'external_id' => $externalId,
+                    'retail_outlet_name' => $outletName,
+                    'name' => trim($user->name),
+                    'expected_amount' => (int) $amount,
+                    'is_single_use' => 'true',
+                    'expiration_date' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
+                ]);
+
+            if ($response->failed()) {
+                $errorMsg = $response->json('message') ?? $response->body();
+                throw new \Exception("Gagal membuat Kode Pembayaran Kasir: " . $errorMsg);
+            }
+
+            $resData = $response->json();
+            return [
+                'xendit_retail_id' => $resData['id'] ?? null,
+                'payment_code' => $resData['payment_code'] ?? null,
+                'store' => strtolower($resData['retail_outlet_name'] ?? $paymentMethod),
+                'transaction_status' => 'pending',
+                'expiry_time' => isset($resData['expiration_date']) ? date('Y-m-d H:i:s', strtotime($resData['expiration_date'])) : date('Y-m-d H:i:s', time() + 86400),
+            ];
+        }
+
+        // 4. E-WALLETS (DIRECT EWALLET API - GoPay, ShopeePay, DANA, OVO)
+        if (in_array($paymentMethod, ['gopay', 'shopeepay', 'dana', 'ovo'])) {
+            $channelMap = [
+                'gopay' => 'ID_GOPAY',
+                'shopeepay' => 'ID_SHOPEEPAY',
+                'dana' => 'ID_DANA',
+                'ovo' => 'ID_OVO',
+            ];
+
+            $channelCode = $channelMap[$paymentMethod];
+            $payload = [
+                'reference_id' => $externalId,
+                'currency' => 'IDR',
+                'amount' => (int) $amount,
+                'checkout_method' => 'ONE_TIME_PAYMENT',
+                'channel_code' => $channelCode,
+                'channel_properties' => [
+                    'success_redirect_url' => url('/checkout/success/' . $order->id),
+                ]
+            ];
+
+            if ($paymentMethod === 'ovo') {
+                $cleanPhone = preg_replace('/[^0-9+]/', '', $phone);
+                if (str_starts_with($cleanPhone, '+62')) {
+                    $cleanPhone = '0' . substr($cleanPhone, 3);
+                } elseif (str_starts_with($cleanPhone, '62')) {
+                    $cleanPhone = '0' . substr($cleanPhone, 2);
+                }
+                $payload['channel_properties']['mobile_number'] = $cleanPhone;
+            }
+
+            $response = Http::withBasicAuth($secretKey, '')
+                ->post('https://api.xendit.co/ewallets/charges', $payload);
+
+            if ($response->failed()) {
+                $errorMsg = $response->json('message') ?? $response->body();
+                throw new \Exception("Gagal memproses E-Wallet (" . $paymentMethod . "): " . $errorMsg);
+            }
+
+            $resData = $response->json();
+            $details = [
+                'xendit_ewallet_id' => $resData['id'] ?? null,
+                'transaction_status' => strtolower($resData['status'] ?? 'pending'),
+                'expiry_time' => date('Y-m-d H:i:s', time() + 86400),
+            ];
+
+            if ($paymentMethod === 'ovo') {
+                $details['ovo_phone'] = $cleanPhone ?? $phone;
+            }
+
+            if (isset($resData['actions']) && is_array($resData['actions'])) {
+                foreach ($resData['actions'] as $action) {
+                    $urlType = $action['url_type'] ?? '';
+                    if (in_array($urlType, ['DEEPLINK', 'MOBILE_DEEPLINK'])) {
+                        $details['deeplink'] = $action['url'] ?? null;
+                    } elseif (in_array($urlType, ['WEB', 'DESKTOP_WEB', 'MOBILE_WEB'])) {
+                        $details['qr_url'] = $action['url'] ?? null;
+                    } elseif ($urlType === 'QR_CODE') {
+                        $details['qr_string'] = $action['qr_code'] ?? $action['url'] ?? null;
                     }
                 }
             }
 
-            // Generate DANA universal app-redirect link dynamically using QRIS string
-            if ($paymentMethod === 'dana' && !empty($details['qr_string'])) {
-                $details['deeplink'] = 'https://link.dana.id/qr/' . $details['qr_string'];
-            }
-
-            // GoPay direct app-to-app deep link
-            if ($paymentMethod === 'gopay' && !empty($details['deeplink'])) {
-                $urlParts = explode('/', rtrim($details['deeplink'], '/'));
-                $token = end($urlParts);
-                if ($token) {
-                    $details['deeplink'] = 'gojek://gopay/merchanttransfer?ttoken=' . $token;
-                }
-            }
-
-            // ShopeePay direct app-to-app deep link
-            if ($paymentMethod === 'shopeepay' && !empty($details['deeplink'])) {
-                $urlParts = explode('/', rtrim($details['deeplink'], '/'));
-                $token = end($urlParts);
-                if ($token) {
-                    $details['deeplink'] = 'shopeeid://client/jumps/wallet/pay?token=' . $token;
-                }
-            }
-
-            $details['expiry_time'] = $response->expiry_time ?? null;
-        } elseif (str_contains($paymentMethod, '_va')) {
-            if (in_array($paymentMethod, ['permata_va', 'seabank_va', 'danamon_va', 'saqu_va'])) {
-                $details['va_number'] = $response->permata_va_number ?? null;
-                $details['bank'] = 'permata';
-            } else {
-                $vaNumbers = $response->va_numbers ?? [];
-                $details['va_number'] = !empty($vaNumbers) ? ($vaNumbers[0]->va_number ?? null) : null;
-                $details['bank'] = !empty($vaNumbers) ? ($vaNumbers[0]->bank ?? str_replace('_va', '', $paymentMethod)) : str_replace('_va', '', $paymentMethod);
-            }
-            $details['expiry_time'] = $response->expiry_time ?? null;
-        } elseif ($paymentMethod === 'mandiri_va') {
-            $details['bill_key'] = $response->bill_key ?? null;
-            $details['biller_code'] = $response->biller_code ?? null;
-            $details['expiry_time'] = $response->expiry_time ?? null;
-        } elseif ($paymentMethod === 'ovo') {
-            $details['expiry_time'] = $response->expiry_time ?? null;
-            if (isset($phone)) {
-                $details['ovo_phone'] = $phone;
-            }
-        } elseif (in_array($paymentMethod, ['alfamart', 'indomaret'])) {
-            $details['payment_code'] = $response->payment_code ?? null;
-            $details['store'] = $response->store ?? $paymentMethod;
-            $details['expiry_time'] = $response->expiry_time ?? null;
-        } elseif ($paymentMethod === 'credit_card') {
-            $details['redirect_url'] = $response->redirect_url ?? null;
-            $details['expiry_time'] = $response->expiry_time ?? null;
+            return $details;
         }
 
-        return $details;
+        // 5. FALLBACK TO INVOICE FOR CREDIT CARD
+        \Xendit\Configuration::setXenditKey($secretKey);
+        $apiInstance = new \Xendit\Invoice\InvoiceApi();
+        $createInvoiceRequest = new \Xendit\Invoice\CreateInvoiceRequest([
+            'external_id' => $externalId,
+            'amount' => (float) $amount,
+            'description' => 'Pembayaran Fayyfir Shop #' . $order->invoice_number,
+            'invoice_duration' => 86400,
+            'currency' => 'IDR',
+            'customer' => [
+                'given_names' => $firstName,
+                'surname' => $lastName,
+                'email' => $user->email,
+                'mobile_number' => $phone,
+            ],
+            'success_redirect_url' => url('/checkout/success/' . $order->id),
+            'failure_redirect_url' => url('/checkout/payment/' . $order->id),
+        ]);
+
+        $invoice = $apiInstance->createInvoice($createInvoiceRequest);
+
+        return [
+            'xendit_invoice_id' => $invoice->getId(),
+            'invoice_url' => $invoice->getInvoiceUrl(),
+            'external_id' => $invoice->getExternalId(),
+            'transaction_status' => strtolower((string)$invoice->getStatus()),
+            'expiry_time' => date('Y-m-d H:i:s', time() + 86400),
+        ];
     }
 }

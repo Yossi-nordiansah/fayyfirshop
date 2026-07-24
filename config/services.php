@@ -42,6 +42,15 @@ return [
         'is_production' => strpos(env('MIDTRANS_URL_ENDPOINT_BASE', 'sandbox'), 'sandbox') === false,
     ],
 
+    'payment_gateway' => env('PAYMENT_GATEWAY', 'xendit'),
+
+    'xendit' => [
+        'secret_key' => env('XENDIT_SECRET_KEY'),
+        'public_key' => env('XENDIT_PUBLIC_KEY'),
+        'webhook_token' => env('XENDIT_WEBHOOK_TOKEN', env('XENDIT_CALLBACK_TOKEN')),
+    ],
+
+
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

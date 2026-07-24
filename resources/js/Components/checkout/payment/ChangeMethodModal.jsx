@@ -92,7 +92,7 @@ export default function ChangeMethodModal({
                                  <div className="flex flex-col items-center justify-center py-14 space-y-3">
                                      <LoadingSpinner className="w-12 h-12" />
                                      <span className="text-xs text-slate-500 font-bold text-center px-4 max-w-md leading-relaxed">
-                                         {t("checkout.modal.loading", "Mengubah metode pembayaran & menghubungi Midtrans...")}
+                                         {t("checkout.modal.loading", "Mengubah metode pembayaran & menghubungi Xendit...")}
                                      </span>
                                  </div>
                              ) : (

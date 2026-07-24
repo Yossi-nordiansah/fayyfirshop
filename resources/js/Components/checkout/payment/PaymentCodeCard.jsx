@@ -47,8 +47,8 @@ export default function PaymentCodeCard({
                 </button>
             </div>
 
-            {/* 1. Virtual Account (non-mandiri) */}
-            {["bca_va", "bri_va", "bni_va", "permata_va", "cimb_va", "seabank_va", "danamon_va", "bsi_va", "saqu_va"].includes(order.payment_method) && details.va_number && (
+            {/* 1. Virtual Account */}
+            {["bca_va", "bri_va", "bni_va", "mandiri_va", "permata_va", "cimb_va", "seabank_va", "danamon_va", "bsi_va", "saqu_va"].includes(order.payment_method) && details.va_number && (
                 <div className="space-y-4 text-center">
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-sm w-full mx-auto">
                         <span className="text-xs text-slate-400 font-bold tracking-wider block uppercase">
@@ -239,7 +239,7 @@ export default function PaymentCodeCard({
                                 {t("payment.retail.midtrans_notice_title", "Pemberitahuan Kasir")}
                             </span>
                             <span className="text-[11px] text-blue-800 font-medium leading-normal block mt-1">
-                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Midtrans / Online Shop.")}
+                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Xendit / Online Shop.")}
                             </span>
                         </div>
                     </div>

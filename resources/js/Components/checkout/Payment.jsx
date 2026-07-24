@@ -11,7 +11,7 @@ import ActionPanel from "@/Components/checkout/payment/ActionPanel";
 import ChangeMethodModal from "@/Components/checkout/payment/ChangeMethodModal";
 import Toast from "@/Components/Toast";
 
-export default function Payment({ order, midtransClientKey, isProduction, t, locale }) {
+export default function Payment({ order, xenditPublicKey, isProduction, t, locale }) {
     const isRtl = locale === "arabic";
 
     /* ── UI State ── */
@@ -195,76 +195,48 @@ export default function Payment({ order, midtransClientKey, isProduction, t, loc
         return () => clearInterval(timer);
     }, [order]);
 
-    // Poll payment status every 5 seconds while unpaid
+    // Silent background status polling (no page reloads or loading bars)
     useEffect(() => {
         if (order.payment_status !== "unpaid" || order.status !== "pending") return;
-        const interval = setInterval(() => router.reload({ only: ["order"] }), 5000);
+
+        const interval = setInterval(() => {
+            axios
+                .get(route("checkout.payment.status", order.id))
+                .then((res) => {
+                    if (res.data && res.data.payment_status === "paid") {
+                        router.visit(route("checkout.success", order.id));
+                    } else if (res.data && (res.data.payment_status === "expired" || res.data.status === "cancelled")) {
+                        router.reload();
+                    }
+                })
+                .catch(() => {});
+        }, 5000);
+
         return () => clearInterval(interval);
-    }, [order.payment_status, order.status]);
-
-    // Auto-redirect when paid
-    useEffect(() => {
-        if (order.payment_status === "paid") {
-            router.visit(route("checkout.success", order.id));
-        }
-    }, [order.payment_status, order.id]);
-
-    // Load Midtrans SDK for Credit Card
-    useEffect(() => {
-        if (order.payment_method !== "credit_card") return;
-        if (document.getElementById("midtrans-cc-script")) return;
-
-        const script = document.createElement("script");
-        script.src = isProduction
-            ? "https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js"
-            : "https://api.sandbox.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js";
-        script.id = "midtrans-cc-script";
-        script.setAttribute("data-client-key", midtransClientKey);
-        script.async = true;
-        document.body.appendChild(script);
-    }, [order.payment_method, isProduction, midtransClientKey]);
+    }, [order.payment_status, order.status, order.id]);
 
     /* ── Handlers ── */
 
     const handleCardPay = (e) => {
         e.preventDefault();
-        if (!window.Midtrans) {
-            alert(t("payment.sdk_error", "Midtrans SDK gagal dimuat. Harap periksa koneksi internet Anda."));
+        setIsPayingCard(true);
+        if (details.invoice_url) {
+            window.location.href = details.invoice_url;
             return;
         }
-        setIsPayingCard(true);
-        window.Midtrans.card.token(
-            {
-                card_number: cardForm.cardNumber.replace(/\s+/g, ""),
-                card_exp_month: cardForm.expiryMonth,
-                card_exp_year: "20" + cardForm.expiryYear.slice(-2),
-                card_cvv: cardForm.cvv,
-                client_key: midtransClientKey,
-            },
-            {
-                onSuccess: (response) => {
-                    axios
-                        .post(route("checkout.payment.pay-card", order.id), { token_id: response.token_id })
-                        .then((res) => {
-                            if (res.data.success) {
-                                res.data.redirect_url
-                                    ? (window.location.href = res.data.redirect_url)
-                                    : router.reload();
-                            } else {
-                                alert(res.data.message || "Pembayaran gagal.");
-                            }
-                        })
-                        .catch((err) => {
-                            alert(err.response?.data?.message || "Terjadi kesalahan saat memproses kartu Anda.");
-                        })
-                        .finally(() => setIsPayingCard(false));
-                },
-                onFailure: (response) => {
-                    alert(t("payment.card_validation_failed", "Validasi kartu gagal: ") + response.validation_messages.join(", "));
-                    setIsPayingCard(false);
-                },
-            }
-        );
+        axios
+            .post(route("checkout.payment.pay-card", order.id))
+            .then((res) => {
+                if (res.data.success && res.data.redirect_url) {
+                    window.location.href = res.data.redirect_url;
+                } else {
+                    alert(res.data.message || "Pembayaran gagal.");
+                }
+            })
+            .catch((err) => {
+                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses pembayaran kartu.");
+            })
+            .finally(() => setIsPayingCard(false));
     };
 
     const handleOvoPay = (e) => {
