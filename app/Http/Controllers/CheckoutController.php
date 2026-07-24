@@ -1211,10 +1211,10 @@ class CheckoutController extends Controller
 
         $order = null;
         if ($externalId) {
-            $parts = explode('-', $externalId);
-            if (count($parts) >= 3) {
-                $invoiceNumber = implode('-', array_slice($parts, 0, 3));
-                $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
+            $lastHyphenPos = strrpos($externalId, '-');
+            if ($lastHyphenPos !== false) {
+                $possibleInvoiceNumber = substr($externalId, 0, $lastHyphenPos);
+                $order = Order::with('items')->where('invoice_number', $possibleInvoiceNumber)->first();
             }
             if (!$order) {
                 $order = Order::with('items')->where('invoice_number', $externalId)->first();
@@ -1244,9 +1244,11 @@ class CheckoutController extends Controller
         $orderStatus = $order->status;
 
         $isPaid = in_array($rawStatus, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED']) ||
-                  in_array($rawEvent, ['PAYMENT_REQUEST.SUCCEEDED', 'PAYMENT.SUCCEEDED', 'QR_CODE.PAYMENT', 'INVOICE.PAID']) ||
+                  in_array($rawEvent, ['PAYMENT_REQUEST.SUCCEEDED', 'PAYMENT.SUCCEEDED', 'QR_CODE.PAYMENT', 'INVOICE.PAID', 'FVA.PAID', 'VA_PAID']) ||
                   str_contains($rawEvent, 'SUCCEEDED') ||
-                  str_contains($rawEvent, 'PAID');
+                  str_contains($rawEvent, 'PAID') ||
+                  $request->has('payment_id') ||
+                  $request->has('callback_virtual_account_id');
 
         $isExpiredOrFailed = in_array($rawStatus, ['EXPIRED', 'EXPIRE', 'CANCELLED', 'FAILED']) ||
                              str_contains($rawEvent, 'EXPIRED') ||
