@@ -23,7 +23,14 @@ class HandleInertiaRequests extends Middleware
         $laravelLocale = $map[$locale] ?? 'id';
         app()->setLocale($laravelLocale);
         
-        return parent::handle($request, $next);
+        $response = parent::handle($request, $next);
+
+        $response->headers->set('Vary', 'X-Inertia');
+        $response->headers->set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+
+        return $response;
     }
 
     /**

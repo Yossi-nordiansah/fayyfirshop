@@ -1187,6 +1187,7 @@
     "payment.mandiri.copy_biller": "Salin Biller",
     "payment.mandiri.copy_key": "Salin Bill Key",
     "payment.qris.scan_title": "SCAN QRIS UNTUK MEMBAYAR",
+    "payment.download_qr": "Unduh QR Code",
     "payment.qris.open_app": "Buka Aplikasi E-Wallet \/ QRIS",
     "payment.qris.support_desc": "Mendukung Gopay, ShopeePay, OVO, Dana, LinkAja, & Mobile Banking",
     "payment.ovo.notif_sent": "Push Notification OVO Terkirim ke",

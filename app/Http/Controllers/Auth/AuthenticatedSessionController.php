@@ -79,7 +79,7 @@ class AuthenticatedSessionController extends Controller
     /**
      * Destroy an authenticated session.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request)
     {
         $role = Auth::user()?->role;
 
@@ -91,10 +91,10 @@ class AuthenticatedSessionController extends Controller
 
         if (in_array($role, ['admin', 'super_admin'], true)) {
             $request->session()->flash('logout_status', 'success_admin');
-            return redirect()->route('backoffice.login');
+            return Inertia::location(route('backoffice.login'));
         }
 
         $request->session()->flash('logout_status', 'success_customer');
-        return redirect('/');
+        return Inertia::location('/');
     }
 }

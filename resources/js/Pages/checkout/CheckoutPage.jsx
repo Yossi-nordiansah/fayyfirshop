@@ -524,8 +524,8 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                         localStorage.removeItem(checkoutKey);
 
                         window.dispatchEvent(new Event("fayyfir-cart-updated"));
-                        // Redirect to custom payment details page
-                        router.visit(route('checkout.payment', orderId));
+                        // Redirect to custom payment details page with history replace
+                        router.visit(route('checkout.payment', orderId), { replace: true });
                     };
 
                     clearCartAndRedirect(res.data.order.id);

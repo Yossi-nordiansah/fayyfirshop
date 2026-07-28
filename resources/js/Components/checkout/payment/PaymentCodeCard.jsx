@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle, Smartphone, Monitor
+    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle, Smartphone, Monitor, Download
 } from "lucide-react";
 import LoadingSpinner from "@/Components/LoadingSpinner";
 
@@ -32,6 +32,44 @@ export default function PaymentCodeCard({
         window.addEventListener("resize", checkDevice);
         return () => window.removeEventListener("resize", checkDevice);
     }, []);
+
+    // Helper to download QR code image
+    const downloadQrCode = async (url, filename = `QR-${order.invoice_number}.png`) => {
+        if (!url) return;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.src = url;
+            image.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = image.width || 300;
+                canvas.height = image.height || 300;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(image, 0, 0);
+                const dataUrl = canvas.toDataURL("image/png");
+                const a = document.createElement("a");
+                a.href = dataUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            image.onerror = () => {
+                window.open(url, "_blank");
+            };
+        }
+    };
 
     // Helper to dynamic translate raw payment method key
     const getPaymentMethodName = (method) => {
@@ -129,8 +167,15 @@ export default function PaymentCodeCard({
                     <span className="text-xs text-slate-400 font-extrabold tracking-wider block uppercase">
                         {t("payment.qris.scan_title", "SCAN QRIS UNTUK MEMBAYAR")}
                     </span>
-                    <div className="p-4 border-2 border-slate-100 rounded-3xl shadow-sm bg-white shrink-0">
+                    <div className="p-4 border-2 border-slate-100 rounded-3xl shadow-sm bg-white shrink-0 flex flex-col items-center gap-3">
                         <img src={qrCodeUrl} alt="QRIS Code" className="w-56 h-56 object-contain" />
+                        <button
+                            onClick={() => downloadQrCode(qrCodeUrl, `QRIS-${order.invoice_number}.png`)}
+                            className="inline-flex items-center gap-1.5 text-xs font-extrabold text-blue-950 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 px-4 py-2 rounded-xl transition active:scale-95 shadow-xs"
+                        >
+                            <Download size={14} className="text-blue-900" />
+                            <span>{t("payment.download_qr", "Unduh QR Code")}</span>
+                        </button>
                     </div>
                     {details.deeplink && (
                         <a
@@ -213,11 +258,20 @@ export default function PaymentCodeCard({
                             {!isMobile ? (
                                 <div className="flex flex-col items-center space-y-4 w-full max-w-md bg-slate-50/80 border border-slate-200/80 p-6 rounded-3xl text-center shadow-xs">
                                     {qrCodeUrl ? (
-                                        <div className="p-4 border-2 border-slate-200 rounded-3xl shadow-sm bg-white shrink-0 flex flex-col items-center space-y-2">
+                                        <div className="p-4 border-2 border-slate-200 rounded-3xl shadow-sm bg-white shrink-0 flex flex-col items-center space-y-3">
                                             <img src={qrCodeUrl} alt="QR Code Pembayaran" className="w-56 h-56 object-contain" />
-                                            <span className="text-[11px] font-black text-blue-950 uppercase tracking-wide">
-                                                {t("payment.scan_qr_title", "SCAN QR CODE UNTUK MEMBAYAR")}
-                                            </span>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[11px] font-black text-blue-950 uppercase tracking-wide">
+                                                    {t("payment.scan_qr_title", "SCAN QR CODE UNTUK MEMBAYAR")}
+                                                </span>
+                                                <button
+                                                    onClick={() => downloadQrCode(qrCodeUrl, `QR-${order.payment_method?.toUpperCase()}-${order.invoice_number}.png`)}
+                                                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-blue-950 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 px-4 py-2 rounded-xl transition active:scale-95 shadow-xs"
+                                                >
+                                                    <Download size={14} className="text-blue-900" />
+                                                    <span>{t("payment.download_qr", "Unduh QR Code")}</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs font-semibold">
@@ -286,11 +340,18 @@ export default function PaymentCodeCard({
 
                                     {/* Alternate QR Code on Mobile */}
                                     {qrCodeUrl && (
-                                        <div className="p-4 border border-slate-200 rounded-3xl shadow-xs bg-slate-50/50 shrink-0 flex flex-col items-center space-y-2">
+                                        <div className="p-4 border border-slate-200 rounded-3xl shadow-xs bg-slate-50/50 shrink-0 flex flex-col items-center space-y-3">
                                             <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 object-contain bg-white p-2 rounded-2xl border border-slate-100" />
                                             <span className="text-[10px] text-slate-500 font-bold">
                                                 {t("payment.scan_to_pay_mobile_alt", "Atau Scan QR Code jika menggunakan HP lain")}
                                             </span>
+                                            <button
+                                                onClick={() => downloadQrCode(qrCodeUrl, `QR-${order.payment_method?.toUpperCase()}-${order.invoice_number}.png`)}
+                                                className="inline-flex items-center gap-1.5 text-xs font-extrabold text-blue-950 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 px-3.5 py-1.5 rounded-xl transition active:scale-95 shadow-xs"
+                                            >
+                                                <Download size={14} className="text-blue-900" />
+                                                <span>{t("payment.download_qr", "Unduh QR Code")}</span>
+                                            </button>
                                         </div>
                                     )}
                                 </div>

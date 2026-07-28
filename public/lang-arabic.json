@@ -1190,6 +1190,7 @@
     "payment.mandiri.copy_biller": "نسخ رمز المفوتر",
     "payment.mandiri.copy_key": "نسخ مفتاح الفاتورة",
     "payment.qris.scan_title": "امسح رمز QRIS لإتمام الدفع",
+    "payment.download_qr": "تنزيل رمز QR",
     "payment.qris.open_app": "فتح تطبيق المحفظة الإلكترونية \/ QRIS",
     "payment.qris.support_desc": "يدعم Gopay و ShopeePay و OVO و Dana و LinkAja والخدمات المصرفية عبر الهاتف المحمول",
     "payment.ovo.notif_sent": "تم إرسال إشعار OVO المباشر إلى",

@@ -1183,6 +1183,7 @@
     "payment.mandiri.copy_biller": "Copy Biller",
     "payment.mandiri.copy_key": "Copy Bill Key",
     "payment.qris.scan_title": "SCAN QRIS TO PAY",
+    "payment.download_qr": "Download QR Code",
     "payment.qris.open_app": "Open E-Wallet \/ QRIS Application",
     "payment.qris.support_desc": "Supports Gopay, ShopeePay, OVO, Dana, LinkAja, & Mobile Banking",
     "payment.ovo.notif_sent": "OVO Push Notification Sent to",

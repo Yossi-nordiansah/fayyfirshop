@@ -51,6 +51,13 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
         return "";
     });
 
+    // Auto-close login modal when user logged in
+    useEffect(() => {
+        if (user) {
+            setShowLoginModal(false);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);

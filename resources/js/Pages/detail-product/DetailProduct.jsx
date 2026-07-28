@@ -716,6 +716,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isPendingBuyNow, setIsPendingBuyNow] = useState(false);
 
+    // Auto-close login modal when user becomes logged in
+    useEffect(() => {
+        if (auth?.user) {
+            setIsLoginModalOpen(false);
+        }
+    }, [auth?.user]);
 
     // Sinkronisasi state ketika produk / locale / image pool berubah
     useEffect(() => {
