@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
-    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle
+    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle, Smartphone, Monitor
 } from "lucide-react";
 import LoadingSpinner from "@/Components/LoadingSpinner";
+
 export default function PaymentCodeCard({
     order,
     details,
@@ -18,6 +19,20 @@ export default function PaymentCodeCard({
     copyText,
     t,
 }) {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkDevice = () => {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const isTouchScreen = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+            setIsMobile(isMobileUA || (isTouchScreen && window.innerWidth <= 768));
+        };
+        checkDevice();
+        window.addEventListener("resize", checkDevice);
+        return () => window.removeEventListener("resize", checkDevice);
+    }, []);
+
     // Helper to dynamic translate raw payment method key
     const getPaymentMethodName = (method) => {
         if (!method) return "";
@@ -137,14 +152,7 @@ export default function PaymentCodeCard({
 
             {/* 4. E-Wallet (GoPay, ShopeePay, OVO, DANA) */}
             {["gopay", "shopeepay", "ovo", "dana"].includes(order.payment_method) && (
-                <div className="flex flex-col items-center space-y-5">
-                    {qrCodeUrl && (
-                        <div className="p-4 border-2 border-slate-100 rounded-3xl shadow-sm bg-white shrink-0 flex flex-col items-center space-y-2">
-                            <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 object-contain" />
-                            <span className="text-[10px] text-slate-400 font-bold">{t("payment.scan_to_pay", "Scan QR Code")}</span>
-                        </div>
-                    )}
-
+                <div className="flex flex-col items-center space-y-5 w-full">
                     {/* OVO Phone Form */}
                     {order.payment_method === "ovo" && (
                         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
@@ -198,24 +206,96 @@ export default function PaymentCodeCard({
                         </div>
                     )}
 
-                    {details.deeplink && (
-                        <a
-                            href={details.deeplink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-black text-white bg-blue-950 px-6 py-3.5 rounded-2xl shadow-md hover:bg-blue-900 transition active:scale-[0.98]"
-                        >
-                            <span>
-                                {order.payment_method === "dana"
-                                    ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
-                                    : order.payment_method === "gopay"
-                                        ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
-                                        : order.payment_method === "shopeepay"
-                                            ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
-                                            : t("payment.wallet.open_generic", "Buka Aplikasi E-Wallet")}
-                            </span>
-                            <ExternalLink size={16} />
-                        </a>
+                    {/* ShopeePay, GoPay, DANA */}
+                    {order.payment_method !== "ovo" && (
+                        <div className="flex flex-col items-center space-y-5 w-full">
+                            {/* A) DESKTOP / PC MODE: Tampilkan QR Code & Petunjuk Scan HP */}
+                            {!isMobile ? (
+                                <div className="flex flex-col items-center space-y-4 w-full max-w-md bg-slate-50/80 border border-slate-200/80 p-6 rounded-3xl text-center shadow-xs">
+                                    {qrCodeUrl ? (
+                                        <div className="p-4 border-2 border-slate-200 rounded-3xl shadow-sm bg-white shrink-0 flex flex-col items-center space-y-2">
+                                            <img src={qrCodeUrl} alt="QR Code Pembayaran" className="w-56 h-56 object-contain" />
+                                            <span className="text-[11px] font-black text-blue-950 uppercase tracking-wide">
+                                                {t("payment.scan_qr_title", "SCAN QR CODE UNTUK MEMBAYAR")}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs font-semibold">
+                                            {t("payment.qr_not_available", "QR Code belum dapat dimuat.")}
+                                        </div>
+                                    )}
+
+                                    {/* Instructional Guide for PC Users */}
+                                    <div className="p-4 bg-white border border-slate-200/80 rounded-2xl text-left w-full space-y-2 text-xs">
+                                        <span className="font-extrabold text-slate-900 block flex items-center gap-1.5">
+                                            <Smartphone size={14} className="text-blue-900 shrink-0" />
+                                            <span>{t("payment.desktop_instructions_title", "Cara Membayar via Smartphone:")}</span>
+                                        </span>
+                                        <ol className="list-decimal list-inside text-slate-600 space-y-1.5 font-medium leading-relaxed">
+                                            <li>
+                                                {order.payment_method === "shopeepay"
+                                                    ? t("payment.step_shopeepay", "Buka aplikasi Shopee di smartphone Anda.")
+                                                    : order.payment_method === "gopay"
+                                                        ? t("payment.step_gopay", "Buka aplikasi Gojek / GoPay di smartphone Anda.")
+                                                        : t("payment.step_dana", "Buka aplikasi DANA di smartphone Anda.")}
+                                            </li>
+                                            <li>
+                                                {t("payment.step_scan", "Pilih menu Scan / Pindai QR di aplikasi.")}
+                                            </li>
+                                            <li>
+                                                {t("payment.step_pin", "Arahkan kamera HP ke QR Code di atas dan konfirmasikan pembayaran.")}
+                                            </li>
+                                        </ol>
+                                    </div>
+
+                                    {/* Fallback Link for Web Checkout */}
+                                    {details.deeplink && (
+                                        <div className="pt-1">
+                                            <a
+                                                href={details.deeplink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-950 transition underline"
+                                            >
+                                                <span>{t("payment.wallet.open_web_desktop", "Atau buka Halaman Web Pembayaran")}</span>
+                                                <ExternalLink size={12} />
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* B) MOBILE / HP MODE: Tampilkan Tombol 'Buka Aplikasi' Utama */
+                                <div className="flex flex-col items-center space-y-5 w-full">
+                                    {details.deeplink && (
+                                        <a
+                                            href={details.deeplink}
+                                            className="inline-flex items-center justify-center gap-2 text-sm font-black text-white bg-blue-950 px-6 py-4 rounded-2xl shadow-md hover:bg-blue-900 transition active:scale-[0.98] w-full max-w-sm"
+                                        >
+                                            <span>
+                                                {order.payment_method === "dana"
+                                                    ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
+                                                    : order.payment_method === "gopay"
+                                                        ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
+                                                        : order.payment_method === "shopeepay"
+                                                            ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
+                                                            : t("payment.wallet.open_generic", "Buka Aplikasi E-Wallet")}
+                                            </span>
+                                            <ExternalLink size={16} />
+                                        </a>
+                                    )}
+
+                                    {/* Alternate QR Code on Mobile */}
+                                    {qrCodeUrl && (
+                                        <div className="p-4 border border-slate-200 rounded-3xl shadow-xs bg-slate-50/50 shrink-0 flex flex-col items-center space-y-2">
+                                            <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 object-contain bg-white p-2 rounded-2xl border border-slate-100" />
+                                            <span className="text-[10px] text-slate-500 font-bold">
+                                                {t("payment.scan_to_pay_mobile_alt", "Atau Scan QR Code jika menggunakan HP lain")}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             )}

@@ -39,9 +39,12 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
 
     /* ── Derived Data ── */
     const details = order.payment_details || {};
-    const qrCodeUrl = details.qr_string
-        ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(details.qr_string)}`
-        : details.qr_url;
+    const derivedQrString = details.qr_string || details.deeplink || details.qr_url;
+    const qrCodeUrl = derivedQrString
+        ? (details.qr_url && (details.qr_url.endsWith(".png") || details.qr_url.endsWith(".jpg") || details.qr_url.endsWith(".svg") || details.qr_url.includes("qr")))
+            ? details.qr_url
+            : `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(derivedQrString)}`
+        : null;
 
     /* ── Helpers ── */
     const formatPrice = (value) => {
@@ -78,7 +81,6 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             methods: [
                 { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
                 { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
-                { id: "ovo", name: "OVO", desc: t("checkout.payment.desc.ovo", "Bayar menggunakan aplikasi OVO"), logo: "/images/payment/ovo.svg" },
                 { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
             ],
         },
@@ -194,26 +196,6 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
         }, 1000);
         return () => clearInterval(timer);
     }, [order]);
-
-    // Silent background status polling (no page reloads or loading bars)
-    useEffect(() => {
-        if (order.payment_status !== "unpaid" || order.status !== "pending") return;
-
-        const interval = setInterval(() => {
-            axios
-                .get(route("checkout.payment.status", order.id))
-                .then((res) => {
-                    if (res.data && res.data.payment_status === "paid") {
-                        router.visit(route("checkout.success", order.id));
-                    } else if (res.data && (res.data.payment_status === "expired" || res.data.status === "cancelled")) {
-                        router.reload();
-                    }
-                })
-                .catch(() => {});
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, [order.payment_status, order.status, order.id]);
 
     /* ── Handlers ── */
 

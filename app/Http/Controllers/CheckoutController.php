@@ -1714,9 +1714,6 @@ class CheckoutController extends Controller
                     'reusability' => 'ONE_TIME_USE',
                     'qr_code' => [
                         'channel_code' => 'QRIS',
-                        'channel_properties' => [
-                            'expires_at' => date('Y-m-d\TH:i:s.000\Z', time() + 86400),
-                        ]
                     ]
                 ]
             ];
@@ -1813,18 +1810,31 @@ class CheckoutController extends Controller
             ];
 
             $channelCode = $channelMap[$paymentMethod];
-            $channelProps = [
-                'success_return_url' => url('/checkout/success/' . $order->id),
-            ];
 
+            // OVO uses push notification — only mobile_number is allowed in channel_properties.
+            // GoPay, ShopeePay, DANA use redirect URLs.
             if ($paymentMethod === 'ovo') {
+                // Xendit Payment Requests API v3 requires +62 international format for OVO
                 $cleanPhone = preg_replace('/[^0-9+]/', '', $phone);
+                // Normalize to +62 format
                 if (str_starts_with($cleanPhone, '+62')) {
-                    $cleanPhone = '0' . substr($cleanPhone, 3);
+                    // Already correct
                 } elseif (str_starts_with($cleanPhone, '62')) {
-                    $cleanPhone = '0' . substr($cleanPhone, 2);
+                    $cleanPhone = '+' . $cleanPhone;
+                } elseif (str_starts_with($cleanPhone, '08') || str_starts_with($cleanPhone, '8')) {
+                    $cleanPhone = '+62' . ltrim($cleanPhone, '0');
+                } else {
+                    $cleanPhone = '+62' . $cleanPhone;
                 }
-                $channelProps['mobile_number'] = $cleanPhone;
+                $channelProps = [
+                    'mobile_number' => $cleanPhone,
+                ];
+            } else {
+                $channelProps = [
+                    'success_return_url' => url('/checkout/success/' . $order->id),
+                    'failure_return_url' => url('/checkout/payment/' . $order->id),
+                    'cancel_return_url'  => url('/checkout/payment/' . $order->id),
+                ];
             }
 
             $payload = [
@@ -1847,8 +1857,16 @@ class CheckoutController extends Controller
                 ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
-                $errorMsg = $response->json('message') ?? $response->body();
-                throw new \Exception("Gagal memproses E-Wallet (" . $paymentMethod . "): " . $errorMsg);
+                $errBody = $response->body();
+                $errJson = $response->json();
+                $errorMsg = $errJson['message'] ?? $errJson['error_code'] ?? $errBody;
+                $errDetails = isset($errJson['errors']) ? json_encode($errJson['errors']) : '';
+                Log::error('Xendit E-Wallet Error', [
+                    'method' => $paymentMethod,
+                    'status' => $response->status(),
+                    'body' => $errBody,
+                ]);
+                throw new \Exception("Gagal memproses E-Wallet (" . $paymentMethod . "): " . $errorMsg . ($errDetails ? ' | ' . $errDetails : ''));
             }
 
             $resData = $response->json();

@@ -41,7 +41,6 @@ export default function PaymentMethodSelection({
             methods: [
                 { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
                 { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
-                { id: "ovo", name: "OVO", desc: t("checkout.payment.desc.ovo", "Bayar menggunakan aplikasi OVO"), logo: "/images/payment/ovo.svg" },
                 { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" }
             ]
         },
