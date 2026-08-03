@@ -1,5 +1,5 @@
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import { ArrowLeft, FolderTree, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, FolderTree, Plus, Trash2, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 
@@ -23,6 +23,8 @@ export default function ProductCategoryForm({
         (statusAction === 'created' || statusAction === 'updated') && Boolean(status),
     );
 
+    const [imagePreview, setImagePreview] = useState(category?.banner_image ?? null);
+
     useEffect(() => {
         setShowSuccessModal(
             (statusAction === 'created' || statusAction === 'updated') && Boolean(status),
@@ -39,7 +41,30 @@ export default function ProductCategoryForm({
             initialSubCategories.length > 0
                 ? initialSubCategories
                 : [],
+        banner_image_file: null,
+        banner_image_url: category?.banner_image ?? '',
+        remove_banner_image: false,
     });
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            form.setData('banner_image_file', file);
+            form.setData('remove_banner_image', false);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        form.setData('banner_image_file', null);
+        form.setData('banner_image_url', '');
+        form.setData('remove_banner_image', true);
+        setImagePreview(null);
+    };
 
     const addSubCategory = () => {
         form.setData('sub_categories', [
@@ -72,6 +97,7 @@ export default function ProductCategoryForm({
         event.preventDefault();
 
         const payload = {
+            ...(isEditing ? { _method: 'PATCH' } : {}),
             name_translations: {
                 indonesia: (form.data.name_translations?.indonesia ?? '').trim(),
                 english: (form.data.name_translations?.english ?? '').trim(),
@@ -82,11 +108,14 @@ export default function ProductCategoryForm({
                 english: (row?.english ?? '').trim(),
                 arabic: (row?.arabic ?? '').trim(),
             })),
+            banner_image_file: form.data.banner_image_file,
+            banner_image_url: form.data.banner_image_url,
+            remove_banner_image: form.data.remove_banner_image ? 1 : 0,
         };
 
         if (isEditing) {
             form.transform(() => payload);
-            form.patch(route('backoffice.product-categories.update', category.slug), {
+            form.post(route('backoffice.product-categories.update', category.slug), {
                 preserveScroll: true,
             });
 
@@ -253,6 +282,64 @@ export default function ProductCategoryForm({
                                                 </p>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Banner Image Kategori */}
+                                <div>
+                                    <label className="block mb-2 text-sm font-semibold text-blue-950 flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4 text-amber-600" />
+                                        {t('backoffice.category.fields.banner_image', 'Banner Image Kategori (Background Halaman Produk)')}
+                                    </label>
+                                    <p className="text-xs text-slate-500 mb-3">
+                                        {t('backoffice.category.fields.banner_image_desc', 'Gambar ini akan dijadikan sebagai background banner utama pada halaman')} <span className="font-semibold text-slate-700">/products/{category?.slug || 'kategori'}</span>.
+                                    </p>
+
+                                    <div className="bg-slate-50/50 p-4 rounded-xl border border-blue-50 space-y-3">
+                                        {imagePreview ? (
+                                            <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 group max-h-48">
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Banner Preview"
+                                                    className="w-full h-48 object-cover opacity-80"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end justify-between p-3">
+                                                    <span className="text-xs font-semibold text-white/90 truncate max-w-[70%] bg-slate-900/60 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/10">
+                                                        {form.data.banner_image_file ? form.data.banner_image_file.name : (category?.banner_image || t('backoffice.category.banner.current', 'Banner Saat Ini'))}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveImage}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-rose-300 bg-rose-950/80 hover:bg-rose-900 rounded-md border border-rose-500/30 transition"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                        {t('backoffice.category.banner.remove', 'Hapus Gambar')}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-200 rounded-xl bg-white hover:bg-blue-50/50 cursor-pointer transition text-center group">
+                                                <Upload className="w-8 h-8 text-blue-400 group-hover:text-blue-600 mb-2 transition" />
+                                                <span className="text-sm font-semibold text-slate-700">
+                                                    {t('backoffice.category.banner.dropzone', 'Klik atau drag & drop gambar banner di sini')}
+                                                </span>
+                                                <span className="text-xs text-slate-400 mt-1">
+                                                    {t('backoffice.category.banner.file_types', 'Format: JPG, PNG, WEBP (Maks: 5MB)')}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageChange}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        )}
+
+                                        {form.errors.banner_image_file && (
+                                            <p className="text-xs font-semibold text-rose-600">
+                                                {form.errors.banner_image_file}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

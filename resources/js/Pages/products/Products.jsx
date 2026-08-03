@@ -17,7 +17,7 @@ import {
     Filter,
 } from "lucide-react";
 
-export default function Products({ category = null, subCategory = null, products = [] }) {
+export default function Products({ category = null, subCategory = null, products = [], heroSlides = [], homeCategoryCards = [] }) {
     const { t, locale } = useLanguage();
     const { navCategories = [] } = usePage().props;
     const { url } = usePage();
@@ -92,6 +92,7 @@ export default function Products({ category = null, subCategory = null, products
                     id: cat.id,
                     name: cat.name,
                     name_translations: cat.name_translations,
+                    banner_image: cat.banner_image,
                     translationKey: null,
                     subCategories: subCategoriesObj,
                 };
@@ -418,22 +419,30 @@ export default function Products({ category = null, subCategory = null, products
     }, [activeCategoryInfo, activeSubcategoryInfo, locale, t]);
 
     const bannerSubtitle = useMemo(() => {
-        if (selectedCat === "perfume" || selectedCat === "parfum") {
+        const catLower = String(selectedCat || "").toLowerCase();
+        if (catLower.includes("perfume") || catLower.includes("parfum")) {
             return t(
                 "hero.perfume.subtitle",
                 "Eau de Parfum & Fragrance Spray",
             );
         }
-        if (selectedCat === "aromatic-oil" || selectedCat === "minyak-aromaterapi") {
+        if (catLower.includes("oil") || catLower.includes("minyak")) {
             return t("hero.oil.subtitle", "Dehn Oud & Campuran Minyak Pilihan");
         }
-        if (selectedCat === "bakhoor-and-oud") {
+        if (
+            catLower.includes("bakhoor") ||
+            catLower.includes("oud") ||
+            catLower.includes("arang") ||
+            catLower.includes("mabkhara") ||
+            catLower.includes("mabhkara") ||
+            catLower.includes("bukhur")
+        ) {
             return t(
                 "hero.bakhoor.subtitle",
                 "Dupa Arab Tradisional & Kayu Oud",
             );
         }
-        if (selectedCat === "healthy-nutrition" || selectedCat === "kesehatan-dan-nutrisi") {
+        if (catLower.includes("nutrition") || catLower.includes("kesehatan") || catLower.includes("honey") || catLower.includes("saffron") || catLower.includes("kurma") || catLower.includes("dates")) {
             return t("hero.nutrition.subtitle", "Madu Sidr & Saffron Premium");
         }
         return t(
@@ -441,6 +450,265 @@ export default function Products({ category = null, subCategory = null, products
             "Destinasi Anda untuk kemewahan Arab premium.",
         );
     }, [selectedCat, t]);
+
+    // Category background configuration (matches home page hero images & themes)
+    const categoryBgMap = useMemo(
+        () => ({
+            perfume: {
+                image: "/images/hero/bg-perfume.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/10 to-blue-500/10",
+            },
+            parfum: {
+                image: "/images/hero/bg-perfume.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/10 to-blue-500/10",
+            },
+            "aromatic-oil": {
+                image: "/images/hero/aromatic-oil2.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-blue-900/75 to-slate-950/90",
+                accentGlow: "from-blue-600/10 to-cyan-500/10",
+            },
+            "minyak-aromaterapi": {
+                image: "/images/hero/aromatic-oil2.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-blue-900/75 to-slate-950/90",
+                accentGlow: "from-blue-600/10 to-cyan-500/10",
+            },
+            "minyak-aromatik": {
+                image: "/images/hero/aromatic-oil2.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-blue-900/75 to-slate-950/90",
+                accentGlow: "from-blue-600/10 to-cyan-500/10",
+            },
+            "bakhoor-and-oud": {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            "bakhoor-dan-oud": {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            "arang-dan-mabkhara": {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            "arang-dan-mabhkara": {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            mabkhara: {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            mabhkara: {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            "healthy-nutrition": {
+                image: "/images/hero/bg-honey.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-900/70 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-yellow-500/10",
+            },
+            "kesehatan-dan-nutrisi": {
+                image: "/images/hero/bg-honey.webp",
+                overlayTheme:
+                    "from-slate-950/85 via-amber-900/70 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-yellow-500/10",
+            },
+        }),
+        [],
+    );
+
+    const getFormattedImageUrl = (imgPath) => {
+        if (!imgPath) return null;
+        if (imgPath.startsWith("http://") || imgPath.startsWith("https://") || imgPath.startsWith("/")) {
+            return imgPath;
+        }
+        return `/storage/${imgPath}`;
+    };
+
+    const currentCategoryBg = useMemo(() => {
+        const defaultBg = {
+            image: "/images/hero/bg-perfume.webp",
+            overlayTheme: "from-slate-950/60 via-blue-950/50 to-slate-950/70",
+            accentGlow: "from-amber-500/10 to-blue-500/10",
+        };
+
+        const targetCatSlug = selectedCat ? String(selectedCat).toLowerCase() : null;
+
+        // 1. Check direct Category Banner Image from Backoffice (Product Categories CRUD)
+        if (activeCategoryInfo?.banner_image) {
+            const formattedImg = getFormattedImageUrl(activeCategoryInfo.banner_image);
+            if (formattedImg) {
+                return {
+                    image: formattedImg,
+                    overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                    accentGlow: "from-amber-500/10 to-blue-500/10",
+                };
+            }
+        }
+
+        // Also check navCategories directly for targetCatSlug
+        if (targetCatSlug && navCategories && navCategories.length > 0) {
+            const matchedNavCat = navCategories.find(c => String(c.slug || '').toLowerCase() === targetCatSlug);
+            if (matchedNavCat?.banner_image) {
+                const formattedImg = getFormattedImageUrl(matchedNavCat.banner_image);
+                if (formattedImg) {
+                    return {
+                        image: formattedImg,
+                        overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                        accentGlow: "from-amber-500/10 to-blue-500/10",
+                    };
+                }
+            }
+        }
+
+        // 2. Check dynamic heroSlides from Backoffice (Content Management)
+        if (heroSlides && heroSlides.length > 0) {
+            let matchedSlide = null;
+            if (!targetCatSlug) {
+                // For "Semua Produk", use first active hero slide from backoffice if available
+                matchedSlide = heroSlides[0];
+            } else {
+                matchedSlide = heroSlides.find((slide) => {
+                    const slideSlug = String(slide.slug || "").toLowerCase();
+                    const slideCat = String(slide.category || "").toLowerCase();
+                    if (slideSlug === targetCatSlug || slideCat === targetCatSlug) return true;
+                    if (targetCatSlug.includes("parfum") || targetCatSlug.includes("perfume")) {
+                        return slideSlug.includes("parfum") || slideSlug.includes("perfume") || slideCat.includes("parfum") || slideCat.includes("perfume");
+                    }
+                    if (targetCatSlug.includes("oil") || targetCatSlug.includes("minyak")) {
+                        return slideSlug.includes("oil") || slideSlug.includes("minyak") || slideCat.includes("oil") || slideCat.includes("minyak");
+                    }
+                    if (targetCatSlug === "bakhoor-dan-oud" || targetCatSlug === "bakhoor-and-oud") {
+                        return (slideSlug.includes("bakhoor") || slideSlug.includes("oud") || slideCat.includes("bakhoor") || slideCat.includes("oud")) &&
+                            !slideSlug.includes("arang") && !slideSlug.includes("mabkhara") && !slideCat.includes("arang") && !slideCat.includes("mabkhara");
+                    }
+                    if (targetCatSlug.includes("arang") || targetCatSlug.includes("mabkhara") || targetCatSlug.includes("mabhkara")) {
+                        return slideSlug.includes("arang") || slideSlug.includes("mabkhara") || slideSlug.includes("mabhkara") ||
+                            slideCat.includes("arang") || slideCat.includes("mabkhara") || slideCat.includes("mabhkara");
+                    }
+                    if (targetCatSlug.includes("nutrition") || targetCatSlug.includes("kesehatan") || targetCatSlug.includes("honey") || targetCatSlug.includes("saffron") || targetCatSlug.includes("kurma") || targetCatSlug.includes("dates")) {
+                        return slideSlug.includes("nutrition") || slideSlug.includes("kesehatan") || slideSlug.includes("honey") || slideCat.includes("nutrition") || slideCat.includes("kesehatan") || slideCat.includes("honey");
+                    }
+                    return false;
+                });
+            }
+
+            if (matchedSlide) {
+                const rawImg = matchedSlide.background_image || matchedSlide.image;
+                const formattedImg = getFormattedImageUrl(rawImg);
+                if (formattedImg) {
+                    let overlayTheme = "from-slate-950/30 via-blue-950/70 to-slate-950/60";
+                    let accentGlow = "from-amber-500/10 to-blue-500/10";
+                    if (matchedSlide.theme) {
+                        if (matchedSlide.theme.includes("amber")) {
+                            overlayTheme = "from-slate-950/85 via-amber-950/75 to-slate-950/90";
+                            accentGlow = "from-amber-500/15 to-orange-500/10";
+                        } else if (matchedSlide.theme.includes("blue-800") || matchedSlide.theme.includes("cyan")) {
+                            overlayTheme = "from-slate-950/85 via-blue-900/75 to-slate-950/90";
+                            accentGlow = "from-blue-600/10 to-cyan-500/10";
+                        }
+                    } else if (
+                        targetCatSlug?.includes("bakhoor") ||
+                        targetCatSlug?.includes("oud") ||
+                        targetCatSlug?.includes("arang") ||
+                        targetCatSlug?.includes("mabkhara") ||
+                        targetCatSlug?.includes("mabhkara") ||
+                        targetCatSlug?.includes("bukhur")
+                    ) {
+                        overlayTheme = "from-slate-950/85 via-amber-950/75 to-slate-950/90";
+                        accentGlow = "from-amber-500/15 to-orange-500/10";
+                    } else if (targetCatSlug?.includes("nutrition") || targetCatSlug?.includes("kesehatan")) {
+                        overlayTheme = "from-slate-950/85 via-amber-900/70 to-slate-950/90";
+                        accentGlow = "from-amber-500/15 to-yellow-500/10";
+                    }
+                    return { image: formattedImg, overlayTheme, accentGlow };
+                }
+            }
+        }
+
+        // 2. Check dynamic homeCategoryCards from Backoffice (Content Management)
+        if (targetCatSlug && homeCategoryCards && homeCategoryCards.length > 0) {
+            const matchedCard = homeCategoryCards.find((card) => {
+                const cardSlug = String(card.slug || "").toLowerCase();
+                if (cardSlug === targetCatSlug || cardSlug === `/products/${targetCatSlug}`) return true;
+                if (targetCatSlug.includes("parfum") || targetCatSlug.includes("perfume")) return cardSlug.includes("parfum") || cardSlug.includes("perfume");
+                if (targetCatSlug.includes("oil") || targetCatSlug.includes("minyak")) return cardSlug.includes("oil") || cardSlug.includes("minyak");
+                if (targetCatSlug === "bakhoor-dan-oud" || targetCatSlug === "bakhoor-and-oud") {
+                    return (cardSlug.includes("bakhoor") || cardSlug.includes("oud")) &&
+                        !cardSlug.includes("arang") && !cardSlug.includes("mabkhara");
+                }
+                if (targetCatSlug.includes("arang") || targetCatSlug.includes("mabkhara") || targetCatSlug.includes("mabhkara")) {
+                    return cardSlug.includes("arang") || cardSlug.includes("mabkhara") || cardSlug.includes("mabhkara");
+                }
+                if (targetCatSlug.includes("nutrition") || targetCatSlug.includes("kesehatan") || targetCatSlug.includes("honey") || targetCatSlug.includes("saffron") || targetCatSlug.includes("kurma") || targetCatSlug.includes("dates")) {
+                    return cardSlug.includes("nutrition") || cardSlug.includes("kesehatan") || cardSlug.includes("healty") || cardSlug.includes("honey");
+                }
+                return false;
+            });
+
+            if (matchedCard) {
+                const formattedImg = getFormattedImageUrl(matchedCard.image);
+                if (formattedImg) {
+                    return {
+                        image: formattedImg,
+                        overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                        accentGlow: "from-amber-500/10 to-blue-500/10",
+                    };
+                }
+            }
+        }
+
+        // 3. Fallback to category static map if matches
+        if (targetCatSlug && categoryBgMap[targetCatSlug]) {
+            return categoryBgMap[targetCatSlug];
+        }
+
+        // 4. Fallback to activeCategoryInfo (ProductCategory model image)
+        if (activeCategoryInfo?.image || activeCategoryInfo?.background_image) {
+            const formattedImg = getFormattedImageUrl(activeCategoryInfo.image || activeCategoryInfo.background_image);
+            if (formattedImg) {
+                return {
+                    image: formattedImg,
+                    overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                    accentGlow: "from-amber-500/10 to-blue-500/10",
+                };
+            }
+        }
+
+        // 5. Dynamic fallback for ANY brand new category: automatically use primary image from category products
+        if (targetCatSlug && filteredProducts && filteredProducts.length > 0) {
+            const firstProdImg = getProductImage(filteredProducts[0]);
+            if (firstProdImg && !firstProdImg.includes("logo-footer")) {
+                const formattedImg = Array.isArray(firstProdImg) ? firstProdImg[0] : firstProdImg;
+                return {
+                    image: formattedImg,
+                    overlayTheme: "from-slate-950/90 via-blue-950/80 to-slate-950/95",
+                    accentGlow: "from-amber-500/10 to-blue-500/10",
+                };
+            }
+        }
+
+        return defaultBg;
+    }, [selectedCat, heroSlides, homeCategoryCards, categoryBgMap, activeCategoryInfo, filteredProducts]);
 
     // Grid animation configs
     const containerVariants = {
@@ -467,14 +735,42 @@ export default function Products({ category = null, subCategory = null, products
             <Head title={`Fayyfir - ${bannerTitle}`} />
 
             <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
-                {/* 1. Luxurious Banner Header */}
-                <div ref={bannerRef} className="relative pt-28 pb-20 px-6 bg-gradient-to-br from-slate-950 via-blue-950 to-zinc-950 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center">
-                    {/* Arabesque Geometric Overlay */}
-                    <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+                {/* 1. Luxurious Banner Header with Category-Specific Background */}
+                <div
+                    ref={bannerRef}
+                    className="relative pt-28 pb-20 px-6 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center bg-slate-950"
+                >
+                    {/* Category Background Image with Smooth Animation */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentCategoryBg.image}
+                            initial={{ opacity: 0, scale: 1.05 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            transition={{ duration: 0.7, ease: "easeInOut" }}
+                            className="absolute inset-0 z-0"
+                        >
+                            <img
+                                src={currentCategoryBg.image}
+                                alt="Category Background"
+                                className="w-full h-full object-cover object-center"
+                            />
+                            {/* Dark Gradient Overlays for optimal text contrast */}
+                            <div
+                                className={`absolute inset-0 bg-gradient-to-br ${currentCategoryBg.overlayTheme}`}
+                            />
+                            <div className="absolute inset-0 bg-black/20 backdrop-brightness-20" />
+                        </motion.div>
+                    </AnimatePresence>
 
-                    {/* Golden Ambient Blur Rings */}
-                    <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
-                    <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+                    {/* Arabesque Geometric Overlay */}
+                    <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none z-[1]" />
+
+                    {/* Dynamic Golden Ambient Blur Rings */}
+                    <div
+                        className={`absolute top-1/2 left-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-gradient-to-br ${currentCategoryBg.accentGlow} blur-[120px] pointer-events-none z-[1]`}
+                    />
+                    <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none z-[1]" />
 
                     <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                         {/* Breadcrumbs */}

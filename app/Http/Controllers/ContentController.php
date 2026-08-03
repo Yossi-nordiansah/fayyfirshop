@@ -6,6 +6,7 @@ use App\Models\HeroSlide;
 use App\Models\HomeCategoryCard;
 use App\Models\FeaturedProductItem;
 use App\Models\UspItem;
+use App\Models\AboutUsSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,7 @@ class ContentController extends Controller
         $homeCategoryCards = [];
         $featuredProducts = [];
         $uspItems = [];
+        $aboutUsSettings = [];
 
         try {
             if (Schema::hasTable('hero_slides')) {
@@ -57,6 +59,13 @@ class ContentController extends Controller
                 }
                 $uspItems = UspItem::orderBy('sort_order', 'asc')->get();
             }
+
+            if (Schema::hasTable('about_us_settings')) {
+                if (AboutUsSetting::count() === 0) {
+                    $this->seedDefaultAboutUsSettings();
+                }
+                $aboutUsSettings = AboutUsSetting::all()->keyBy('key');
+            }
         } catch (\Exception $e) {
             // Silently catch database exception
         }
@@ -66,6 +75,7 @@ class ContentController extends Controller
             'homeCategoryCards' => $homeCategoryCards,
             'featuredProducts' => $featuredProducts,
             'uspItems' => $uspItems,
+            'aboutUsSettings' => $aboutUsSettings,
             'status' => session('status'),
             'statusAction' => session('statusAction'),
         ]);
@@ -1087,6 +1097,61 @@ class ContentController extends Controller
     }
 
     /**
+     * Update About Us settings (all fields at once).
+     */
+    public function updateAboutUs(Request $request)
+    {
+        $request->validate([
+            'hero_badge_label_id' => 'nullable|string|max:255',
+            'hero_badge_label_en' => 'nullable|string|max:255',
+            'hero_badge_label_ar' => 'nullable|string|max:255',
+            'story_title_id'      => 'nullable|string|max:255',
+            'story_title_en'      => 'nullable|string|max:255',
+            'story_title_ar'      => 'nullable|string|max:255',
+            'story_p1_id'         => 'nullable|string',
+            'story_p1_en'         => 'nullable|string',
+            'story_p1_ar'         => 'nullable|string',
+            'story_p2_id'         => 'nullable|string',
+            'story_p2_en'         => 'nullable|string',
+            'story_p2_ar'         => 'nullable|string',
+            'story_p3_id'         => 'nullable|string',
+            'story_p3_en'         => 'nullable|string',
+            'story_p3_ar'         => 'nullable|string',
+        ]);
+
+        $fields = [
+            'hero_badge_label',
+            'story_title',
+            'story_p1',
+            'story_p2',
+            'story_p3',
+        ];
+
+        foreach ($fields as $field) {
+            $idVal = $request->input("{$field}_id", '');
+            $enVal = $request->input("{$field}_en", $idVal);
+            $arVal = $request->input("{$field}_ar", $idVal);
+
+            AboutUsSetting::updateOrCreate(
+                ['key' => $field],
+                [
+                    'value' => $idVal,
+                    'value_translations' => [
+                        'id' => $idVal,
+                        'en' => $enVal ?: $idVal,
+                        'ar' => $arVal ?: $idVal,
+                    ],
+                ]
+            );
+        }
+
+        return redirect()->back()->with([
+            'status' => 'Konten Tentang Kami berhasil disimpan.',
+            'statusAction' => 'updated',
+        ]);
+    }
+
+    /**
      * Seed initial default USP items with 3 languages.
      */
     private function seedDefaultUspItems()
@@ -1172,6 +1237,64 @@ class ContentController extends Controller
 
         foreach ($defaults as $item) {
             UspItem::create($item);
+        }
+    }
+
+    /**
+     * Seed default About Us settings.
+     */
+    private function seedDefaultAboutUsSettings()
+    {
+        $defaults = [
+            [
+                'key'   => 'hero_badge_label',
+                'value' => 'Alsharif Perfume Bandung',
+                'value_translations' => [
+                    'id' => 'Alsharif Perfume Bandung',
+                    'en' => 'Alsharif Perfume Bandung',
+                    'ar' => 'الشريف للعطور باندونغ',
+                ],
+            ],
+            [
+                'key'   => 'story_title',
+                'value' => 'Kisah Alsharif Perfume',
+                'value_translations' => [
+                    'id' => 'Kisah Alsharif Perfume',
+                    'en' => 'The Alsharif Perfume Story',
+                    'ar' => 'قصة الشريف للعطور',
+                ],
+            ],
+            [
+                'key'   => 'story_p1',
+                'value' => 'Alsharif Perfume Bandung lahir dari kecintaan yang mendalam terhadap seni pembuatan wewangian tradisional Timur Tengah yang dipadukan dengan kemewahan modern. Kami percaya bahwa setiap aroma memiliki kekuatan untuk menceritakan kisah, membangkitkan ingatan emosional, dan mengekspresikan karakter unik dari pemakainya.',
+                'value_translations' => [
+                    'id' => 'Alsharif Perfume Bandung lahir dari kecintaan yang mendalam terhadap seni pembuatan wewangian tradisional Timur Tengah yang dipadukan dengan kemewahan modern. Kami percaya bahwa setiap aroma memiliki kekuatan untuk menceritakan kisah, membangkitkan ingatan emosional, dan mengekspresikan karakter unik dari pemakainya.',
+                    'en' => 'Alsharif Perfume Bandung was born from a deep-rooted passion for traditional Middle Eastern perfumery combined with modern luxury. We believe that a fragrance is more than a scent; it has the power to narrate stories, evoke emotions, and express the unique character of its wearer.',
+                    'ar' => 'ولدت عطور الشريف باندونغ من شغف عميق بصناعة العطور الشرقية التقليدية الممزوجة بالرفاهية الحديثة. نحن نؤمن بأن العطور تمتلك القوة لرواية القصص، وإيقاظ المشاعر، وعكس الطابع الفريد لمن يرتديها.',
+                ],
+            ],
+            [
+                'key'   => 'story_p2',
+                'value' => 'Berlandaskan komitmen tinggi terhadap kualitas kelas dunia, kami menyeleksi bahan baku pilihan secara ketat. Mulai dari minyak esensial oud yang pekat, kelembutan mawar Taif, hingga kehangatan amber murni. Setiap racikan wewangian kami diformulasikan dengan cermat untuk menghadirkan aroma yang kaya, tahan lama, dan memikat di kulit Anda.',
+                'value_translations' => [
+                    'id' => 'Berlandaskan komitmen tinggi terhadap kualitas kelas dunia, kami menyeleksi bahan baku pilihan secara ketat. Mulai dari minyak esensial oud yang pekat, kelembutan mawar Taif, hingga kehangatan amber murni. Setiap racikan wewangian kami diformulasikan dengan cermat untuk menghadirkan aroma yang kaya, tahan lama, dan memikat di kulit Anda.',
+                    'en' => 'Grounded in a commitment to world-class quality, we carefully select and source premium raw materials. From rich oud essential oils and mystical Taif roses to pure warm amber. Each of our blends is meticulously formulated to deliver rich, long-lasting, and captivating scents.',
+                    'ar' => 'تأسست على الالتزام بالجودة العالمية، ونحن نختار بعناية المواد الخام الممتازة. من زيوت العود الغنية وورد الطائف الغامض إلى العنبر الدافئ النقي. تمت صياغة كل من خلطاتنا بدقة لتقديم روائح غنية تدوم طويلاً وتأسر الحواس.',
+                ],
+            ],
+            [
+                'key'   => 'story_p3',
+                'value' => 'Toko fisik kami di Bandung dirancang bukan sekadar sebagai tempat belanja wewangian, melainkan ruang eksplorasi sensorik di mana Anda dapat menemukan signature scent yang sejati. Staf konsultan parfum kami siap membantu memandu perjalanan aromatik Anda dengan layanan ramah dan profesional.',
+                'value_translations' => [
+                    'id' => 'Toko fisik kami di Bandung dirancang bukan sekadar sebagai tempat belanja wewangian, melainkan ruang eksplorasi sensorik di mana Anda dapat menemukan signature scent yang sejati. Staf konsultan parfum kami siap membantu memandu perjalanan aromatik Anda dengan layanan ramah dan profesional.',
+                    'en' => 'Our physical store in Bandung is designed not just as a shop, but as a sensory exploration space where you can discover your true signature scent. Our expert perfume consultants are here to guide your olfactory journey with warm, personalized, and professional service.',
+                    'ar' => 'متجرنا الفعلي في باندونغ ليس مجرد متجر تجزئة، بل هو مساحة للاستكشاف الحسي حيث يمكنك اكتشاف عطرك المميز الحقيقي. مستشارو العطور لدينا مستعدون لمساعدتك في رحلتك العطرية بكل ود وخبرة احترافية.',
+                ],
+            ],
+        ];
+
+        foreach ($defaults as $item) {
+            AboutUsSetting::create($item);
         }
     }
 }

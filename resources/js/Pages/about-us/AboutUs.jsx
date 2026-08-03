@@ -114,10 +114,36 @@ const GALLERY_IMAGES = [
     { src: '/images/alsharif5.webp', alt: 'Luxury Packaging & Gift Sets' }
 ];
 
-export default function AboutUs() {
+export default function AboutUs({ aboutUsSettings = {} }) {
     const { locale, t } = useLanguage();
     const currentLang = CONTENT[locale] ? locale : 'indonesia';
     const text = CONTENT[currentLang];
+
+    /**
+     * Helper: ambil nilai dari aboutUsSettings DB,
+     * fallback ke CONTENT hardcode jika belum ada data di DB.
+     */
+    const getLangKey = (lang) => {
+        if (lang === 'indonesia') return 'id';
+        if (lang === 'english') return 'en';
+        if (lang === 'arabic') return 'ar';
+        return 'id';
+    };
+
+    const getDbText = (key, fallback) => {
+        const item = aboutUsSettings?.[key];
+        if (!item) return fallback;
+        const langCode = getLangKey(currentLang);
+        const translations = item.value_translations || {};
+        return translations[langCode] || item.value || fallback;
+    };
+
+    // Override CONTENT dengan data dari DB
+    const heroBadgeLabel = getDbText('hero_badge_label', 'Alsharif Perfume Bandung');
+    const storyTitle     = getDbText('story_title', text.story_title);
+    const storyP1        = getDbText('story_p1', text.story_p1);
+    const storyP2        = getDbText('story_p2', text.story_p2);
+    const storyP3        = getDbText('story_p3', text.story_p3);
 
     const values = [
         {
@@ -163,7 +189,7 @@ export default function AboutUs() {
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-bold uppercase tracking-widest"
                         >
                             <Sparkles className="h-3 w-3" />
-                            Alsharif Perfume Bandung
+                            {heroBadgeLabel}
                         </motion.span>
                         <motion.h1
                             initial={{ opacity: 0, y: 20 }}
@@ -195,12 +221,12 @@ export default function AboutUs() {
                     >
                         <div className="space-y-2">
                             <span className="text-xs font-bold tracking-widest text-amber-600 uppercase block">{text.label_journey}</span>
-                            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{text.story_title}</h2>
+                            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{storyTitle}</h2>
                             <div className="h-1 w-20 bg-gradient-to-r from-amber-500 to-amber-600 rounded mx-auto"></div>
                         </div>
-                        <p className="text-slate-600 text-sm md:text-base leading-relaxed text-justify md:text-center">{text.story_p1}</p>
-                        <p className="text-slate-600 text-sm md:text-base leading-relaxed text-justify md:text-center">{text.story_p2}</p>
-                        <p className="text-slate-700 text-sm md:text-base leading-relaxed font-bold text-center">{text.story_p3}</p>
+                        <p className="text-slate-600 text-sm md:text-base leading-relaxed text-justify md:text-center">{storyP1}</p>
+                        <p className="text-slate-600 text-sm md:text-base leading-relaxed text-justify md:text-center">{storyP2}</p>
+                        <p className="text-slate-700 text-sm md:text-base leading-relaxed font-bold text-center">{storyP3}</p>
                     </motion.div>
                 </div>
 

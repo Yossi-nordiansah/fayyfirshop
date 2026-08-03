@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProductCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,9 +44,18 @@ class ProductCategoryController extends Controller
     {
         $validated = $this->validateRequest($request);
 
+        $bannerImagePath = null;
+        if ($request->hasFile('banner_image_file')) {
+            $path = $request->file('banner_image_file')->store('category-banners', 'public');
+            $bannerImagePath = '/storage/' . $path;
+        } elseif (!empty($request->banner_image_url)) {
+            $bannerImagePath = $request->banner_image_url;
+        }
+
         $category = ProductCategory::create([
             'name' => $validated['name'],
             'name_translations' => $validated['name_translations'],
+            'banner_image' => $bannerImagePath,
         ]);
 
         $this->syncSubCategories($category, $validated['sub_categories']);
@@ -93,9 +103,29 @@ class ProductCategoryController extends Controller
     {
         $validated = $this->validateRequest($request, $productCategory->id);
 
+        $bannerImagePath = $productCategory->banner_image;
+
+        if ($request->boolean('remove_banner_image')) {
+            if ($bannerImagePath && str_starts_with($bannerImagePath, '/storage/')) {
+                $storagePath = str_replace('/storage/', '', $bannerImagePath);
+                Storage::disk('public')->delete($storagePath);
+            }
+            $bannerImagePath = null;
+        } elseif ($request->hasFile('banner_image_file')) {
+            if ($bannerImagePath && str_starts_with($bannerImagePath, '/storage/')) {
+                $storagePath = str_replace('/storage/', '', $bannerImagePath);
+                Storage::disk('public')->delete($storagePath);
+            }
+            $path = $request->file('banner_image_file')->store('category-banners', 'public');
+            $bannerImagePath = '/storage/' . $path;
+        } elseif (!empty($request->banner_image_url)) {
+            $bannerImagePath = $request->banner_image_url;
+        }
+
         $productCategory->update([
             'name' => $validated['name'],
             'name_translations' => $validated['name_translations'],
+            'banner_image' => $bannerImagePath,
         ]);
 
         $this->syncSubCategories($productCategory, $validated['sub_categories']);
@@ -108,6 +138,11 @@ class ProductCategoryController extends Controller
 
     public function destroy(ProductCategory $productCategory): RedirectResponse
     {
+        if ($productCategory->banner_image && str_starts_with($productCategory->banner_image, '/storage/')) {
+            $storagePath = str_replace('/storage/', '', $productCategory->banner_image);
+            Storage::disk('public')->delete($storagePath);
+        }
+
         $productCategory->delete();
 
         return redirect()
@@ -150,6 +185,9 @@ class ProductCategoryController extends Controller
             'sub_categories.*.indonesia' => ['nullable', 'string', 'max:255'],
             'sub_categories.*.english' => ['nullable', 'string', 'max:255'],
             'sub_categories.*.arabic' => ['nullable', 'string', 'max:255'],
+            'banner_image_file' => ['nullable', 'file', 'mimes:jpeg,png,jpg,webp,gif,svg', 'max:5120'],
+            'banner_image_url' => ['nullable', 'string'],
+            'remove_banner_image' => ['nullable', 'boolean'],
         ]);
 
         $nameTranslations = [

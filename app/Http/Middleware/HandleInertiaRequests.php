@@ -328,6 +328,7 @@ class HandleInertiaRequests extends Middleware
                     'name'  => $cat->name,
                     'name_translations' => $cat->name_translations,
                     'slug'  => $cat->slug,
+                    'banner_image' => $cat->banner_image,
                     'href'  => '/products/' . $cat->slug,
                     'subCategories' => $cat->subCategories->map(fn ($sub) => [
                         'id'   => $sub->id,

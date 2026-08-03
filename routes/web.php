@@ -89,7 +89,15 @@ Route::get('/', function () {
 });
 
 Route::get('/about', function () {
-    return Inertia::render('about-us/AboutUs');
+    $aboutUsSettings = [];
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('about_us_settings')) {
+            $aboutUsSettings = \App\Models\AboutUsSetting::all()->keyBy('key');
+        }
+    } catch (\Exception $e) {}
+    return Inertia::render('about-us/AboutUs', [
+        'aboutUsSettings' => $aboutUsSettings,
+    ]);
 })->name('about');
 
 Route::get('/products/{category?}', function ($category = null) {
@@ -107,10 +115,22 @@ Route::get('/products/{category?}', function ($category = null) {
         })
         ->get();
 
+    $heroSlides = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('hero_slides')) {
+        $heroSlides = \App\Models\HeroSlide::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
+    $homeCategoryCards = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('home_category_cards')) {
+        $homeCategoryCards = \App\Models\HomeCategoryCard::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
     return Inertia::render('products/Products', [
         'category' => $category,
         'subCategory' => request('sub'),
-        'products' => $products
+        'products' => $products,
+        'heroSlides' => $heroSlides,
+        'homeCategoryCards' => $homeCategoryCards,
     ]);
 });
 
@@ -310,6 +330,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::post('/content/usp/{id}', [ContentController::class, 'updateUsp'])->name('backoffice.content.usp.update');
     Route::delete('/content/usp/{id}', [ContentController::class, 'destroyUsp'])->name('backoffice.content.usp.destroy');
     Route::patch('/content/usp/{id}/toggle-active', [ContentController::class, 'toggleUspActive'])->name('backoffice.content.usp.toggle-active');
+
+    Route::patch('/content/about-us', [ContentController::class, 'updateAboutUs'])->name('backoffice.content.about-us.update');
 
     Route::get('/store-branches', [StoreBranchController::class, 'index'])
         ->name('backoffice.store-branches.index');

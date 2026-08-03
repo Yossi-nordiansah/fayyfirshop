@@ -7,7 +7,9 @@ import {
     Grid,
     Star,
     ShieldCheck,
-    AlertCircle
+    AlertCircle,
+    BookOpen,
+    Home,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -18,11 +20,15 @@ import HeroTab from '../components/HeroTab';
 import CategoryTab from '../components/CategoryTab';
 import FeaturedProductTab from '../components/FeaturedProductTab';
 import UspTab from '../components/UspTab';
+import AboutUsTab from '../components/AboutUsTab';
 
-export default function Content({ heroSlides = [], homeCategoryCards = [], featuredProducts = [], uspItems = [], status = null, errors = {} }) {
+export default function Content({ heroSlides = [], homeCategoryCards = [], featuredProducts = [], uspItems = [], aboutUsSettings = {}, status = null, errors = {} }) {
     const { t } = useLanguage();
 
-    // Active Tab state: 'hero' | 'category' | 'featured_product' | 'usp'
+    // Top-level page: 'home' | 'about_us'
+    const [activePage, setActivePage] = useState('home');
+
+    // Active home sub-tab: 'hero' | 'category' | 'featured_product' | 'usp'
     const [activeTab, setActiveTab] = useState('hero');
 
     return (
@@ -57,73 +63,108 @@ export default function Content({ heroSlides = [], homeCategoryCards = [], featu
                         )}
 
                         {/* Custom Tab Navigation */}
-                        <div className="border-b border-blue-100 bg-white px-4 pt-3 rounded-t-lg flex flex-wrap gap-6 shadow-sm">
+                        {/* ── Level 1: Home / Tentang Kami ─────────────────── */}
+                        <div className="border-b border-blue-100 bg-white px-4 pt-3 rounded-t-lg flex flex-wrap gap-0 shadow-sm">
                             <button
-                                onClick={() => setActiveTab('hero')}
-                                className={`pb-3 text-sm font-bold transition-all relative ${
-                                    activeTab === 'hero'
+                                onClick={() => setActivePage('home')}
+                                className={`pb-3 px-4 text-sm font-bold transition-all relative ${
+                                    activePage === 'home'
                                         ? 'text-blue-950 border-b-2 border-blue-950 font-extrabold'
                                         : 'text-slate-400 hover:text-slate-600'
                                 }`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4" />
-                                    <span>{t('backoffice.content.tab.hero', 'Hero')}</span>
+                                    <Home className="w-4 h-4" />
+                                    <span>{t('backoffice.content.tab.home', 'Beranda')}</span>
                                 </div>
                             </button>
 
                             <button
-                                onClick={() => setActiveTab('category')}
-                                className={`pb-3 text-sm font-bold transition-all relative ${
-                                    activeTab === 'category'
+                                onClick={() => setActivePage('about_us')}
+                                className={`pb-3 px-4 text-sm font-bold transition-all relative ${
+                                    activePage === 'about_us'
                                         ? 'text-blue-950 border-b-2 border-blue-950 font-extrabold'
                                         : 'text-slate-400 hover:text-slate-600'
                                 }`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Grid className="w-4 h-4" />
-                                    <span>{t('backoffice.content.tab.category', 'Category')}</span>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => setActiveTab('featured_product')}
-                                className={`pb-3 text-sm font-bold transition-all relative ${
-                                    activeTab === 'featured_product'
-                                        ? 'text-blue-950 border-b-2 border-blue-950 font-extrabold'
-                                        : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Star className="w-4 h-4" />
-                                    <span>{t('backoffice.content.tab.featured_product', 'Featured Product')}</span>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => setActiveTab('usp')}
-                                className={`pb-3 text-sm font-bold transition-all relative ${
-                                    activeTab === 'usp'
-                                        ? 'text-blue-950 border-b-2 border-blue-950 font-extrabold'
-                                        : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <ShieldCheck className="w-4 h-4" />
-                                    <span>{t('backoffice.content.tab.usp', 'USP')}</span>
+                                    <BookOpen className="w-4 h-4" />
+                                    <span>{t('backoffice.content.tab.about_us', 'Tentang Kami')}</span>
                                 </div>
                             </button>
                         </div>
 
+                        {/* ── Level 2: Home Sub-Tabs (only when page=home) ── */}
+                        {activePage === 'home' && (
+                            <div className="border-b border-blue-50 bg-slate-50 px-6 pt-2 flex flex-wrap gap-5">
+                                <button
+                                    onClick={() => setActiveTab('hero')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'hero'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.hero', 'Hero')}</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('category')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'category'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <Grid className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.category', 'Category')}</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('featured_product')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'featured_product'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <Star className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.featured_product', 'Featured Product')}</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('usp')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'usp'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.usp', 'USP')}</span>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+
                         {/* --- TAB CONTENT CONTAINER --- */}
                         <div className="bg-white border-x border-b border-blue-100 rounded-b-lg shadow-sm p-6">
-                            {activeTab === 'hero' && <HeroTab heroSlides={heroSlides} />}
+                            {/* Home sub-tabs */}
+                            {activePage === 'home' && activeTab === 'hero' && <HeroTab heroSlides={heroSlides} />}
+                            {activePage === 'home' && activeTab === 'category' && <CategoryTab categoryCards={homeCategoryCards} />}
+                            {activePage === 'home' && activeTab === 'featured_product' && <FeaturedProductTab featuredProducts={featuredProducts} />}
+                            {activePage === 'home' && activeTab === 'usp' && <UspTab uspItems={uspItems} />}
 
-                            {activeTab === 'category' && <CategoryTab categoryCards={homeCategoryCards} />}
-
-                            {activeTab === 'featured_product' && <FeaturedProductTab featuredProducts={featuredProducts} />}
-
-                            {activeTab === 'usp' && <UspTab uspItems={uspItems} />}
+                            {/* About Us tab */}
+                            {activePage === 'about_us' && <AboutUsTab aboutUsSettings={aboutUsSettings} />}
                         </div>
                     </div>
                 </main>

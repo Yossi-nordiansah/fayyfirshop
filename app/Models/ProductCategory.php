@@ -15,6 +15,7 @@ class ProductCategory extends Model
         'name',
         'name_translations',
         'slug',
+        'banner_image',
         'is_active',
     ];
 
