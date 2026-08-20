@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\AllProductSlideController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -125,12 +126,18 @@ Route::get('/products/{category?}', function ($category = null) {
         $homeCategoryCards = \App\Models\HomeCategoryCard::where('is_active', true)->orderBy('sort_order', 'asc')->get();
     }
 
+    $allProductSlides = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('all_product_slides')) {
+        $allProductSlides = \App\Models\AllProductSlide::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+    }
+
     return Inertia::render('products/Products', [
-        'category' => $category,
-        'subCategory' => request('sub'),
-        'products' => $products,
-        'heroSlides' => $heroSlides,
+        'category'          => $category,
+        'subCategory'       => request('sub'),
+        'products'          => $products,
+        'heroSlides'        => $heroSlides,
         'homeCategoryCards' => $homeCategoryCards,
+        'allProductSlides'  => $allProductSlides,
     ]);
 });
 
@@ -266,6 +273,16 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.product-categories.toggle-active');
     Route::delete('/product-categories/{productCategory:slug}', [ProductCategoryController::class, 'destroy'])
         ->name('backoffice.product-categories.destroy');
+
+    // All Product Slides — Carousel background images for "Semua Produk" page
+    Route::post('/all-product-slides', [AllProductSlideController::class, 'store'])
+        ->name('backoffice.all-product-slides.store');
+    Route::post('/all-product-slides/{id}', [AllProductSlideController::class, 'update'])
+        ->name('backoffice.all-product-slides.update');
+    Route::delete('/all-product-slides/{id}', [AllProductSlideController::class, 'destroy'])
+        ->name('backoffice.all-product-slides.destroy');
+    Route::patch('/all-product-slides/{id}/toggle-active', [AllProductSlideController::class, 'toggleActive'])
+        ->name('backoffice.all-product-slides.toggle-active');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('backoffice.orders');
     Route::patch('/orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('backoffice.orders.update-status');

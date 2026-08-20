@@ -17,7 +17,7 @@ import {
     Filter,
 } from "lucide-react";
 
-export default function Products({ category = null, subCategory = null, products = [], heroSlides = [], homeCategoryCards = [] }) {
+export default function Products({ category = null, subCategory = null, products = [], heroSlides = [], homeCategoryCards = [], allProductSlides = [] }) {
     const { t, locale } = useLanguage();
     const { navCategories = [] } = usePage().props;
     const { url } = usePage();
@@ -236,6 +236,7 @@ export default function Products({ category = null, subCategory = null, products
         return "";
     });
     const [sortBy, setSortBy] = useState("popular");
+    const [bgSlideIndex, setBgSlideIndex] = useState(0);
 
     // Mobile controls
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -544,6 +545,107 @@ export default function Products({ category = null, subCategory = null, products
         return `/storage/${imgPath}`;
     };
 
+    // Carousel background slides list for "Semua Produk" (All Products)
+    // Priority: 1. DB all_product_slides  2. heroSlides  3. navCategory banners  4. default static images
+    const allProductBgSlides = useMemo(() => {
+        const defaultCategorySlides = [
+            {
+                image: "/images/hero/bg-perfume.webp",
+                overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/10 to-blue-500/10",
+            },
+            {
+                image: "/images/hero/aromatic-oil2.webp",
+                overlayTheme: "from-slate-950/85 via-blue-900/75 to-slate-950/90",
+                accentGlow: "from-blue-600/10 to-cyan-500/10",
+            },
+            {
+                image: "/images/hero/bakhoor.webp",
+                overlayTheme: "from-slate-950/85 via-amber-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-orange-500/10",
+            },
+            {
+                image: "/images/hero/bg-honey.webp",
+                overlayTheme: "from-slate-950/85 via-amber-900/70 to-slate-950/90",
+                accentGlow: "from-amber-500/15 to-yellow-500/10",
+            },
+        ];
+
+        // 1. Use DB-managed all_product_slides as priority source
+        if (allProductSlides && allProductSlides.length > 0) {
+            return allProductSlides.map((slide) => ({
+                image: getFormattedImageUrl(slide.image) || defaultCategorySlides[0].image,
+                overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                accentGlow: "from-amber-500/10 to-blue-500/10",
+            }));
+        }
+
+        // 2. Fallback: heroSlides from Content Management
+        const slides = [];
+        if (heroSlides && heroSlides.length > 0) {
+            heroSlides.forEach((slide) => {
+                const rawImg = slide.background_image || slide.image;
+                const formattedImg = getFormattedImageUrl(rawImg);
+                if (formattedImg && !slides.some((s) => s.image === formattedImg)) {
+                    let overlayTheme = "from-slate-950/85 via-blue-950/75 to-slate-950/90";
+                    let accentGlow = "from-amber-500/10 to-blue-500/10";
+                    if (slide.theme) {
+                        if (slide.theme.includes("amber")) {
+                            overlayTheme = "from-slate-950/85 via-amber-950/75 to-slate-950/90";
+                            accentGlow = "from-amber-500/15 to-orange-500/10";
+                        } else if (slide.theme.includes("blue-800") || slide.theme.includes("cyan")) {
+                            overlayTheme = "from-slate-950/85 via-blue-900/75 to-slate-950/90";
+                            accentGlow = "from-blue-600/10 to-cyan-500/10";
+                        }
+                    }
+                    slides.push({ image: formattedImg, overlayTheme, accentGlow });
+                }
+            });
+        }
+
+        // 3. navCategory banner images
+        if (navCategories && navCategories.length > 0) {
+            navCategories.forEach((cat) => {
+                if (cat.banner_image) {
+                    const formattedImg = getFormattedImageUrl(cat.banner_image);
+                    if (formattedImg && !slides.some((s) => s.image === formattedImg)) {
+                        slides.push({
+                            image: formattedImg,
+                            overlayTheme: "from-slate-950/85 via-blue-950/75 to-slate-950/90",
+                            accentGlow: "from-amber-500/10 to-blue-500/10",
+                        });
+                    }
+                }
+            });
+        }
+
+        // 4. Fill in with default static slides
+        defaultCategorySlides.forEach((defSlide) => {
+            if (!slides.some((s) => s.image === defSlide.image)) {
+                slides.push(defSlide);
+            }
+        });
+
+        return slides.length > 0 ? slides : defaultCategorySlides;
+    }, [allProductSlides, heroSlides, navCategories]);
+
+    // Timer effect for auto-cycling background slides on "Semua Produk"
+    useEffect(() => {
+        if (selectedCat) return;
+        if (!allProductBgSlides || allProductBgSlides.length <= 1) return;
+
+        const timer = setInterval(() => {
+            setBgSlideIndex((prev) => (prev + 1) % allProductBgSlides.length);
+        }, 5000);
+
+        return () => clearInterval(timer);
+    }, [selectedCat, allProductBgSlides]);
+
+    // Reset slide index when category changes
+    useEffect(() => {
+        setBgSlideIndex(0);
+    }, [selectedCat]);
+
     const currentCategoryBg = useMemo(() => {
         const defaultBg = {
             image: "/images/hero/bg-perfume.webp",
@@ -552,6 +654,15 @@ export default function Products({ category = null, subCategory = null, products
         };
 
         const targetCatSlug = selectedCat ? String(selectedCat).toLowerCase() : null;
+
+        // If NO specific category selected ("Semua Produk"), return active slide from background carousel
+        if (!targetCatSlug) {
+            if (allProductBgSlides && allProductBgSlides.length > 0) {
+                const safeIndex = bgSlideIndex % allProductBgSlides.length;
+                return allProductBgSlides[safeIndex];
+            }
+            return defaultBg;
+        }
 
         // 1. Check direct Category Banner Image from Backoffice (Product Categories CRUD)
         if (activeCategoryInfo?.banner_image) {
@@ -582,35 +693,29 @@ export default function Products({ category = null, subCategory = null, products
 
         // 2. Check dynamic heroSlides from Backoffice (Content Management)
         if (heroSlides && heroSlides.length > 0) {
-            let matchedSlide = null;
-            if (!targetCatSlug) {
-                // For "Semua Produk", use first active hero slide from backoffice if available
-                matchedSlide = heroSlides[0];
-            } else {
-                matchedSlide = heroSlides.find((slide) => {
-                    const slideSlug = String(slide.slug || "").toLowerCase();
-                    const slideCat = String(slide.category || "").toLowerCase();
-                    if (slideSlug === targetCatSlug || slideCat === targetCatSlug) return true;
-                    if (targetCatSlug.includes("parfum") || targetCatSlug.includes("perfume")) {
-                        return slideSlug.includes("parfum") || slideSlug.includes("perfume") || slideCat.includes("parfum") || slideCat.includes("perfume");
-                    }
-                    if (targetCatSlug.includes("oil") || targetCatSlug.includes("minyak")) {
-                        return slideSlug.includes("oil") || slideSlug.includes("minyak") || slideCat.includes("oil") || slideCat.includes("minyak");
-                    }
-                    if (targetCatSlug === "bakhoor-dan-oud" || targetCatSlug === "bakhoor-and-oud") {
-                        return (slideSlug.includes("bakhoor") || slideSlug.includes("oud") || slideCat.includes("bakhoor") || slideCat.includes("oud")) &&
-                            !slideSlug.includes("arang") && !slideSlug.includes("mabkhara") && !slideCat.includes("arang") && !slideCat.includes("mabkhara");
-                    }
-                    if (targetCatSlug.includes("arang") || targetCatSlug.includes("mabkhara") || targetCatSlug.includes("mabhkara")) {
-                        return slideSlug.includes("arang") || slideSlug.includes("mabkhara") || slideSlug.includes("mabhkara") ||
-                            slideCat.includes("arang") || slideCat.includes("mabkhara") || slideCat.includes("mabhkara");
-                    }
-                    if (targetCatSlug.includes("nutrition") || targetCatSlug.includes("kesehatan") || targetCatSlug.includes("honey") || targetCatSlug.includes("saffron") || targetCatSlug.includes("kurma") || targetCatSlug.includes("dates")) {
-                        return slideSlug.includes("nutrition") || slideSlug.includes("kesehatan") || slideSlug.includes("honey") || slideCat.includes("nutrition") || slideCat.includes("kesehatan") || slideCat.includes("honey");
-                    }
-                    return false;
-                });
-            }
+            let matchedSlide = heroSlides.find((slide) => {
+                const slideSlug = String(slide.slug || "").toLowerCase();
+                const slideCat = String(slide.category || "").toLowerCase();
+                if (slideSlug === targetCatSlug || slideCat === targetCatSlug) return true;
+                if (targetCatSlug.includes("parfum") || targetCatSlug.includes("perfume")) {
+                    return slideSlug.includes("parfum") || slideSlug.includes("perfume") || slideCat.includes("parfum") || slideCat.includes("perfume");
+                }
+                if (targetCatSlug.includes("oil") || targetCatSlug.includes("minyak")) {
+                    return slideSlug.includes("oil") || slideSlug.includes("minyak") || slideCat.includes("oil") || slideCat.includes("minyak");
+                }
+                if (targetCatSlug === "bakhoor-dan-oud" || targetCatSlug === "bakhoor-and-oud") {
+                    return (slideSlug.includes("bakhoor") || slideSlug.includes("oud") || slideCat.includes("bakhoor") || slideCat.includes("oud")) &&
+                        !slideSlug.includes("arang") && !slideSlug.includes("mabkhara") && !slideCat.includes("arang") && !slideCat.includes("mabkhara");
+                }
+                if (targetCatSlug.includes("arang") || targetCatSlug.includes("mabkhara") || targetCatSlug.includes("mabhkara")) {
+                    return slideSlug.includes("arang") || slideSlug.includes("mabkhara") || slideSlug.includes("mabhkara") ||
+                        slideCat.includes("arang") || slideCat.includes("mabkhara") || slideCat.includes("mabhkara");
+                }
+                if (targetCatSlug.includes("nutrition") || targetCatSlug.includes("kesehatan") || targetCatSlug.includes("honey") || targetCatSlug.includes("saffron") || targetCatSlug.includes("kurma") || targetCatSlug.includes("dates")) {
+                    return slideSlug.includes("nutrition") || slideSlug.includes("kesehatan") || slideSlug.includes("honey") || slideCat.includes("nutrition") || slideCat.includes("kesehatan") || slideCat.includes("honey");
+                }
+                return false;
+            });
 
             if (matchedSlide) {
                 const rawImg = matchedSlide.background_image || matchedSlide.image;
@@ -645,7 +750,7 @@ export default function Products({ category = null, subCategory = null, products
             }
         }
 
-        // 2. Check dynamic homeCategoryCards from Backoffice (Content Management)
+        // 3. Check dynamic homeCategoryCards from Backoffice (Content Management)
         if (targetCatSlug && homeCategoryCards && homeCategoryCards.length > 0) {
             const matchedCard = homeCategoryCards.find((card) => {
                 const cardSlug = String(card.slug || "").toLowerCase();
@@ -677,12 +782,12 @@ export default function Products({ category = null, subCategory = null, products
             }
         }
 
-        // 3. Fallback to category static map if matches
+        // 4. Fallback to category static map if matches
         if (targetCatSlug && categoryBgMap[targetCatSlug]) {
             return categoryBgMap[targetCatSlug];
         }
 
-        // 4. Fallback to activeCategoryInfo (ProductCategory model image)
+        // 5. Fallback to activeCategoryInfo (ProductCategory model image)
         if (activeCategoryInfo?.image || activeCategoryInfo?.background_image) {
             const formattedImg = getFormattedImageUrl(activeCategoryInfo.image || activeCategoryInfo.background_image);
             if (formattedImg) {
@@ -694,7 +799,7 @@ export default function Products({ category = null, subCategory = null, products
             }
         }
 
-        // 5. Dynamic fallback for ANY brand new category: automatically use primary image from category products
+        // 6. Dynamic fallback for ANY brand new category: automatically use primary image from category products
         if (targetCatSlug && filteredProducts && filteredProducts.length > 0) {
             const firstProdImg = getProductImage(filteredProducts[0]);
             if (firstProdImg && !firstProdImg.includes("logo-footer")) {
@@ -708,7 +813,7 @@ export default function Products({ category = null, subCategory = null, products
         }
 
         return defaultBg;
-    }, [selectedCat, heroSlides, homeCategoryCards, categoryBgMap, activeCategoryInfo, filteredProducts]);
+    }, [selectedCat, heroSlides, homeCategoryCards, categoryBgMap, activeCategoryInfo, filteredProducts, allProductBgSlides, bgSlideIndex]);
 
     // Grid animation configs
     const containerVariants = {
@@ -738,30 +843,32 @@ export default function Products({ category = null, subCategory = null, products
                 {/* 1. Luxurious Banner Header with Category-Specific Background */}
                 <div
                     ref={bannerRef}
-                    className="relative pt-28 pb-20 px-6 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center bg-slate-950"
+                    className="relative pt-28 pb-20 px-6 border-b border-amber-500/20 overflow-hidden shadow-2xl text-center bg-slate-950 group"
                 >
-                    {/* Category Background Image with Smooth Animation */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentCategoryBg.image}
-                            initial={{ opacity: 0, scale: 1.05 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.05 }}
-                            transition={{ duration: 0.7, ease: "easeInOut" }}
-                            className="absolute inset-0 z-0"
-                        >
-                            <img
-                                src={currentCategoryBg.image}
-                                alt="Category Background"
-                                className="w-full h-full object-cover object-center"
-                            />
-                            {/* Dark Gradient Overlays for optimal text contrast */}
-                            <div
-                                className={`absolute inset-0 bg-gradient-to-br ${currentCategoryBg.overlayTheme}`}
-                            />
-                            <div className="absolute inset-0 bg-black/20 backdrop-brightness-20" />
-                        </motion.div>
-                    </AnimatePresence>
+                    {/* Category Background Image with Smooth Horizontal Slide Animation */}
+                    <div className="absolute inset-0 overflow-hidden z-0 pointer-events-none">
+                        <AnimatePresence mode="popLayout" initial={false}>
+                            <motion.div
+                                key={`${selectedCat || "all"}-${bgSlideIndex}-${currentCategoryBg.image}`}
+                                initial={{ x: "100%", opacity: 0.7 }}
+                                animate={{ x: "0%", opacity: 1 }}
+                                exit={{ x: "-100%", opacity: 0.7 }}
+                                transition={{ duration: 1.1, ease: [0.25, 1, 0.5, 1] }}
+                                className="absolute inset-0 w-full h-full"
+                            >
+                                <img
+                                    src={currentCategoryBg.image}
+                                    alt="Category Background"
+                                    className="w-full h-full object-cover object-center"
+                                />
+                                {/* Dark Gradient Overlays for optimal text contrast */}
+                                <div
+                                    className={`absolute inset-0 bg-gradient-to-br ${currentCategoryBg.overlayTheme}`}
+                                />
+                                <div className="absolute inset-0 bg-black/20 backdrop-brightness-20" />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
 
                     {/* Arabesque Geometric Overlay */}
                     <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none z-[1]" />
@@ -771,6 +878,8 @@ export default function Products({ category = null, subCategory = null, products
                         className={`absolute top-1/2 left-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-gradient-to-br ${currentCategoryBg.accentGlow} blur-[120px] pointer-events-none z-[1]`}
                     />
                     <div className="absolute top-1/3 right-1/4 -translate-y-1/2 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none z-[1]" />
+
+                    {/* Carousel auto-cycles silently — no dots or chevrons shown */}
 
                     <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                         {/* Breadcrumbs */}

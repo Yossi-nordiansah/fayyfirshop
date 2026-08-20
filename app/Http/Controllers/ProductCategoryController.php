@@ -20,6 +20,7 @@ class ProductCategoryController extends Controller
                 ->withCount('subCategories')
                 ->latest('id')
                 ->get(),
+            'allProductSlides' => \App\Models\AllProductSlide::orderBy('sort_order')->orderBy('id')->get(),
             'status' => session('status'),
             'statusAction' => session('statusAction'),
         ]);
