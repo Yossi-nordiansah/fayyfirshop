@@ -80,6 +80,21 @@ export default function OrderHistoryPage({ orders = [], xenditPublicKey, isProdu
             });
     };
 
+    const handleOrderExpired = (orderId) => {
+        if (!orderId) return;
+        try {
+            axios.post(route('checkout.payment.expire', orderId))
+                .finally(() => {
+                    router.reload({ preserveScroll: true });
+                });
+        } catch (err) {
+            axios.post(`/checkout/payment/${orderId}/expire`)
+                .finally(() => {
+                    router.reload({ preserveScroll: true });
+                });
+        }
+    };
+
     // Helpers
     const formatPrice = (value) => {
         const currencySymbol = locale === "indonesia" ? "Rp" : "IDR";
@@ -440,6 +455,7 @@ export default function OrderHistoryPage({ orders = [], xenditPublicKey, isProdu
                                             isExpanded={expandedOrderId === order.id}
                                             onToggle={toggleExpand}
                                             onOpenCancelModal={openCancelModal}
+                                            onOrderExpired={handleOrderExpired}
                                             formatPrice={formatPrice}
                                             formatDate={formatDate}
                                             getLocalizedValue={getLocalizedValue}

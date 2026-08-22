@@ -195,8 +195,8 @@ export default function PaymentCodeCard({
                 </div>
             )}
 
-            {/* 4. E-Wallet (GoPay, ShopeePay, OVO, DANA) */}
-            {["gopay", "shopeepay", "ovo", "dana"].includes(order.payment_method) && (
+            {/* 4. E-Wallet (ShopeePay, LinkAja, OVO, GoPay, DANA) */}
+            {["gopay", "shopeepay", "ovo", "dana", "linkaja"].includes(order.payment_method) && (
                 <div className="flex flex-col items-center space-y-5 w-full">
                     {/* OVO Phone Form */}
                     {order.payment_method === "ovo" && (
@@ -289,9 +289,11 @@ export default function PaymentCodeCard({
                                             <li>
                                                 {order.payment_method === "shopeepay"
                                                     ? t("payment.step_shopeepay", "Buka aplikasi Shopee di smartphone Anda.")
-                                                    : order.payment_method === "gopay"
-                                                        ? t("payment.step_gopay", "Buka aplikasi Gojek / GoPay di smartphone Anda.")
-                                                        : t("payment.step_dana", "Buka aplikasi DANA di smartphone Anda.")}
+                                                    : order.payment_method === "linkaja"
+                                                        ? t("payment.step_linkaja", "Buka aplikasi LinkAja di smartphone Anda.")
+                                                        : order.payment_method === "gopay"
+                                                            ? t("payment.step_gopay", "Buka aplikasi Gojek / GoPay di smartphone Anda.")
+                                                            : t("payment.step_dana", "Buka aplikasi DANA di smartphone Anda.")}
                                             </li>
                                             <li>
                                                 {t("payment.step_scan", "Pilih menu Scan / Pindai QR di aplikasi.")}
@@ -326,13 +328,15 @@ export default function PaymentCodeCard({
                                             className="inline-flex items-center justify-center gap-2 text-sm font-black text-white bg-blue-950 px-6 py-4 rounded-2xl shadow-md hover:bg-blue-900 transition active:scale-[0.98] w-full max-w-sm"
                                         >
                                             <span>
-                                                {order.payment_method === "dana"
-                                                    ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
-                                                    : order.payment_method === "gopay"
-                                                        ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
-                                                        : order.payment_method === "shopeepay"
-                                                            ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
-                                                            : t("payment.wallet.open_generic", "Buka Aplikasi E-Wallet")}
+                                                {order.payment_method === "linkaja"
+                                                    ? t("payment.wallet.open_linkaja", "Buka Aplikasi LinkAja")
+                                                    : order.payment_method === "dana"
+                                                        ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
+                                                        : order.payment_method === "gopay"
+                                                            ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
+                                                            : order.payment_method === "shopeepay"
+                                                                ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
+                                                                : t("payment.wallet.open_generic", "Buka Aplikasi E-Wallet")}
                                             </span>
                                             <ExternalLink size={16} />
                                         </a>

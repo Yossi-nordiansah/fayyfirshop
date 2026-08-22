@@ -13,6 +13,9 @@ class OrderController extends Controller
 {
     public function index()
     {
+        // Cancel any expired pending orders first
+        Order::cancelExpiredOrders();
+
         // Admin view of all orders
         $orders = Order::with(['user', 'storeBranch', 'items.product', 'items.variant'])
             ->latest('id')
@@ -354,6 +357,9 @@ class OrderController extends Controller
 
     public function userOrders()
     {
+        // Cancel any expired pending orders for this user first
+        Order::cancelExpiredOrders(auth()->id());
+
         $orders = Order::with([
             'user',
             'items.product.images',

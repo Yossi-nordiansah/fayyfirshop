@@ -262,5 +262,96 @@ class Order extends Model
 
         return 1.0;
     }
+
+    /**
+     * Check if the unpaid order has exceeded its payment expiry time.
+     */
+    public function isExpired(): bool
+    {
+        if ($this->payment_status === 'paid' || $this->status === 'cancelled' || $this->payment_status === 'expired') {
+            return false;
+        }
+
+        if ($this->status !== 'pending' || $this->payment_status !== 'unpaid') {
+            return false;
+        }
+
+        $expiryTime = $this->payment_details['expiry_time'] ?? null;
+        if ($expiryTime) {
+            try {
+                return now()->gt(\Carbon\Carbon::parse($expiryTime));
+            } catch (\Throwable $e) {
+                // If parse fails, fallback to created_at + 24 hours
+            }
+        }
+
+        return $this->created_at ? now()->gt($this->created_at->copy()->addDay()) : false;
+    }
+
+    /**
+     * Cancel the order and mark payment as expired.
+     */
+    public function markAsExpired(): bool
+    {
+        if ($this->payment_status === 'paid' || $this->status === 'cancelled' || $this->payment_status === 'expired') {
+            return false;
+        }
+
+        try {
+            if (is_array($this->payment_details)) {
+                if (isset($this->payment_details['xendit_invoice_id']) && config('services.xendit.secret_key')) {
+                    try {
+                        \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
+                        $apiInstance = new \Xendit\Invoice\InvoiceApi();
+                        $apiInstance->expireInvoice($this->payment_details['xendit_invoice_id']);
+                    } catch (\Throwable $e) {}
+                }
+                if (isset($this->payment_details['midtrans_order_id']) && config('services.midtrans.server_key')) {
+                    try {
+                        \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                        \Midtrans\Config::$isProduction = (bool) config('services.midtrans.is_production');
+                        \Midtrans\Transaction::cancel($this->payment_details['midtrans_order_id']);
+                    } catch (\Throwable $e) {}
+                }
+            }
+
+            $this->update([
+                'status' => 'cancelled',
+                'payment_status' => 'expired',
+                'cancellation_reason' => 'Batas waktu pembayaran telah habis.'
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to mark order #{$this->id} as expired: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check and cancel all expired orders.
+     */
+    public static function cancelExpiredOrders(?int $userId = null): int
+    {
+        $query = static::where('status', 'pending')
+            ->where('payment_status', 'unpaid');
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        $orders = $query->get();
+        $cancelledCount = 0;
+
+        foreach ($orders as $order) {
+            if ($order->isExpired()) {
+                if ($order->markAsExpired()) {
+                    $cancelledCount++;
+                }
+            }
+        }
+
+        return $cancelledCount;
+    }
 }
 

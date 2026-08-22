@@ -1465,42 +1465,19 @@ class CheckoutController extends Controller
             ], 422);
         }
 
-        try {
-            DB::transaction(function () use ($order) {
-                if ($order->payment_details) {
-                    if (isset($order->payment_details['xendit_invoice_id'])) {
-                        try {
-                            \Xendit\Configuration::setXenditKey(config('services.xendit.secret_key'));
-                            $apiInstance = new \Xendit\Invoice\InvoiceApi();
-                            $apiInstance->expireInvoice($order->payment_details['xendit_invoice_id']);
-                        } catch (\Throwable $cancelEx) {}
-                    }
-                    if (isset($order->payment_details['midtrans_order_id'])) {
-                        try {
-                            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
-                            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
-                            \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
-                        } catch (\Throwable $cancelEx) {}
-                    }
-                }
+        $success = $order->markAsExpired();
 
-                $order->update([
-                    'status' => 'cancelled',
-                    'payment_status' => 'expired',
-                    'cancellation_reason' => 'Batas waktu pembayaran telah habis.'
-                ]);
-            });
-
+        if ($success) {
             return response()->json([
                 'success' => true,
                 'message' => 'Pesanan telah dibatalkan karena batas waktu pembayaran habis.'
             ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal membatalkan pesanan: ' . $e->getMessage()
-            ], 500);
         }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal membatalkan pesanan kedaluwarsa.'
+        ], 500);
     }
 
     /**
@@ -1800,19 +1777,20 @@ class CheckoutController extends Controller
             ];
         }
 
-        // 4. E-WALLETS (API V3 - PAYMENT REQUESTS - GoPay, ShopeePay, DANA, OVO)
-        if (in_array($paymentMethod, ['gopay', 'shopeepay', 'dana', 'ovo'])) {
+        // 4. E-WALLETS (API V3 - PAYMENT REQUESTS - GoPay, ShopeePay, DANA, OVO, LinkAja)
+        if (in_array($paymentMethod, ['gopay', 'shopeepay', 'dana', 'ovo', 'linkaja'])) {
             $channelMap = [
                 'gopay' => 'GOPAY',
                 'shopeepay' => 'SHOPEEPAY',
                 'dana' => 'DANA',
                 'ovo' => 'OVO',
+                'linkaja' => 'LINKAJA',
             ];
 
             $channelCode = $channelMap[$paymentMethod];
 
             // OVO uses push notification — only mobile_number is allowed in channel_properties.
-            // GoPay, ShopeePay, DANA use redirect URLs.
+            // GoPay, ShopeePay, DANA, LinkAja use redirect URLs.
             if ($paymentMethod === 'ovo') {
                 // Xendit Payment Requests API v3 requires +62 international format for OVO
                 $cleanPhone = preg_replace('/[^0-9+]/', '', $phone);

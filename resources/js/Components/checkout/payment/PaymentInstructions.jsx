@@ -31,7 +31,7 @@ export default function PaymentInstructions({ order, activeAccordion, setActiveA
     ].includes(order.payment_method);
 
     const isQris = order.payment_method === "qris";
-    const isEWallet = ["gopay", "shopeepay", "ovo", "dana"].includes(order.payment_method);
+    const isEWallet = ["gopay", "shopeepay", "ovo", "dana", "linkaja"].includes(order.payment_method);
     const isRetail = ["alfamart", "indomaret"].includes(order.payment_method);
 
     if (!isVA && !isQris && !isEWallet && !isRetail) return null;

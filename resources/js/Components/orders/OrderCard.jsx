@@ -22,8 +22,9 @@ import { useLanguage } from "@/Contexts/LanguageContext";
 import ReviewOrderModal from "./ReviewOrderModal";
 import Toast from "@/Components/Toast";
 
-function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPay, t }) {
+function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, orderId, onExpired, onClickPay, t }) {
     const [timeLeft, setTimeLeft] = useState("");
+    const expiredTriggeredRef = React.useRef(false);
 
     useEffect(() => {
         if (!expiryTime) {
@@ -35,6 +36,12 @@ function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPa
             const diff = +new Date(expiryTime.replace(/-/g, "/")) - +new Date();
             if (diff <= 0) {
                 setTimeLeft("Expired");
+                if (!expiredTriggeredRef.current) {
+                    expiredTriggeredRef.current = true;
+                    if (onExpired) {
+                        onExpired(orderId);
+                    }
+                }
                 return;
             }
             const h = Math.floor(diff / (1000 * 60 * 60));
@@ -46,7 +53,7 @@ function PaymentCountdown({ expiryTime, paymentMethod, paymentDetails, onClickPa
         updateTimer();
         const timer = setInterval(updateTimer, 1000);
         return () => clearInterval(timer);
-    }, [expiryTime]);
+    }, [expiryTime, orderId, onExpired]);
 
     if (timeLeft === "Expired") return null;
 
@@ -85,6 +92,7 @@ export default function OrderCard({
     isExpanded,
     onToggle,
     onOpenCancelModal,
+    onOrderExpired,
     formatPrice,
     formatDate,
     getLocalizedValue,
@@ -329,6 +337,8 @@ export default function OrderCard({
                     expiryTime={order.payment_details?.expiry_time}
                     paymentMethod={order.payment_method}
                     paymentDetails={order.payment_details}
+                    orderId={order.id}
+                    onExpired={onOrderExpired}
                     t={t}
                     onClickPay={(e) => {
                         e.stopPropagation();

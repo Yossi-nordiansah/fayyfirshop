@@ -11,6 +11,12 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('model:prune')->daily();
+Schedule::command('orders:cancel-expired')->everyFiveMinutes();
+
+Artisan::command('orders:cancel-expired', function () {
+    $count = \App\Models\Order::cancelExpiredOrders();
+    $this->info("Successfully cancelled {$count} expired orders.");
+})->purpose('Cancel orders whose payment time limit has expired');
 
 Artisan::command('inventory:setup-branch-stocks {--copy-existing-to=ID : Branch country code that receives current products.stock and product_variants.stock values} {--reset : Delete existing branch stock rows before recreating them}', function () {
     if (
