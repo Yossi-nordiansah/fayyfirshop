@@ -1535,6 +1535,7 @@
     "backoffice.orders.modal.err_complete_warehouse_area": "Lengkapi Area ID Gudang",
     "backoffice.orders.modal.err_complete_customer_area": "Lengkapi Area ID Pelanggan",
     "backoffice.orders.modal.btn_track_shipment": "Lacak Pengiriman",
+    "backoffice.orders.modal.waiting_pickup": "Menunggu Penjemputan Kurir",
     "backoffice.orders.modal.btn_track_pod": "Lacak & Lihat POD",
     "backoffice.orders.confirm.approve_cancel": "Apakah Anda yakin ingin menyetujui pembatalan pesanan ini? Stok produk akan dikembalikan.",
     "backoffice.orders.confirm.reject_cancel": "Apakah Anda yakin ingin menolak pembatalan pesanan ini?",

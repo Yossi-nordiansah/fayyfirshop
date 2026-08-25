@@ -1538,6 +1538,7 @@
     "backoffice.orders.modal.err_complete_warehouse_area": "أكمل معرف منطقة المستودع",
     "backoffice.orders.modal.err_complete_customer_area": "أكمل معرف منطقة العميل",
     "backoffice.orders.modal.btn_track_shipment": "تتبع الشحنة",
+    "backoffice.orders.modal.waiting_pickup": "في انتظار استلام مندوب التوصيل",
     "backoffice.orders.modal.btn_track_pod": "تتبع وعرض إثبات التسليم (POD)",
     "backoffice.orders.confirm.approve_cancel": "هل أنت متأكد من رغبتك في الموافقة على إلغاء هذا الطلب؟ سيتم استعادة مخزون المنتج.",
     "backoffice.orders.confirm.reject_cancel": "هل أنت متأكد من رغبتك في رفض إلغاء هذا الطلب؟",

@@ -423,7 +423,7 @@ export default function Orders({ orders = [], status }) {
                                                                 <Eye size={12} />
                                                                 <span>{t('backoffice.orders.action.details', 'Details')}</span>
                                                             </button>
-                                                            {order.tracking_number && (
+                                                            {order.tracking_number && (order.status === 'shipped' || order.status === 'completed') && (
                                                                 <a
                                                                     href={route('orders.track', order.id)}
                                                                     target="_blank"
@@ -525,13 +525,21 @@ export default function Orders({ orders = [], status }) {
                                                         <span className="text-slate-400 block">{t('backoffice.orders.modal.awb', 'Airwaybill (AWB)')}</span>
                                                         <strong className="text-blue-950 font-mono">{selectedOrder.tracking_number}</strong>
                                                     </div>
-                                                    <a
-                                                        href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                                        className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
-                                                    >
-                                                        <Truck size={12} />
-                                                        <span>{t('backoffice.orders.modal.track_shipment', 'Lacak Pengiriman')}</span>
-                                                    </a>
+                                                    {selectedOrder.status === 'processing' ? (
+                                                        <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-lg">
+                                                            <span>{t('backoffice.orders.modal.waiting_pickup', 'Menunggu Penjemputan Kurir')}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <a
+                                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
+                                                        >
+                                                            <Truck size={12} />
+                                                            <span>{t('backoffice.orders.modal.track_shipment', 'Lacak Pengiriman')}</span>
+                                                        </a>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

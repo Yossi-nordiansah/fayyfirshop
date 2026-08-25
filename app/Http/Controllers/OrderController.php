@@ -170,7 +170,7 @@ class OrderController extends Controller
 
     public function createBiteshipShipment(Request $request, $id)
     {
-        $order = Order::with(['user', 'storeBranch', 'items.product', 'items.variant.parent'])->findOrFail($id);
+        $order = Order::with(['user', 'storeBranch', 'items.product.category', 'items.variant.parent'])->findOrFail($id);
 
         if (!empty($order->tracking_number)) {
             return redirect()
@@ -212,6 +212,23 @@ class OrderController extends Controller
                 }
             }
 
+            // Determine valid Biteship item category
+            $itemCategory = 'fashion';
+            if ($product && $product->category) {
+                $catName = strtolower($product->category->name ?? $product->category->name_translations['english'] ?? $product->category->name_translations['indonesia'] ?? '');
+                if (str_contains($catName, 'parfum') || str_contains($catName, 'perfume') || str_contains($catName, 'beauty') || str_contains($catName, 'kosmetik') || str_contains($catName, 'minyak') || str_contains($catName, 'oil') || str_contains($catName, 'oud') || str_contains($catName, 'bakhoor')) {
+                    $itemCategory = 'beauty';
+                } elseif (str_contains($catName, 'sehat') || str_contains($catName, 'health') || str_contains($catName, 'nutrisi') || str_contains($catName, 'obat')) {
+                    $itemCategory = 'healthcare';
+                } elseif (str_contains($catName, 'makanan') || str_contains($catName, 'food') || str_contains($catName, 'minum') || str_contains($catName, 'drink')) {
+                    $itemCategory = 'food_and_drink';
+                } elseif (str_contains($catName, 'fashion') || str_contains($catName, 'baju') || str_contains($catName, 'pakaian') || str_contains($catName, 'abaya') || str_contains($catName, 'gamis') || str_contains($catName, 'hijab')) {
+                    $itemCategory = 'fashion';
+                } else {
+                    $itemCategory = 'others';
+                }
+            }
+
             $biteshipItems[] = [
                 'name' => $product->title ?: ($product->name_translations['indonesia'] ?? 'Product'),
                 'description' => $desc,
@@ -221,7 +238,7 @@ class OrderController extends Controller
                 'length' => 10,
                 'width' => 10,
                 'height' => 10,
-                'category' => 'general'
+                'category' => $itemCategory
             ];
         }
 
@@ -263,15 +280,18 @@ class OrderController extends Controller
             $courierType = 'instant';
         }
 
+        $branchPhone = $branch->whatsapp_number ?: '081234567890';
+        $receiverPhone = $user->phone ?: '08123456789';
+
         $payload = [
             'shipper_contact_name' => $branch->name,
-            'shipper_contact_phone' => '081234567890', // fallback store phone
+            'shipper_contact_phone' => $branchPhone,
             'origin_contact_name' => $branch->name,
-            'origin_contact_phone' => '081234567890',
+            'origin_contact_phone' => $branchPhone,
             'origin_address' => $branch->detail_address ?: ($branch->street . ', ' . $branch->city),
             'origin_area_id' => $branch->area_id,
             'destination_contact_name' => $user->receiver_name ?: $user->name,
-            'destination_contact_phone' => $user->phone ?: '08123456789',
+            'destination_contact_phone' => $receiverPhone,
             'destination_address' => $order->shipping_address,
             'destination_area_id' => $user->area_id,
             'courier_company' => $courier,
@@ -321,7 +341,7 @@ class OrderController extends Controller
                 if ($waybillId) {
                     $order->update([
                         'tracking_number' => $waybillId,
-                        'status' => 'shipped',
+                        'status' => 'processing', // Stay processing; status changes to 'shipped' only via Biteship webhook when courier picks up
                         'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]"),
                     ]);
 
@@ -603,4 +623,92 @@ class OrderController extends Controller
         }
         return null;
     }
+
+    /**
+     * Handle Biteship webhook callbacks for order status updates.
+     * Called automatically by Biteship when shipment status changes.
+     */
+    public function biteshipWebhook(Request $request)
+    {
+        \Illuminate\Support\Facades\Log::info('Biteship Webhook Received:', [
+            'headers' => $request->headers->all(),
+            'payload' => $request->all(),
+        ]);
+
+        // Verify Biteship webhook token
+        $receivedToken = $request->header('biteship-token') ?? $request->header('x-biteship-token');
+        $configuredToken = env('BITESHIP_WEBHOOK_TOKEN');
+
+        if ($configuredToken && $receivedToken !== $configuredToken) {
+            \Illuminate\Support\Facades\Log::warning('Biteship Webhook Token Mismatch', [
+                'received' => $receivedToken,
+            ]);
+            return response()->json(['message' => 'Invalid webhook token'], 403);
+        }
+
+        // Extract order data from payload
+        // Biteship sends: order_id (Biteship's own order ID), status, waybill_id
+        $biteshipOrderId = $request->input('order_id') ?? $request->input('data.order_id');
+        $newStatus       = strtolower($request->input('status') ?? $request->input('data.status') ?? '');
+        $waybillId       = $request->input('waybill_id') ?? $request->input('data.waybill_id');
+
+        if (!$biteshipOrderId && !$waybillId) {
+            return response()->json(['status' => 'ok', 'message' => 'ok'], 200);
+        }
+
+        // Find the order by Biteship Order ID stored in notes, or by tracking_number
+        $order = null;
+
+        if ($biteshipOrderId) {
+            // We store "[Biteship Order ID: xxx]" in notes field
+            $order = Order::where('notes', 'like', '%[Biteship Order ID: ' . $biteshipOrderId . ']%')->first();
+        }
+
+        if (!$order && $waybillId) {
+            $order = Order::where('tracking_number', $waybillId)
+                ->orWhere('tracking_number', 'PENDING_' . $biteshipOrderId)
+                ->first();
+        }
+
+        if (!$order) {
+            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order not found', [
+                'biteship_order_id' => $biteshipOrderId,
+                'waybill_id'        => $waybillId,
+            ]);
+            return response()->json(['message' => 'Webhook received (order not found)'], 200);
+        }
+
+        // Map Biteship status → Fayyfir order status
+        // Biteship statuses: confirmed, allocated, picking_up, picked, dropping_off, delivered, rejected, cancelled, returned
+        $updates = [];
+
+        if ($waybillId && ($order->tracking_number !== $waybillId)) {
+            // Update waybill if newly assigned or changed
+            $updates['tracking_number'] = $waybillId;
+        }
+
+        if (in_array($newStatus, ['picking_up', 'picked', 'dropping_off', 'on_hold'])) {
+            // Courier has picked up or is en route
+            $updates['status'] = 'shipped';
+        } elseif ($newStatus === 'delivered') {
+            $updates['status'] = 'completed';
+        } elseif (in_array($newStatus, ['cancelled', 'rejected', 'returned'])) {
+            // Only revert to processing — don't auto-cancel because admin may need to re-book
+            $updates['status'] = 'processing';
+            $updates['tracking_number'] = null;
+        }
+
+        if (!empty($updates)) {
+            $order->update($updates);
+            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order updated', [
+                'order_id'   => $order->id,
+                'new_status' => $updates['status'] ?? 'unchanged',
+                'waybill'    => $updates['tracking_number'] ?? $order->tracking_number,
+                'biteship_status' => $newStatus,
+            ]);
+        }
+
+        return response()->json(['message' => 'Webhook processed successfully'], 200);
+    }
 }
+

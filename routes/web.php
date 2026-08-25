@@ -366,6 +366,7 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
 
 Route::post('/checkout/xendit-callback', [CheckoutController::class, 'xenditCallback'])->name('checkout.xendit-callback');
 Route::post('/checkout/midtrans-callback', [CheckoutController::class, 'midtransCallback'])->name('checkout.midtrans-callback');
+Route::match(['get', 'post'], '/biteship/webhook', [OrderController::class, 'biteshipWebhook'])->name('biteship.webhook');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

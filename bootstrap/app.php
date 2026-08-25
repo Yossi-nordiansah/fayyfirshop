@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'checkout/midtrans-callback',
             'checkout/xendit-callback',
+            'biteship/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

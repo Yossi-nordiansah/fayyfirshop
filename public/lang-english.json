@@ -1531,6 +1531,7 @@
     "backoffice.orders.modal.err_complete_warehouse_area": "Complete Warehouse Area ID",
     "backoffice.orders.modal.err_complete_customer_area": "Complete Customer Area ID",
     "backoffice.orders.modal.btn_track_shipment": "Track Shipment",
+    "backoffice.orders.modal.waiting_pickup": "Waiting for Courier Pickup",
     "backoffice.orders.modal.btn_track_pod": "Track & View POD",
     "backoffice.orders.confirm.approve_cancel": "Are you sure you want to approve this order cancellation? Product stock will be restored.",
     "backoffice.orders.confirm.reject_cancel": "Are you sure you want to reject this order cancellation?",
