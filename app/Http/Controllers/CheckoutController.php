@@ -448,6 +448,17 @@ class CheckoutController extends Controller
                         return response()->json(['success' => false, 'message' => 'Kuota penggunaan kode referral telah habis.'], 422);
                     }
 
+                    // Cek apakah user sudah pernah menggunakan referral ini (sekali pakai)
+                    if ($userId && Schema::hasTable('referral_usages')) {
+                        $userReferralUsage = DB::table('referral_usages')
+                            ->where('referral_id', $referral->id)
+                            ->where('user_id', $userId)
+                            ->count();
+                        if ($userReferralUsage >= 1) {
+                            return response()->json(['success' => false, 'message' => 'Anda sudah pernah menggunakan kode referral ini. Kode referral hanya bisa digunakan satu kali.'], 422);
+                        }
+                    }
+
                     if ($subtotal < $referral->min_spending) {
                         $diff = $referral->min_spending - $subtotal;
                         return response()->json([
@@ -771,16 +782,23 @@ class CheckoutController extends Controller
                         ($referral->total_quota == 0 || $referral->used_quota < $referral->total_quota) &&
                         ($subtotal >= $referral->min_spending)
                     ) {
-                        $remainingSubtotal = max(0.0, $subtotal - $manualDiscount - $eventDiscount);
-                        if ($remainingSubtotal > 0) {
-                            if ($referral->type === 'fixed') {
-                                $referralDiscount = (float)$referral->value;
-                            } elseif ($referral->type === 'percentage') {
-                                $referralDiscount = $remainingSubtotal * ($referral->value / 100);
-                            }
+                        // Cek apakah user sudah pernah menggunakan referral ini (sekali pakai per user)
+                        $userReferralUsage = Schema::hasTable('referral_usages')
+                            ? DB::table('referral_usages')->where('referral_id', $referral->id)->where('user_id', $user->id)->count()
+                            : 0;
 
-                            if ($referralDiscount > $remainingSubtotal) {
-                                $referralDiscount = $remainingSubtotal;
+                        if ($userReferralUsage < 1) {
+                            $remainingSubtotal = max(0.0, $subtotal - $manualDiscount - $eventDiscount);
+                            if ($remainingSubtotal > 0) {
+                                if ($referral->type === 'fixed') {
+                                    $referralDiscount = (float)$referral->value;
+                                } elseif ($referral->type === 'percentage') {
+                                    $referralDiscount = $remainingSubtotal * ($referral->value / 100);
+                                }
+
+                                if ($referralDiscount > $remainingSubtotal) {
+                                    $referralDiscount = $remainingSubtotal;
+                                }
                             }
                         }
                     }

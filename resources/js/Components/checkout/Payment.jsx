@@ -102,10 +102,10 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                 { id: "mandiri_va", name: "Mandiri Bill Payment", desc: t("checkout.payment.desc.mandiri_va", "Transfer Mandiri Bill Payment"), logo: "/images/payment/mandiri.svg" },
                 { id: "permata_va", name: "Permata Virtual Account", desc: t("checkout.payment.desc.permata_va", "Transfer Virtual Account Permata"), logo: "/images/payment/permata.svg" },
                 { id: "cimb_va", name: "CIMB Niaga Virtual Account", desc: t("checkout.payment.desc.cimb_va", "Transfer Virtual Account CIMB Niaga"), logo: "/images/payment/cimb.svg" },
-                { id: "seabank_va", name: "SeaBank Virtual Account", desc: t("checkout.payment.desc.seabank_va", "Transfer Virtual Account SeaBank"), logo: "/images/payment/seabank.svg" },
-                { id: "danamon_va", name: "Danamon Virtual Account", desc: t("checkout.payment.desc.danamon_va", "Transfer Virtual Account Danamon"), logo: "/images/payment/danamon.svg" },
+                // { id: "seabank_va", name: "SeaBank Virtual Account", desc: t("checkout.payment.desc.seabank_va", "Transfer Virtual Account SeaBank"), logo: "/images/payment/seabank.svg" },  // SEMENTARA DINONAKTIFKAN
+                // { id: "danamon_va", name: "Danamon Virtual Account", desc: t("checkout.payment.desc.danamon_va", "Transfer Virtual Account Danamon"), logo: "/images/payment/danamon.svg" },  // SEMENTARA DINONAKTIFKAN
                 { id: "bsi_va", name: "BSI Virtual Account", desc: t("checkout.payment.desc.bsi_va", "Transfer Virtual Account BSI"), logo: "/images/payment/bsi.svg" },
-                { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu_va", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" },
+                // { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu_va", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" },  // SEMENTARA DINONAKTIFKAN
             ],
         },
         {
