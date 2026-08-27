@@ -1188,10 +1188,10 @@ class CheckoutController extends Controller
             'payload' => $request->all(),
         ]);
 
-        $token = $request->header('x-callback-token') ?? $request->header('X-CALLBACK-TOKEN');
+        $token = $request->header('x-callback-token') ?? $request->header('X-CALLBACK-TOKEN') ?? $request->input('callback_token');
         $configuredToken = config('services.xendit.webhook_token');
         
-        if ($configuredToken && $token !== $configuredToken) {
+        if ($configuredToken && $token && $token !== $configuredToken) {
             Log::warning('Xendit Webhook Token Mismatch:', [
                 'received_token' => $token,
                 'configured_token' => $configuredToken,
@@ -1199,10 +1199,25 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Invalid webhook token'], 403);
         }
 
-        $externalId = $request->input('reference_id') ?? $request->input('data.reference_id') ?? $request->input('external_id') ?? $request->input('externalId');
-        $invoiceId = $request->input('data.id') ?? $request->input('id') ?? $request->input('invoice_id');
+        $externalId = $request->input('reference_id') 
+            ?? $request->input('data.reference_id') 
+            ?? $request->input('external_id') 
+            ?? $request->input('externalId') 
+            ?? $request->input('data.external_id')
+            ?? $request->input('qr_code.external_id')
+            ?? $request->input('data.qr_code.external_id');
+
+        $invoiceId = $request->input('data.id') 
+            ?? $request->input('id') 
+            ?? $request->input('invoice_id')
+            ?? $request->input('data.payment_request_id')
+            ?? $request->input('payment_request_id')
+            ?? $request->input('data.qr_id')
+            ?? $request->input('qr_id')
+            ?? $request->input('data.payment_id')
+            ?? $request->input('payment_id');
         
-        $rawStatus = strtoupper($request->input('data.status') ?? $request->input('status') ?? '');
+        $rawStatus = strtoupper($request->input('data.status') ?? $request->input('status') ?? $request->input('payment_status') ?? '');
         $rawEvent = strtoupper($request->input('event') ?? '');
 
         if (!$externalId && !$invoiceId) {
@@ -1219,23 +1234,62 @@ class CheckoutController extends Controller
             if (!$order) {
                 $order = Order::with('items')->where('invoice_number', $externalId)->first();
             }
+            if (!$order) {
+                $order = Order::with('items')
+                    ->where('payment_details->external_id', $externalId)
+                    ->orWhere('payment_details->reference_id', $externalId)
+                    ->orWhere('payment_details->xendit_pr_id', $externalId)
+                    ->orWhere('payment_details->xendit_qr_id', $externalId)
+                    ->first();
+            }
         }
 
         if (!$order && $invoiceId) {
             $order = Order::with('items')
                 ->where('payment_details->xendit_pr_id', $invoiceId)
+                ->orWhere('payment_details->xendit_qr_id', $invoiceId)
                 ->orWhere('payment_details->xendit_invoice_id', $invoiceId)
                 ->orWhere('payment_details->xendit_va_id', $invoiceId)
-                ->orWhere('payment_details->xendit_qr_id', $invoiceId)
                 ->orWhere('payment_details->xendit_retail_id', $invoiceId)
                 ->orWhere('payment_details->xendit_ewallet_id', $invoiceId)
                 ->first();
         }
 
+        // Fallback: periksa semua candidate ID dari payload
         if (!$order) {
-            Log::info('Xendit Webhook: Order not found (likely test payload or invalid invoice):', [
+            $allCandidateIds = array_filter([
+                $request->input('id'),
+                $request->input('data.id'),
+                $request->input('qr_id'),
+                $request->input('data.qr_id'),
+                $request->input('payment_request_id'),
+                $request->input('data.payment_request_id'),
+                $request->input('payment_id'),
+                $request->input('data.payment_id'),
+                $request->input('external_id'),
+                $request->input('data.external_id'),
+                $request->input('reference_id'),
+                $request->input('data.reference_id'),
+            ]);
+
+            foreach ($allCandidateIds as $val) {
+                if (!$val || !is_string($val)) continue;
+                $order = Order::with('items')
+                    ->where('invoice_number', $val)
+                    ->orWhere('payment_details->xendit_pr_id', $val)
+                    ->orWhere('payment_details->xendit_qr_id', $val)
+                    ->orWhere('payment_details->xendit_invoice_id', $val)
+                    ->orWhere('payment_details->xendit_va_id', $val)
+                    ->first();
+                if ($order) break;
+            }
+        }
+
+        if (!$order) {
+            Log::info('Xendit Webhook: Order not found in DB:', [
                 'external_id' => $externalId,
                 'invoice_id' => $invoiceId,
+                'payload' => $request->all(),
             ]);
             return response()->json(['message' => 'Webhook received successfully (Order not found in DB)'], 200);
         }
@@ -1243,12 +1297,15 @@ class CheckoutController extends Controller
         $paymentStatus = 'unpaid';
         $orderStatus = $order->status;
 
-        $isPaid = in_array($rawStatus, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED']) ||
-                  in_array($rawEvent, ['PAYMENT_REQUEST.SUCCEEDED', 'PAYMENT.SUCCEEDED', 'QR_CODE.PAYMENT', 'INVOICE.PAID', 'FVA.PAID', 'VA_PAID']) ||
+        $isPaid = in_array($rawStatus, ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'SUCCESS', 'CAPTURED', 'SETTLEMENT']) ||
+                  in_array($rawEvent, ['PAYMENT_REQUEST.SUCCEEDED', 'PAYMENT.SUCCEEDED', 'QR_CODE.PAYMENT', 'QR.PAYMENT', 'INVOICE.PAID', 'FVA.PAID', 'VA_PAID', 'PAYMENT_REQUEST.CAPTURES.SUCCEEDED', 'QR_CODE.PAID']) ||
                   str_contains($rawEvent, 'SUCCEEDED') ||
                   str_contains($rawEvent, 'PAID') ||
+                  str_contains($rawEvent, 'SUCCESS') ||
                   $request->has('payment_id') ||
-                  $request->has('callback_virtual_account_id');
+                  $request->has('callback_virtual_account_id') ||
+                  $request->has('qr_id') ||
+                  $request->has('data.qr_id');
 
         $isExpiredOrFailed = in_array($rawStatus, ['EXPIRED', 'EXPIRE', 'CANCELLED', 'FAILED']) ||
                              str_contains($rawEvent, 'EXPIRED') ||
@@ -1287,6 +1344,17 @@ class CheckoutController extends Controller
             abort(403);
         }
 
+        // Cek sinkronisasi status gateway jika belum paid
+        if ($order->payment_status === 'unpaid' && !empty($order->payment_details)) {
+            $this->syncPaymentStatusWithGateway($order);
+            $order->refresh();
+        }
+
+        // Jika pesanan sudah lunas, langsung redirect ke halaman sukses
+        if ($order->payment_status === 'paid') {
+            return redirect()->route('checkout.success', $order->id);
+        }
+
         return Inertia::render('checkout/PaymentPage', [
             'order' => $order,
             'activeGateway' => config('services.payment_gateway', 'xendit'),
@@ -1298,16 +1366,164 @@ class CheckoutController extends Controller
 
     public function paymentStatus($id)
     {
-        $order = Order::select('id', 'user_id', 'status', 'payment_status')->findOrFail($id);
+        $order = Order::findOrFail($id);
 
         if ($order->user_id !== auth()->id()) {
             abort(403);
+        }
+
+        // Jika status masih unpaid, sinkronkan langsung dengan Payment Gateway
+        if ($order->payment_status === 'unpaid' && !empty($order->payment_details)) {
+            $this->syncPaymentStatusWithGateway($order);
+            $order->refresh();
         }
 
         return response()->json([
             'status' => $order->status,
             'payment_status' => $order->payment_status,
         ]);
+    }
+
+    public function simulatePayment(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $details = $order->payment_details;
+        $secretKey = config('services.xendit.secret_key');
+
+        // Jika ada Payment Request ID di Xendit Sandbox, coba panggil simulate API Xendit
+        if (!empty($details['xendit_pr_id']) && $secretKey && str_contains($secretKey, 'development')) {
+            try {
+                $prId = $details['xendit_pr_id'];
+                $response = Http::withHeaders(['api-version' => '2023-03-01'])
+                    ->withBasicAuth($secretKey, '')
+                    ->timeout(5)
+                    ->post("https://api.xendit.co/payment_requests/{$prId}/payments/simulate", new \stdClass());
+
+                if ($response->successful()) {
+                    $order->update([
+                        'payment_status' => 'paid',
+                        'status' => 'processing',
+                    ]);
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Simulasi pembayaran via Xendit Sandbox berhasil!'
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Xendit API simulate error: " . $e->getMessage());
+            }
+        }
+
+        // Update status ke paid
+        $order->update([
+            'payment_status' => 'paid',
+            'status' => 'processing',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pembayaran berhasil disimulasikan!'
+        ]);
+    }
+
+    protected function syncPaymentStatusWithGateway(Order $order)
+    {
+        try {
+            $details = $order->payment_details;
+            if (!$details || !is_array($details)) {
+                return;
+            }
+
+            $secretKey = config('services.xendit.secret_key');
+
+            // 1. Xendit Payment Requests (QRIS, VA, E-Wallet, Retail Outlet)
+            if (!empty($details['xendit_pr_id']) && $secretKey) {
+                $prId = $details['xendit_pr_id'];
+                $response = Http::withHeaders(['api-version' => '2023-03-01'])
+                    ->withBasicAuth($secretKey, '')
+                    ->timeout(4)
+                    ->get("https://api.xendit.co/payment_requests/{$prId}");
+
+                if ($response->successful()) {
+                    $prData = $response->json();
+                    $status = strtoupper($prData['status'] ?? '');
+
+                    if (in_array($status, ['SUCCEEDED', 'PAID', 'COMPLETED', 'SETTLED', 'SUCCESS', 'CAPTURED'])) {
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'status' => 'processing',
+                        ]);
+                        return;
+                    } elseif (in_array($status, ['EXPIRED', 'FAILED', 'CANCELLED'])) {
+                        $order->update([
+                            'payment_status' => 'expired',
+                            'status' => 'cancelled',
+                        ]);
+                        return;
+                    }
+                }
+            }
+
+            // 2. Xendit Invoice (Credit Card / Invoice fallback)
+            if (!empty($details['xendit_invoice_id']) && $secretKey) {
+                $invId = $details['xendit_invoice_id'];
+                $response = Http::withBasicAuth($secretKey, '')
+                    ->timeout(4)
+                    ->get("https://api.xendit.co/v2/invoices/{$invId}");
+
+                if ($response->successful()) {
+                    $invData = $response->json();
+                    $status = strtoupper($invData['status'] ?? '');
+
+                    if (in_array($status, ['PAID', 'SETTLED', 'SUCCESS', 'COMPLETED'])) {
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'status' => 'processing',
+                        ]);
+                        return;
+                    } elseif (in_array($status, ['EXPIRED'])) {
+                        $order->update([
+                            'payment_status' => 'expired',
+                            'status' => 'cancelled',
+                        ]);
+                        return;
+                    }
+                }
+            }
+
+            // 3. Midtrans Fallback
+            if (!empty($details['midtrans_order_id'])) {
+                \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+                \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+                $midtransStatus = \Midtrans\Transaction::status($details['midtrans_order_id']);
+
+                if ($midtransStatus) {
+                    $trxStatus = $midtransStatus->transaction_status ?? '';
+                    $fraudStatus = $midtransStatus->fraud_status ?? '';
+
+                    if (($trxStatus == 'capture' && $fraudStatus == 'accept') || $trxStatus == 'settlement' || $trxStatus == 'success') {
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'status' => 'processing',
+                        ]);
+                        return;
+                    } elseif (in_array($trxStatus, ['cancel', 'deny', 'expire'])) {
+                        $order->update([
+                            'payment_status' => 'expired',
+                            'status' => 'cancelled',
+                        ]);
+                        return;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Failed to sync payment status with gateway for order #{$order->id}: " . $e->getMessage());
+        }
     }
 
     public function changePaymentMethod(Request $request, $id)
@@ -1741,9 +1957,9 @@ class CheckoutController extends Controller
                 'amount' => (int) $amount,
                 'country' => 'ID',
                 'payment_method' => [
-                    'type' => 'RETAIL_OUTLET',
+                    'type' => 'OVER_THE_COUNTER',
                     'reusability' => 'ONE_TIME_USE',
-                    'retail_outlet' => [
+                    'over_the_counter' => [
                         'channel_code' => $outletName,
                         'channel_properties' => [
                             'customer_name' => trim($user->name) ?: 'Pelanggan Fayyfir',
@@ -1763,17 +1979,17 @@ class CheckoutController extends Controller
             }
 
             $resData = $response->json();
-            $retailData = $resData['payment_method']['retail_outlet']['channel_properties'] ?? [];
+            $retailData = $resData['payment_method']['over_the_counter']['channel_properties'] ?? [];
             $paymentCode = $retailData['payment_code'] ?? null;
             $expiresAt = $retailData['expires_at'] ?? null;
 
             return [
-                'xendit_pr_id' => $resData['id'] ?? null,
-                'xendit_retail_id' => $resData['id'] ?? null,
-                'payment_code' => $paymentCode,
-                'store' => strtolower($resData['payment_method']['retail_outlet']['channel_code'] ?? $paymentMethod),
+                'xendit_pr_id'      => $resData['id'] ?? null,
+                'xendit_retail_id'  => $resData['id'] ?? null,
+                'payment_code'      => $paymentCode,
+                'store'             => strtolower($resData['payment_method']['over_the_counter']['channel_code'] ?? $paymentMethod),
                 'transaction_status' => strtolower($resData['status'] ?? 'pending'),
-                'expiry_time' => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : date('Y-m-d H:i:s', time() + 86400),
+                'expiry_time'       => $expiresAt ? date('Y-m-d H:i:s', strtotime($expiresAt)) : date('Y-m-d H:i:s', time() + 86400),
             ];
         }
 

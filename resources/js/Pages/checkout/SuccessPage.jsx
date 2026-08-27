@@ -89,6 +89,15 @@ export default function SuccessPage({ order }) {
                                             <span className="font-mono font-black text-xs md:text-sm text-blue-950 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-lg">
                                                 {order.invoice_number}
                                             </span>
+                                            {order.payment_status === 'paid' ? (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    {t("payment.status.paid", "Lunas")}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                    {t("payment.status.unpaid", "Belum Bayar")}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-2">

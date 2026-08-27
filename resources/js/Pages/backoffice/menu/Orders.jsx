@@ -14,7 +14,8 @@ import {
     MapPin,
     CreditCard,
     DollarSign,
-    Box
+    Box,
+    Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/Contexts/LanguageContext';
@@ -30,6 +31,45 @@ export default function Orders({ orders = [], status }) {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [bookingShipmentId, setBookingShipmentId] = useState(null);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+    // Inline tracking state (inside modal)
+    const [trackingData, setTrackingData] = useState(null);
+    const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+    const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+
+    const translateStatus = (status) => {
+        if (!status) return '';
+        const s = status.toLowerCase();
+        switch (s) {
+            case 'confirmed': return 'Pengiriman Terkonfirmasi';
+            case 'allocated': return 'Kurir Dialokasikan';
+            case 'picking_up': return 'Dalam Penjemputan';
+            case 'picked': return 'Paket Telah Dijemput';
+            case 'dropping_off':
+            case 'in_transit': return 'Sedang Diantar ke Tujuan';
+            case 'on_hold': return 'Paket Tertahan di Transit';
+            case 'delivered': return 'Paket Terkirim';
+            case 'cancelled': return 'Pengiriman Dibatalkan';
+            case 'shipped': return 'Sedang Dikirim';
+            case 'completed': return 'Selesai';
+            default: return status.toUpperCase();
+        }
+    };
+
+    const handleTrackOrder = async (order) => {
+        setIsTrackingOpen(true);
+        setTrackingData(null);
+        setIsTrackingLoading(true);
+        try {
+            const res = await fetch(route('backoffice.orders.track-api', order.id));
+            const json = await res.json();
+            setTrackingData(json);
+        } catch (e) {
+            setTrackingData({ success: false, error: 'Gagal memuat data pelacakan.' });
+        } finally {
+            setIsTrackingLoading(false);
+        }
+    };
 
     const formatPrice = (value) => {
         // Backoffice displays centered values in IDR
@@ -418,22 +458,11 @@ export default function Orders({ orders = [], status }) {
                                                         <div className="flex items-center justify-center gap-1.5">
                                                             <button
                                                                 onClick={() => handleOpenDetail(order)}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-lg font-bold transition text-xs"
                                                             >
                                                                 <Eye size={12} />
                                                                 <span>{t('backoffice.orders.action.details', 'Details')}</span>
                                                             </button>
-                                                            {order.tracking_number && (order.status === 'shipped' || order.status === 'completed') && (
-                                                                <a
-                                                                    href={route('orders.track', order.id)}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 rounded-lg font-bold transition border border-indigo-100"
-                                                                >
-                                                                    <Truck size={12} />
-                                                                    <span>{t('backoffice.orders.action.track', 'Track')}</span>
-                                                                </a>
-                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -530,15 +559,24 @@ export default function Orders({ orders = [], status }) {
                                                             <span>{t('backoffice.orders.modal.waiting_pickup', 'Menunggu Penjemputan Kurir')}</span>
                                                         </div>
                                                     ) : (
-                                                        <a
-                                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
-                                                        >
-                                                            <Truck size={12} />
-                                                            <span>{t('backoffice.orders.modal.track_shipment', 'Lacak Pengiriman')}</span>
-                                                        </a>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <button
+                                                                onClick={() => handleTrackOrder(selectedOrder)}
+                                                                className="inline-flex items-center gap-1.5 text-[10px] font-black text-indigo-800 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/60 px-3 py-1.5 rounded-xl transition"
+                                                            >
+                                                                <Truck size={12} />
+                                                                <span>{t('backoffice.orders.modal.track_shipment', 'Lacak Pengiriman')}</span>
+                                                            </button>
+                                                            <a
+                                                                href={route('backoffice.orders.print-waybill', selectedOrder.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1.5 text-[10px] font-black text-slate-800 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-300/80 px-3 py-1.5 rounded-xl transition"
+                                                            >
+                                                                <Printer size={12} />
+                                                                <span>{t('backoffice.orders.modal.print_waybill', 'Cetak Resi')}</span>
+                                                            </a>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -758,29 +796,167 @@ export default function Orders({ orders = [], status }) {
                                     )}
 
                                     {selectedOrder.status === 'shipped' && (
-                                        <a
-                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
-                                        >
-                                            <Truck size={12} />
-                                            <span>{t('backoffice.orders.modal.btn_track_shipment', 'Lacak Pengiriman')}</span>
-                                        </a>
+                                        <>
+                                            <button
+                                                onClick={() => handleTrackOrder(selectedOrder)}
+                                                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Truck size={12} />
+                                                <span>{t('backoffice.orders.modal.btn_track_shipment', 'Lacak Pengiriman')}</span>
+                                            </button>
+                                            <a
+                                                href={route('backoffice.orders.print-waybill', selectedOrder.id)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Printer size={12} />
+                                                <span>{t('backoffice.orders.modal.btn_print_waybill', 'Cetak Resi / Label')}</span>
+                                            </a>
+                                        </>
                                     )}
 
                                     {selectedOrder.status === 'completed' && (
-                                        <a
-                                            href={selectedOrder.tracking_number ? `https://results.biteship.com/tracking/${selectedOrder.tracking_number}` : route('orders.track', selectedOrder.id)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
-                                        >
-                                            <Truck size={12} />
-                                            <span>{t('backoffice.orders.modal.btn_track_pod', 'Lacak & Lihat POD')}</span>
-                                        </a>
+                                        <>
+                                            <button
+                                                onClick={() => handleTrackOrder(selectedOrder)}
+                                                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Truck size={12} />
+                                                <span>{t('backoffice.orders.modal.btn_track_pod', 'Lacak & Lihat POD')}</span>
+                                            </button>
+                                            <a
+                                                href={route('backoffice.orders.print-waybill', selectedOrder.id)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Printer size={12} />
+                                                <span>{t('backoffice.orders.modal.btn_print_waybill', 'Cetak Resi')}</span>
+                                            </a>
+                                        </>
                                     )}
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* ====== INLINE TRACKING MODAL ====== */}
+            <AnimatePresence>
+                {isTrackingOpen && (
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                        onClick={() => setIsTrackingOpen(false)}
+                    >
+                        <motion.div
+                            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        />
+                        <motion.div
+                            className="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
+                            initial={{ scale: 0.95, opacity: 0, y: 16 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 16 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                <div>
+                                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                                        <Truck size={16} className="text-indigo-600" />
+                                        Lacak Pengiriman
+                                    </h3>
+                                    {trackingData?.order && (
+                                        <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
+                                            {trackingData.order.invoice_number} &bull;{' '}
+                                            <span className="uppercase font-bold">{trackingData.order.shipping_courier}</span>{' '}
+                                            &bull; Resi: <span className="text-blue-800">{trackingData.order.tracking_number || '—'}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setIsTrackingOpen(false)}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+                                >
+                                    <XIcon size={16} />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="overflow-y-auto flex-1 p-6">
+                                {isTrackingLoading ? (
+                                    <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-xs text-slate-500 font-medium">Mengambil data tracking dari Biteship...</span>
+                                    </div>
+                                ) : !trackingData?.success ? (
+                                    <div className="text-center py-10">
+                                        <p className="text-xs text-rose-600 font-bold">{trackingData?.error || 'Gagal memuat data pelacakan.'}</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Status badge */}
+                                        {trackingData.biteshipStatus && (
+                                            <div className="flex items-center gap-2 mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                                                <Truck size={14} className="text-indigo-700 shrink-0" />
+                                                <div>
+                                                    <span className="text-[10px] text-indigo-500 font-bold uppercase block">Status Terkini</span>
+                                                    <span className="text-sm font-black text-indigo-900">{translateStatus(trackingData.biteshipStatus)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Timeline */}
+                                        {trackingData.trackingLogs && trackingData.trackingLogs.length > 0 ? (
+                                            <div className="relative border-l-2 border-slate-200 ml-3 pl-6 space-y-5">
+                                                {[...trackingData.trackingLogs]
+                                                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                                    .map((log, idx) => {
+                                                        const isLatest = idx === 0;
+                                                        return (
+                                                            <div key={idx} className="relative">
+                                                                <div
+                                                                    className={`absolute -left-[31px] rounded-full ${
+                                                                        isLatest
+                                                                            ? 'w-3.5 h-3.5 -left-[32px] bg-indigo-600 border-2 border-white ring-4 ring-indigo-100'
+                                                                            : 'w-2.5 h-2.5 bg-slate-300 border-2 border-white'
+                                                                    }`}
+                                                                />
+                                                                <div>
+                                                                    <span className="text-[10px] font-bold text-slate-400 block font-mono">
+                                                                        {log.date ? new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                                    </span>
+                                                                    {log.title && (
+                                                                        <h4 className={`text-xs mt-0.5 font-bold ${isLatest ? 'text-indigo-950' : 'text-slate-700'}`}>
+                                                                            {log.title}
+                                                                        </h4>
+                                                                    )}
+                                                                    <p className={`text-xs mt-0.5 leading-relaxed ${isLatest ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>
+                                                                        {log.note}
+                                                                    </p>
+                                                                    {log.service_status && (
+                                                                        <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 border rounded-md ${isLatest ? 'text-indigo-800 bg-indigo-50 border-indigo-200' : 'text-slate-600 bg-slate-50 border-slate-200'}`}>
+                                                                            {translateStatus(log.service_status)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-xs text-slate-500">
+                                                <Truck size={32} className="mx-auto mb-2 text-slate-300" />
+                                                <p>Belum ada riwayat perjalanan paket yang tersedia.</p>
+                                                <p className="mt-1 text-slate-400">Data pelacakan akan muncul setelah kurir menjemput paket.</p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </motion.div>
                     </div>

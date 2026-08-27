@@ -285,6 +285,8 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
         ->name('backoffice.all-product-slides.toggle-active');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('backoffice.orders');
+    Route::get('/orders/{order}/print-waybill', [OrderController::class, 'printWaybill'])->name('backoffice.orders.print-waybill');
+    Route::get('/orders/{order}/track-api', [OrderController::class, 'backofficeTrackOrder'])->name('backoffice.orders.track-api');
     Route::patch('/orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('backoffice.orders.update-status');
     Route::post('/orders/{order}/biteship-shipment', [OrderController::class, 'createBiteshipShipment'])->name('backoffice.orders.biteship-shipment');
     Route::post('/orders/{order}/approve-cancellation', [OrderController::class, 'approveCancellation'])->name('backoffice.orders.approve-cancellation');
@@ -392,6 +394,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/payment/{id}/pay-card', [CheckoutController::class, 'payCreditCard'])->name('checkout.payment.pay-card');
     Route::post('/checkout/payment/{id}/cancel', [CheckoutController::class, 'cancelOrder'])->name('checkout.payment.cancel');
     Route::post('/checkout/payment/{id}/expire', [CheckoutController::class, 'expireOrder'])->name('checkout.payment.expire');
+    Route::post('/checkout/payment/{id}/simulate', [CheckoutController::class, 'simulatePayment'])->name('checkout.payment.simulate');
     Route::get('/orders', [OrderController::class, 'userOrders'])->name('orders.index');
     Route::post('/orders/{order}/payment-token', [OrderController::class, 'getPaymentToken'])->name('orders.payment-token');
     Route::get('/orders/{order}/track', [OrderController::class, 'trackOrder'])->name('orders.track');

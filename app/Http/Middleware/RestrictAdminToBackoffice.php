@@ -17,8 +17,8 @@ class RestrictAdminToBackoffice
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check() && in_array(Auth::user()->role, ['admin', 'super_admin'], true)) {
-            // Exclude backoffice routes, logout route, and api routes
-            if (! $request->is('backoffice*', 'logout', 'api/*')) {
+            // Exclude backoffice routes, logout route, api routes, and order tracking routes
+            if (! $request->is('backoffice*', 'logout', 'api/*', 'orders/*/track')) {
                 return redirect()->route('backoffice.dashboard');
             }
         }

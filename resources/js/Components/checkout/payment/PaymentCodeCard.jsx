@@ -17,6 +17,9 @@ export default function PaymentCodeCard({
     handleCardPay,
     handleOvoPay,
     copyText,
+    isProduction = false,
+    isSimulating = false,
+    handleSimulatePayment,
     t,
 }) {
     const [isMobile, setIsMobile] = useState(false);
@@ -118,6 +121,34 @@ export default function PaymentCodeCard({
                         <Copy size={14} />
                         <span>{t("payment.va.copy", "Salin VA Number")}</span>
                     </button>
+
+                    {/* Sandbox Testing Helper for VA */}
+                    {!isProduction && handleSimulatePayment && order.payment_status === "unpaid" && (
+                        <div className="w-full max-w-sm mx-auto p-3.5 bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200 rounded-2xl text-center space-y-2 mt-3">
+                            <div className="flex items-center justify-center gap-1.5 text-amber-900 font-extrabold text-xs">
+                                <AlertCircle size={14} className="text-amber-600" />
+                                <span>Mode Sandbox / Testing</span>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={isSimulating}
+                                onClick={handleSimulatePayment}
+                                className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                            >
+                                {isSimulating ? (
+                                    <>
+                                        <LoadingSpinner className="w-3.5 h-3.5" />
+                                        <span>Memproses Simulasi...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 size={14} />
+                                        <span>Simulasikan Pembayaran VA Berhasil (Test)</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -192,6 +223,37 @@ export default function PaymentCodeCard({
                         <QrCode size={12} />
                         <span>{t("payment.qris.support_desc", "Mendukung Gopay, ShopeePay, OVO, Dana, LinkAja, & Mobile Banking")}</span>
                     </div>
+
+                    {/* Sandbox Testing Helper */}
+                    {!isProduction && handleSimulatePayment && order.payment_status === "unpaid" && (
+                        <div className="w-full max-w-sm p-4 bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200 rounded-2xl text-center space-y-2.5 mt-2">
+                            <div className="flex items-center justify-center gap-1.5 text-amber-900 font-extrabold text-xs">
+                                <AlertCircle size={15} className="text-amber-600" />
+                                <span>Mode Sandbox / Testing</span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                                QR Code ini dihasilkan di mode <strong>Xendit Sandbox (Uji Coba)</strong>. Aplikasi perbankan asli tidak dapat memproses QR pengujian ini. Klik tombol di bawah untuk menyimulasikan pembayaran berhasil:
+                            </p>
+                            <button
+                                type="button"
+                                disabled={isSimulating}
+                                onClick={handleSimulatePayment}
+                                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                            >
+                                {isSimulating ? (
+                                    <>
+                                        <LoadingSpinner className="w-4 h-4" />
+                                        <span>Memproses Simulasi...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 size={15} />
+                                        <span>Simulasikan Pembayaran Berhasil (Test)</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -384,7 +446,7 @@ export default function PaymentCodeCard({
                                 {t("payment.retail.midtrans_notice_title", "Pemberitahuan Kasir")}
                             </span>
                             <span className="text-[11px] text-blue-800 font-medium leading-normal block mt-1">
-                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Xendit / Online Shop.")}
+                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Xendit")}
                             </span>
                         </div>
                     </div>

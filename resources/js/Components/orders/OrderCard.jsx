@@ -402,14 +402,14 @@ export default function OrderCard({
 
                     {/* 3. SHIPPED STATE */}
                     {order.status === "shipped" && (
-                        <a
-                            href={order.tracking_number ? `https://results.biteship.com/tracking/${order.tracking_number}` : route('orders.track', order.id)}
+                        <Link
+                            href={route('orders.track', order.id)}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 px-4 py-1.5 rounded-lg shadow-xs transition-all active:scale-[0.98] whitespace-nowrap"
                         >
-                            <span>{t('orders.action.track_shipping')}</span>
-                            <ExternalLink size={13} className="shrink-0" />
-                        </a>
+                            <Truck size={13} className="shrink-0" />
+                            <span>{t('orders.action.track_shipping', 'Lacak Pengiriman')}</span>
+                        </Link>
                     )}
 
                     {/* 4. COMPLETED STATE */}

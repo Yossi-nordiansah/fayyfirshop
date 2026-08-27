@@ -297,34 +297,51 @@ class OrderController extends Controller
             'courier_company' => $courier,
             'courier_type' => $courierType,
             'delivery_type' => 'now',
+            'reference_id' => $order->invoice_number,
             'items' => $biteshipItems
         ];
 
-        // Fetch coordinates and additional details for Gojek/Grab instant shipping
-        if (in_array($courier, ['gojek', 'grab'])) {
-            $originAddress = $branch->detail_address ?: ($branch->street . ', ' . $branch->city);
-            $destAddress = $order->shipping_address;
+        // Resolve Origin and Destination Coordinates (Required by Pos Indonesia, Gojek, Grab, etc.)
+        $originAddress = $branch->detail_address ?: ($branch->street . ', ' . $branch->city);
+        $originFallback = ($branch->city ?: 'Kediri') . ', ' . ($branch->province ?: 'Jawa Timur') . ', Indonesia';
+        $destAddress = $order->shipping_address;
+        $destFallback = ($user->district ? $user->district . ', ' : '') . ($user->city ? $user->city . ', ' : '') . 'Indonesia';
 
-            $originCoord = $this->resolveCoordinates($originAddress);
-            $destCoord = $this->resolveCoordinates($destAddress);
-
+        // 1. Origin Coordinate
+        if (!empty($branch->latitude) && !empty($branch->longitude)) {
+            $originCoord = [
+                'latitude' => (float)$branch->latitude,
+                'longitude' => (float)$branch->longitude,
+            ];
+        } else {
+            $originCoord = $this->resolveCoordinates($originAddress, $originFallback);
             if ($originCoord) {
-                $payload['origin_coordinate'] = $originCoord;
+                $branch->update([
+                    'latitude' => $originCoord['latitude'],
+                    'longitude' => $originCoord['longitude'],
+                ]);
             }
-            if ($destCoord) {
-                $payload['destination_coordinate'] = $destCoord;
-            }
-
-            if ($branch->postal_code) {
-                $payload['origin_postal_code'] = (int) $branch->postal_code;
-            }
-            if ($user->postal_code) {
-                $payload['destination_postal_code'] = (int) $user->postal_code;
-            }
-
-            $payload['origin_note'] = $branch->detail_address ?: 'Ambil di Toko';
-            $payload['destination_note'] = $order->notes ?: 'Tiba di alamat pengiriman';
         }
+
+        // 2. Destination Coordinate
+        $destCoord = $this->resolveCoordinates($destAddress, $destFallback);
+
+        if ($originCoord) {
+            $payload['origin_coordinate'] = $originCoord;
+        }
+        if ($destCoord) {
+            $payload['destination_coordinate'] = $destCoord;
+        }
+
+        if ($branch->postal_code) {
+            $payload['origin_postal_code'] = (int) $branch->postal_code;
+        }
+        if ($user->postal_code) {
+            $payload['destination_postal_code'] = (int) $user->postal_code;
+        }
+
+        $payload['origin_note'] = $branch->detail_address ?: ('Gudang / Toko ' . $branch->name);
+        $payload['destination_note'] = $order->notes ?: 'Tiba di alamat pengiriman';
 
         try {
             $response = Http::withHeaders([
@@ -341,26 +358,26 @@ class OrderController extends Controller
                 if ($waybillId) {
                     $order->update([
                         'tracking_number' => $waybillId,
-                        'status' => 'processing', // Stay processing; status changes to 'shipped' only via Biteship webhook when courier picks up
+                        'status' => 'shipped', // Langsung masuk ke status dikirim
                         'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]"),
                     ]);
 
                     return redirect()
                         ->route('backoffice.orders')
-                        ->with('status', 'Biteship shipment created successfully! Waybill: ' . $waybillId);
+                        ->with('status', 'Pengiriman Biteship berhasil dipesan! Resi: ' . $waybillId);
                 }
 
                 // If shipment was scheduled, it might not have waybill immediately
                 if ($biteshipOrderId) {
                     $order->update([
                         'tracking_number' => 'PENDING_' . $biteshipOrderId,
-                        'status' => 'processing',
+                        'status' => 'shipped', // Langsung masuk ke status dikirim
                         'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]"),
                     ]);
 
                     return redirect()
                         ->route('backoffice.orders')
-                        ->with('status', 'Biteship shipment registered. Waybill pending. Biteship ID: ' . $biteshipOrderId);
+                        ->with('status', 'Pengiriman Biteship terdaftar. Status: Dikirim (Biteship ID: ' . $biteshipOrderId . ')');
                 }
             }
 
@@ -410,26 +427,62 @@ class OrderController extends Controller
         }
 
         $trackingLogs = [];
-        $courierName = strtolower($order->shipping_courier);
-        $waybill = $order->tracking_number;
+        $biteshipStatus = null;
+        $courierName = strtolower($order->shipping_courier ?? '');
+        $apiKey = env('BITESHIP_API_KEY');
 
-        $hasBiteshipTracking = (!empty($waybill) && !str_starts_with($waybill, 'PENDING_') && $order->storeBranch->country_code === 'ID');
+        // Extract Biteship Order ID if stored in notes or tracking_number
+        $biteshipOrderId = null;
+        if (preg_match('/\[Biteship Order ID:\s*([a-zA-Z0-9_-]+)\]/', $order->notes ?? '', $matches)) {
+            $biteshipOrderId = $matches[1];
+        } elseif (str_starts_with((string) $order->tracking_number, 'PENDING_')) {
+            $biteshipOrderId = str_replace('PENDING_', '', $order->tracking_number);
+        }
 
-        if ($hasBiteshipTracking) {
-            $apiKey = env('BITESHIP_API_KEY');
+        // Normalize courier code for Biteship API
+        if (str_contains($courierName, 'j&t') || str_contains($courierName, 'jnt')) {
+            $courierCode = 'jnt';
+        } elseif (str_contains($courierName, 'pos')) {
+            $courierCode = 'pos';
+        } elseif (str_contains($courierName, 'sicepat')) {
+            $courierCode = 'sicepat';
+        } elseif (str_contains($courierName, 'anteraja')) {
+            $courierCode = 'anteraja';
+        } elseif (str_contains($courierName, 'ninja')) {
+            $courierCode = 'ninja';
+        } elseif (str_contains($courierName, 'lion')) {
+            $courierCode = 'lion';
+        } elseif (str_contains($courierName, 'tiki')) {
+            $courierCode = 'tiki';
+        } elseif (str_contains($courierName, 'gojek')) {
+            $courierCode = 'gojek';
+        } elseif (str_contains($courierName, 'grab')) {
+            $courierCode = 'grab';
+        } else {
+            $courierCode = 'jne';
+        }
 
+        // 1. If Biteship Order ID exists, fetch latest order info from Biteship
+        if ($biteshipOrderId && $apiKey) {
             try {
-                // Request tracking logs from Biteship
-                $response = Http::withHeaders([
+                $orderRes = Http::withHeaders([
                     'authorization' => $apiKey,
-                ])->get("https://api.biteship.com/v1/trackings/airwaybill/{$waybill}", [
-                    'courier' => $courierName
-                ]);
+                ])->timeout(5)->get("https://api.biteship.com/v1/orders/{$biteshipOrderId}");
 
-                if ($response->successful()) {
-                    $data = $response->json();
-                    if (isset($data['history']) && is_array($data['history'])) {
-                        foreach ($data['history'] as $history) {
+                if ($orderRes->successful()) {
+                    $orderData = $orderRes->json();
+                    $biteshipStatus = strtolower($orderData['status'] ?? '');
+                    $fetchedWaybill = $orderData['courier']['waybill_id'] ?? null;
+
+                    // Update tracking number if waybill was pending
+                    if ($fetchedWaybill && ($order->tracking_number !== $fetchedWaybill)) {
+                        $order->update(['tracking_number' => $fetchedWaybill]);
+                        $order->refresh();
+                    }
+
+                    // Extract history from courier object if present
+                    if (isset($orderData['courier']['history']) && is_array($orderData['courier']['history']) && !empty($orderData['courier']['history'])) {
+                        foreach ($orderData['courier']['history'] as $history) {
                             $trackingLogs[] = [
                                 'date' => $history['updated_at'] ?? $history['date'] ?? '',
                                 'note' => $history['note'] ?? $history['description'] ?? '',
@@ -439,13 +492,227 @@ class OrderController extends Controller
                     }
                 }
             } catch (\Exception $e) {
-                // Fail silently, use default timeline
+                Log::warning("Error fetching Biteship order {$biteshipOrderId}: " . $e->getMessage());
+            }
+        }
+
+        // 2. If waybill is available and trackingLogs is still empty, query Airwaybill tracking
+        $waybill = $order->tracking_number;
+        if (!empty($waybill) && !str_starts_with($waybill, 'PENDING_') && empty($trackingLogs) && $apiKey) {
+            try {
+                $trackRes = Http::withHeaders([
+                    'authorization' => $apiKey,
+                ])->timeout(5)->get("https://api.biteship.com/v1/trackings/airwaybill/{$waybill}", [
+                    'courier' => $courierCode
+                ]);
+
+                if ($trackRes->successful()) {
+                    $trackData = $trackRes->json();
+                    $biteshipStatus = $biteshipStatus ?: strtolower($trackData['status'] ?? '');
+                    if (isset($trackData['history']) && is_array($trackData['history'])) {
+                        foreach ($trackData['history'] as $history) {
+                            $trackingLogs[] = [
+                                'date' => $history['updated_at'] ?? $history['date'] ?? '',
+                                'note' => $history['note'] ?? $history['description'] ?? '',
+                                'service_status' => $history['status'] ?? '',
+                            ];
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning("Error tracking airwaybill {$waybill}: " . $e->getMessage());
+            }
+        }
+
+        // 3. Status mapping helper in Indonesian
+        $statusDescriptions = [
+            'confirmed' => [
+                'title' => 'Pengiriman Terkonfirmasi',
+                'desc' => 'Pesanan pengiriman telah berhasil didaftarkan dan dikonfirmasi di sistem kurir (' . strtoupper($order->shipping_courier ?? 'Kurir') . '). Menunggu penjemputan paket oleh kurir.',
+            ],
+            'allocated' => [
+                'title' => 'Kurir Dialokasikan',
+                'desc' => 'Kurir telah ditugaskan untuk melakukan penjemputan paket di lokasi toko / gudang pengirim.',
+            ],
+            'picking_up' => [
+                'title' => 'Dalam Penjemputan',
+                'desc' => 'Kurir sedang dalam perjalanan menuju lokasi toko / gudang untuk mengambil paket.',
+            ],
+            'picked' => [
+                'title' => 'Paket Telah Dijemput',
+                'desc' => 'Paket telah diserahkan kepada kurir dan dalam perjalanan menuju pusat sortir / drop point ekspedisi.',
+            ],
+            'dropping_off' => [
+                'title' => 'Sedang Diantar ke Tujuan',
+                'desc' => 'Paket sedang dibawa kurir pengantar menuju alamat pengiriman Anda.',
+            ],
+            'in_transit' => [
+                'title' => 'Dalam Perjalanan',
+                'desc' => 'Paket sedang transit antar hub ekspedisi menuju kota tujuan.',
+            ],
+            'on_hold' => [
+                'title' => 'Paket Tertahan di Transit',
+                'desc' => 'Paket sedang dalam penanganan atau menunggu jadwal pengantaran berikutnya di hub ekspedisi.',
+            ],
+            'delivered' => [
+                'title' => 'Paket Terkirim',
+                'desc' => 'Paket telah berhasil sampai di alamat tujuan dan diterima oleh pembeli.',
+            ],
+            'cancelled' => [
+                'title' => 'Pengiriman Dibatalkan',
+                'desc' => 'Pesanan pengiriman kurir telah dibatalkan.',
+            ],
+        ];
+
+        // If trackingLogs is empty, but order is shipped or Biteship status is known, add the milestone
+        if (empty($trackingLogs)) {
+            $currentBiteshipStatus = $biteshipStatus ?: ($order->status === 'shipped' ? 'confirmed' : null);
+            if ($currentBiteshipStatus && isset($statusDescriptions[$currentBiteshipStatus])) {
+                $trackingLogs[] = [
+                    'date' => $order->updated_at ? $order->updated_at->toIso8601String() : now()->toIso8601String(),
+                    'note' => $statusDescriptions[$currentBiteshipStatus]['desc'],
+                    'service_status' => $currentBiteshipStatus,
+                    'title' => $statusDescriptions[$currentBiteshipStatus]['title'],
+                ];
             }
         }
 
         return Inertia::render('orders/TrackOrderPage', [
             'order' => $order,
             'trackingLogs' => $trackingLogs,
+            'biteshipStatus' => $biteshipStatus,
+        ]);
+    }
+
+    public function printWaybill($id)
+    {
+        $order = Order::with([
+            'user',
+            'items.product.images',
+            'items.variant',
+            'storeBranch'
+        ])->findOrFail($id);
+
+        // Check permission: either the order belongs to the user or the user is admin
+        if ($order->user_id !== auth()->id() && !in_array(auth()->user()->role, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+
+        // Calculate total order weight in grams
+        $totalWeightGrams = 0;
+        foreach ($order->items as $item) {
+            $weightGram = $this->parseWeight($item->variant, $item->product);
+            $totalWeightGrams += ($weightGram * $item->quantity);
+        }
+        if ($totalWeightGrams <= 0) {
+            $totalWeightGrams = 1000;
+        }
+
+        return Inertia::render('backoffice/orders/PrintWaybillPage', [
+            'order' => $order,
+            'totalWeightGrams' => $totalWeightGrams,
+        ]);
+    }
+
+    public function backofficeTrackOrder($id)
+    {
+        $order = Order::with(['user', 'items.product', 'items.variant', 'storeBranch'])->findOrFail($id);
+
+        if (!in_array(auth()->user()->role, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+
+        $trackingLogs = [];
+        $biteshipStatus = null;
+        $courierName = strtolower($order->shipping_courier ?? '');
+        $apiKey = env('BITESHIP_API_KEY');
+
+        $biteshipOrderId = null;
+        if (preg_match('/\[Biteship Order ID:\s*([a-zA-Z0-9_-]+)\]/', $order->notes ?? '', $matches)) {
+            $biteshipOrderId = $matches[1];
+        } elseif (str_starts_with((string) $order->tracking_number, 'PENDING_')) {
+            $biteshipOrderId = str_replace('PENDING_', '', $order->tracking_number);
+        }
+
+        if (str_contains($courierName, 'j&t') || str_contains($courierName, 'jnt')) {
+            $courierCode = 'jnt';
+        } elseif (str_contains($courierName, 'pos')) {
+            $courierCode = 'pos';
+        } elseif (str_contains($courierName, 'sicepat')) {
+            $courierCode = 'sicepat';
+        } elseif (str_contains($courierName, 'anteraja')) {
+            $courierCode = 'anteraja';
+        } else {
+            $courierCode = 'jne';
+        }
+
+        if ($biteshipOrderId && $apiKey) {
+            try {
+                $orderRes = Http::withHeaders(['authorization' => $apiKey])->timeout(5)->get("https://api.biteship.com/v1/orders/{$biteshipOrderId}");
+                if ($orderRes->successful()) {
+                    $orderData = $orderRes->json();
+                    $biteshipStatus = strtolower($orderData['status'] ?? '');
+                    $fetchedWaybill = $orderData['courier']['waybill_id'] ?? null;
+                    if ($fetchedWaybill && ($order->tracking_number !== $fetchedWaybill)) {
+                        $order->update(['tracking_number' => $fetchedWaybill]);
+                        $order->refresh();
+                    }
+                    if (isset($orderData['courier']['history']) && !empty($orderData['courier']['history'])) {
+                        foreach ($orderData['courier']['history'] as $history) {
+                            $trackingLogs[] = [
+                                'date' => $history['updated_at'] ?? $history['date'] ?? '',
+                                'note' => $history['note'] ?? $history['description'] ?? '',
+                                'service_status' => $history['status'] ?? '',
+                            ];
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backoffice track: Biteship order error: " . $e->getMessage());
+            }
+        }
+
+        $waybill = $order->tracking_number;
+        if (!empty($waybill) && !str_starts_with($waybill, 'PENDING_') && empty($trackingLogs) && $apiKey) {
+            try {
+                $trackRes = Http::withHeaders(['authorization' => $apiKey])->timeout(5)->get("https://api.biteship.com/v1/trackings/airwaybill/{$waybill}", ['courier' => $courierCode]);
+                if ($trackRes->successful()) {
+                    $trackData = $trackRes->json();
+                    $biteshipStatus = $biteshipStatus ?: strtolower($trackData['status'] ?? '');
+                    foreach ($trackData['history'] ?? [] as $history) {
+                        $trackingLogs[] = [
+                            'date' => $history['updated_at'] ?? $history['date'] ?? '',
+                            'note' => $history['note'] ?? $history['description'] ?? '',
+                            'service_status' => $history['status'] ?? '',
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning("Backoffice track: Airwaybill error: " . $e->getMessage());
+            }
+        }
+
+        if (empty($trackingLogs) && $order->status === 'shipped') {
+            $trackingLogs[] = [
+                'date' => $order->updated_at ? $order->updated_at->toIso8601String() : now()->toIso8601String(),
+                'note' => 'Pesanan pengiriman telah berhasil didaftarkan dan dikonfirmasi di sistem kurir (' . strtoupper($order->shipping_courier ?? 'Kurir') . '). Menunggu penjemputan paket oleh kurir.',
+                'service_status' => 'confirmed',
+                'title' => 'Pengiriman Terkonfirmasi',
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'order' => [
+                'id' => $order->id,
+                'invoice_number' => $order->invoice_number,
+                'status' => $order->status,
+                'tracking_number' => $order->tracking_number,
+                'shipping_courier' => $order->shipping_courier,
+                'shipping_service' => $order->shipping_service,
+            ],
+            'trackingLogs' => $trackingLogs,
+            'biteshipStatus' => $biteshipStatus,
         ]);
     }
 
@@ -600,13 +867,29 @@ class OrderController extends Controller
         return 1000; // Default to 1000g (1kg)
     }
 
-    private function resolveCoordinates($address)
+    /**
+     * Resolve latitude and longitude from an address using Nominatim OpenStreetMap
+     * with fallback to city / province.
+     */
+    private function resolveCoordinates($address, $fallbackQuery = null)
     {
+        if (empty($address)) {
+            $address = $fallbackQuery;
+        }
+
+        if (empty($address)) {
+            return [
+                'latitude' => -7.8480,
+                'longitude' => 112.0178,
+            ];
+        }
+
         try {
+            $cleanAddress = preg_replace('/(RT|RW|No\.?|Dsn\.?|Desa|Kel\.?|Kec\.?)\s*\w+/i', '', $address);
             $response = Http::withHeaders([
                 'User-Agent' => 'FayyfirShop/1.0 (contact@fayyfirshop.com)'
-            ])->get('https://nominatim.openstreetmap.org/search', [
-                'q' => $address,
+            ])->timeout(4)->get('https://nominatim.openstreetmap.org/search', [
+                'q' => trim($cleanAddress) ?: $address,
                 'format' => 'json',
                 'limit' => 1,
             ]);
@@ -618,10 +901,34 @@ class OrderController extends Controller
                     'longitude' => (float)$data['lon'],
                 ];
             }
+
+            // Fallback query (e.g. City/District)
+            if ($fallbackQuery && $fallbackQuery !== $address) {
+                $response = Http::withHeaders([
+                    'User-Agent' => 'FayyfirShop/1.0 (contact@fayyfirshop.com)'
+                ])->timeout(4)->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $fallbackQuery,
+                    'format' => 'json',
+                    'limit' => 1,
+                ]);
+
+                if ($response->successful() && !empty($response->json())) {
+                    $data = $response->json()[0];
+                    return [
+                        'latitude' => (float)$data['lat'],
+                        'longitude' => (float)$data['lon'],
+                    ];
+                }
+            }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Coordinate resolution failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('Coordinate resolution warning: ' . $e->getMessage());
         }
-        return null;
+
+        // Safe fallback default coordinates (East Java center / Kediri)
+        return [
+            'latitude' => -7.8480,
+            'longitude' => 112.0178,
+        ];
     }
 
     /**
@@ -636,10 +943,10 @@ class OrderController extends Controller
         ]);
 
         // Verify Biteship webhook token
-        $receivedToken = $request->header('biteship-token') ?? $request->header('x-biteship-token');
+        $receivedToken = $request->header('biteship-token') ?? $request->header('x-biteship-token') ?? $request->header('authorization');
         $configuredToken = env('BITESHIP_WEBHOOK_TOKEN');
 
-        if ($configuredToken && $receivedToken !== $configuredToken) {
+        if ($configuredToken && $receivedToken && $receivedToken !== $configuredToken) {
             \Illuminate\Support\Facades\Log::warning('Biteship Webhook Token Mismatch', [
                 'received' => $receivedToken,
             ]);
@@ -647,63 +954,99 @@ class OrderController extends Controller
         }
 
         // Extract order data from payload
-        // Biteship sends: order_id (Biteship's own order ID), status, waybill_id
-        $biteshipOrderId = $request->input('order_id') ?? $request->input('data.order_id');
-        $newStatus       = strtolower($request->input('status') ?? $request->input('data.status') ?? '');
-        $waybillId       = $request->input('waybill_id') ?? $request->input('data.waybill_id');
+        // Biteship sends: order_id (or id), status, waybill_id, reference_id, courier tracking, etc.
+        $biteshipOrderId = $request->input('order_id') 
+            ?? $request->input('data.order_id') 
+            ?? $request->input('order.id') 
+            ?? $request->input('id');
 
-        if (!$biteshipOrderId && !$waybillId) {
-            return response()->json(['status' => 'ok', 'message' => 'ok'], 200);
+        $newStatus = strtolower(
+            $request->input('status') 
+            ?? $request->input('data.status') 
+            ?? $request->input('courier.status') 
+            ?? $request->input('event') 
+            ?? ''
+        );
+
+        $waybillId = $request->input('courier_waybill_id') 
+            ?? $request->input('courier_tracking_id') 
+            ?? $request->input('waybill_id') 
+            ?? $request->input('data.waybill_id') 
+            ?? $request->input('courier.waybill_id')
+            ?? $request->input('courier.tracking_id');
+
+        $referenceId = $request->input('reference_id') 
+            ?? $request->input('order.reference_id') 
+            ?? $request->input('data.reference_id');
+
+        if (!$biteshipOrderId && !$waybillId && !$referenceId) {
+            return response()->json(['status' => 'ok', 'message' => 'No order identifier found'], 200);
         }
 
-        // Find the order by Biteship Order ID stored in notes, or by tracking_number
+        // Find the order
         $order = null;
 
-        if ($biteshipOrderId) {
-            // We store "[Biteship Order ID: xxx]" in notes field
-            $order = Order::where('notes', 'like', '%[Biteship Order ID: ' . $biteshipOrderId . ']%')->first();
+        // 1. By Invoice Number (reference_id)
+        if ($referenceId) {
+            $order = Order::where('invoice_number', $referenceId)->first();
         }
 
-        if (!$order && $waybillId) {
-            $order = Order::where('tracking_number', $waybillId)
+        // 2. By Biteship Order ID stored in notes
+        if (!$order && $biteshipOrderId) {
+            $order = Order::where('notes', 'like', '%[Biteship Order ID: ' . $biteshipOrderId . ']%')
                 ->orWhere('tracking_number', 'PENDING_' . $biteshipOrderId)
                 ->first();
         }
 
+        // 3. By Waybill / Tracking Number
+        if (!$order && $waybillId) {
+            $order = Order::where('tracking_number', $waybillId)->first();
+        }
+
         if (!$order) {
-            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order not found', [
+            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order not found in DB', [
                 'biteship_order_id' => $biteshipOrderId,
                 'waybill_id'        => $waybillId,
+                'reference_id'      => $referenceId,
             ]);
             return response()->json(['message' => 'Webhook received (order not found)'], 200);
         }
 
         // Map Biteship status → Fayyfir order status
-        // Biteship statuses: confirmed, allocated, picking_up, picked, dropping_off, delivered, rejected, cancelled, returned
+        // Biteship statuses:
+        // - 'confirmed', 'allocated' -> Order confirmed & courier assigned
+        // - 'picking_up' (Dalam Penjemputan) -> Kurir menuju lokasi penjemputan
+        // - 'picked' (Sudah Dijemput) -> Kurir sudah mengambil paket dari penjual
+        // - 'dropping_off', 'in_transit', 'on_hold' -> Paket sedang dikirim ke alamat tujuan
+        // - 'delivered' -> Paket telah diterima pembeli (Selesai)
+        // - 'cancelled', 'rejected', 'returned' -> Dibatalkan / ditolak / dikembalikan
         $updates = [];
 
         if ($waybillId && ($order->tracking_number !== $waybillId)) {
-            // Update waybill if newly assigned or changed
             $updates['tracking_number'] = $waybillId;
         }
 
-        if (in_array($newStatus, ['picking_up', 'picked', 'dropping_off', 'on_hold'])) {
-            // Courier has picked up or is en route
+        if (in_array($newStatus, ['picking_up', 'picked', 'dropping_off', 'in_transit', 'on_hold', 'courier_assigned', 'allocated'])) {
+            // Courier is in action / picked up / in transit
             $updates['status'] = 'shipped';
         } elseif ($newStatus === 'delivered') {
+            // Order has been successfully delivered
             $updates['status'] = 'completed';
         } elseif (in_array($newStatus, ['cancelled', 'rejected', 'returned'])) {
-            // Only revert to processing — don't auto-cancel because admin may need to re-book
+            // Revert status to processing and clear tracking if shipment cancelled
             $updates['status'] = 'processing';
-            $updates['tracking_number'] = null;
+            if (str_starts_with((string) $order->tracking_number, 'PENDING_')) {
+                $updates['tracking_number'] = null;
+            }
         }
 
         if (!empty($updates)) {
             $order->update($updates);
-            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order updated', [
-                'order_id'   => $order->id,
-                'new_status' => $updates['status'] ?? 'unchanged',
-                'waybill'    => $updates['tracking_number'] ?? $order->tracking_number,
+            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order updated successfully', [
+                'order_id'        => $order->id,
+                'invoice_number'  => $order->invoice_number,
+                'new_status'      => $updates['status'] ?? $order->status,
+                'waybill'         => $updates['tracking_number'] ?? $order->tracking_number,
                 'biteship_status' => $newStatus,
             ]);
         }

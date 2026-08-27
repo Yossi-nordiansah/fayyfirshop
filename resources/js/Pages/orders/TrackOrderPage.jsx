@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import MainLayout from "@/Layouts/MainLayout";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
-export default function TrackOrderPage({ order, trackingLogs = [] }) {
+export default function TrackOrderPage({ order, trackingLogs = [], biteshipStatus = null }) {
     const { t, locale } = useLanguage();
 
     const formatPrice = (value) => {
@@ -30,6 +30,42 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                 minute: "2-digit"
             }
         );
+    };
+
+    const translateStatus = (status) => {
+        if (!status) return "";
+        const s = status.toLowerCase();
+        switch (s) {
+            case "confirmed":
+                return "Pengiriman Terkonfirmasi";
+            case "allocated":
+                return "Kurir Dialokasikan";
+            case "picking_up":
+                return "Dalam Penjemputan";
+            case "picked":
+                return "Paket Telah Dijemput";
+            case "dropping_off":
+            case "in_transit":
+                return "Sedang Diantar ke Tujuan";
+            case "on_hold":
+                return "Paket Tertahan di Transit";
+            case "delivered":
+                return "Paket Terkirim";
+            case "cancelled":
+                return "Pengiriman Dibatalkan";
+            case "rejected":
+                return "Pengiriman Ditolak";
+            case "returned":
+                return "Paket Dikembalikan";
+            case "shipped":
+                return "Sedang Dikirim";
+            case "processing":
+                return "Sedang Diproses";
+            case "completed":
+                return "Selesai";
+            default:
+                return status.toUpperCase();
+        }
     };
 
     // Calculate active step index for the timeline
@@ -84,6 +120,17 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
     };
 
     const fallbackTimeline = getFallbackTimeline();
+    const currentDisplayStatus = translateStatus(biteshipStatus || order.status);
+
+    // Sort tracking logs newest first (descending by timestamp)
+    const sortedTrackingLogs = React.useMemo(() => {
+        if (!trackingLogs || trackingLogs.length === 0) return [];
+        return [...trackingLogs].sort((a, b) => {
+            const timeA = a.date ? new Date(a.date).getTime() : 0;
+            const timeB = b.date ? new Date(b.date).getTime() : 0;
+            return timeB - timeA; // Newest first
+        });
+    }, [trackingLogs]);
 
     return (
         <MainLayout>
@@ -99,13 +146,19 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
                         >
                             <ArrowLeft size={18} className={locale === "arabic" ? "rotate-180" : ""} />
                         </button>
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
-                                {t("orders.track.title", "Lacak Pengiriman")}
-                            </h1>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {t("orders.track.subtitle", "Pantau status pengiriman pesanan Anda secara real-time.")}
-                            </p>
+                        <div className="flex-1 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold tracking-wide text-slate-900 md:text-3xl">
+                                    {t("orders.track.title", "Lacak Pengiriman")}
+                                </h1>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {t("orders.track.subtitle", "Pantau status pengiriman pesanan Anda secara real-time.")}
+                                </p>
+                            </div>
+                            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200">
+                                <Truck size={14} className="text-blue-700" />
+                                <span>{currentDisplayStatus}</span>
+                            </span>
                         </div>
                     </div>
 
@@ -115,40 +168,80 @@ export default function TrackOrderPage({ order, trackingLogs = [] }) {
 
                             {/* Shipment Logs Timeline */}
                             <section className="p-6 bg-white border border-slate-100 shadow-sm rounded-3xl">
-                                <h3 className="text-sm font-extrabold text-slate-900 mb-6 uppercase tracking-wider text-slate-400">
-                                    {t("orders.track.timeline_title", "Riwayat Perjalanan Paket")}
-                                </h3>
+                                <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+                                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                                        {t("orders.track.timeline_title", "Riwayat Perjalanan Paket")}
+                                    </h3>
+                                    <span className="sm:hidden inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-900 border border-blue-200">
+                                        {currentDisplayStatus}
+                                    </span>
+                                </div>
 
-                                {trackingLogs.length > 0 ? (
-                                    <div className="relative border-l border-slate-200/80 ml-3 pl-6 space-y-6">
-                                        {trackingLogs.map((log, idx) => (
-                                            <div key={idx} className="relative">
-                                                {/* Bullet dot */}
-                                                <div className={`absolute -left-[31px] w-2.5 h-2.5 rounded-full border-2 ${idx === 0 ? 'bg-blue-600 border-blue-600 ring-4 ring-blue-50' : 'bg-white border-slate-300'}`} />
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-slate-400 block">{formatDate(log.date)}</span>
-                                                    <p className={`text-xs mt-1 leading-relaxed ${idx === 0 ? 'font-bold text-blue-950' : 'text-slate-600'}`}>{log.note}</p>
-                                                    {log.service_status && (
-                                                        <span className="inline-block mt-1 text-[9px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200 rounded">
-                                                            {log.service_status.toUpperCase()}
+                                {sortedTrackingLogs.length > 0 ? (
+                                    <div className="relative border-l-2 border-slate-200 ml-3 pl-6 space-y-6">
+                                        {sortedTrackingLogs.map((log, idx) => {
+                                            const isLatest = idx === 0;
+                                            return (
+                                                <div key={idx} className="relative">
+                                                    {/* Bullet dot */}
+                                                    <div
+                                                        className={`absolute -left-[31px] rounded-full transition-all ${
+                                                            isLatest
+                                                                ? "w-3.5 h-3.5 -left-[32px] bg-blue-600 border-2 border-white ring-4 ring-blue-100 shadow-sm"
+                                                                : "w-2.5 h-2.5 bg-slate-300 border-2 border-white"
+                                                        }`}
+                                                    />
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-slate-400 block font-mono">
+                                                            {formatDate(log.date)}
                                                         </span>
-                                                    )}
+                                                        {log.title && (
+                                                            <h4 className={`text-xs mt-0.5 font-bold ${isLatest ? "text-blue-950 text-sm" : "text-slate-700"}`}>
+                                                                {log.title}
+                                                            </h4>
+                                                        )}
+                                                        <p className={`text-xs mt-1 leading-relaxed ${isLatest ? "font-semibold text-slate-900" : "text-slate-500"}`}>
+                                                            {log.note}
+                                                        </p>
+                                                        {log.service_status && (
+                                                            <span
+                                                                className={`inline-block mt-1.5 text-[10px] font-bold px-2.5 py-0.5 border rounded-lg ${
+                                                                    isLatest
+                                                                        ? "text-blue-800 bg-blue-50 border-blue-200 font-extrabold"
+                                                                        : "text-slate-600 bg-slate-50 border-slate-200"
+                                                                }`}
+                                                            >
+                                                                {translateStatus(log.service_status)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 ) : (
-                                    <div className="space-y-6 ml-3 border-l border-slate-200/80 pl-6">
-                                        {fallbackTimeline.filter(s => s.date).reverse().map((step, idx) => (
-                                            <div key={idx} className="relative">
-                                                <div className={`absolute -left-[31px] w-2.5 h-2.5 rounded-full border-2 ${idx === 0 ? 'bg-blue-600 border-blue-600 ring-4 ring-blue-50' : 'bg-white border-slate-300'}`} />
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-slate-400 block">{formatDate(step.date)}</span>
-                                                    <h4 className={`text-xs mt-0.5 font-bold ${idx === 0 ? 'text-blue-950' : 'text-slate-800'}`}>{step.title}</h4>
-                                                    <p className="text-xs mt-0.5 text-slate-500 leading-relaxed">{step.desc}</p>
+                                    <div className="space-y-6 ml-3 border-l-2 border-slate-200 pl-6">
+                                        {fallbackTimeline
+                                            .filter((s) => s.date)
+                                            .reverse()
+                                            .map((step, idx) => (
+                                                <div key={idx} className="relative">
+                                                    <div
+                                                        className={`absolute -left-[31px] rounded-full ${
+                                                            idx === 0
+                                                                ? "w-3.5 h-3.5 -left-[32px] bg-blue-600 border-2 border-white ring-4 ring-blue-100"
+                                                                : "w-2.5 h-2.5 bg-slate-300 border-2 border-white"
+                                                        }`}
+                                                    />
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-slate-400 block font-mono">{formatDate(step.date)}</span>
+                                                        <h4 className={`text-xs mt-0.5 font-bold ${idx === 0 ? "text-blue-950 text-sm" : "text-slate-800"}`}>
+                                                            {step.title}
+                                                        </h4>
+                                                        <p className={`text-xs mt-0.5 leading-relaxed ${idx === 0 ? "font-semibold text-slate-800" : "text-slate-500"}`}>{step.desc}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                         {order.status === 'processing' && (
                                             <div className="p-3 bg-blue-50/50 border border-blue-100 text-[11px] text-blue-800 rounded-xl">
                                                 {t("orders.track.processing_desc", "Penjual sedang menyiapkan barang di gudang. Riwayat pelacakan kurir terperinci akan muncul di sini segera setelah paket dijemput.")}

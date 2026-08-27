@@ -198,6 +198,36 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
         return () => clearInterval(timer);
     }, [order]);
 
+    // Polling status pembayaran secara berkala dan otomatis redirect ke halaman sukses saat lunas
+    useEffect(() => {
+        if (order.payment_status === "paid") {
+            router.visit(route("checkout.success", order.id), { replace: true });
+            return;
+        }
+
+        if (order.payment_status !== "unpaid" || order.status === "cancelled") {
+            return;
+        }
+
+        const pollStatus = () => {
+            axios
+                .get(route("checkout.payment.status", order.id))
+                .then((res) => {
+                    if (res.data && res.data.payment_status === "paid") {
+                        router.visit(route("checkout.success", order.id), { replace: true });
+                    } else if (res.data && (res.data.payment_status === "expired" || res.data.status === "cancelled")) {
+                        router.reload();
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to check payment status:", err);
+                });
+        };
+
+        const interval = setInterval(pollStatus, 2500);
+        return () => clearInterval(interval);
+    }, [order.id, order.payment_status, order.status]);
+
     /* ── Handlers ── */
 
     const handleCardPay = (e) => {
@@ -233,6 +263,25 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             })
             .catch((err) => alert(err.response?.data?.message || "Terjadi kesalahan saat menghubungi OVO."))
             .finally(() => setIsPayingOvo(false));
+    };
+
+    const [isSimulating, setIsSimulating] = useState(false);
+
+    const handleSimulatePayment = () => {
+        setIsSimulating(true);
+        axios
+            .post(route("checkout.payment.simulate", order.id))
+            .then((res) => {
+                if (res.data.success) {
+                    router.visit(route("checkout.success", order.id), { replace: true });
+                } else {
+                    alert(res.data.message || "Gagal mensimulasikan pembayaran.");
+                }
+            })
+            .catch((err) => {
+                alert(err.response?.data?.message || "Terjadi kesalahan saat memproses simulasi.");
+            })
+            .finally(() => setIsSimulating(false));
     };
 
     const handleMethodChange = (newMethod) => {
@@ -282,6 +331,9 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                             handleCardPay={handleCardPay}
                             handleOvoPay={handleOvoPay}
                             copyText={copyText}
+                            isProduction={isProduction}
+                            isSimulating={isSimulating}
+                            handleSimulatePayment={handleSimulatePayment}
                             t={t}
                         />
                     </div>

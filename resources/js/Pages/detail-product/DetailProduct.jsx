@@ -379,10 +379,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     }, [reviewsList]);
 
     const averageRating = React.useMemo(() => {
-        if (totalReviewsCount === 0) return parseFloat(product.rating) || 5.0;
-        const sum = reviewsList.reduce((acc, curr) => acc + curr.rating, 0);
-        return (sum / totalReviewsCount).toFixed(1);
-    }, [reviewsList, product.rating]);
+        if (totalReviewsCount === 0) {
+            const staticRating = parseFloat(product.rating || product.ratings || 0);
+            return isNaN(staticRating) ? 0 : staticRating;
+        }
+        const sum = reviewsList.reduce((acc, curr) => acc + (parseFloat(curr.rating) || 0), 0);
+        return parseFloat((sum / totalReviewsCount).toFixed(1));
+    }, [reviewsList, product.rating, product.ratings, totalReviewsCount]);
 
     const uniqueColors = React.useMemo(() => {
         if (isDbProduct) return [];
@@ -1026,7 +1029,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
     };
 
     const renderStars = (rating) => {
-        const parsedRating = parseFloat(rating) || 5.0;
+        const parsedRating = parseFloat(rating) || 0;
         return [...Array(5)].map((_, i) => {
             const full = parsedRating >= i + 1;
             const half = !full && parsedRating >= i + 0.5;
@@ -1497,13 +1500,17 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
                                 {/* Rating row */}
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <div className="flex items-center gap-0.5">
-                                        {renderStars(averageRating)}
-                                    </div>
-                                    <span className="text-sm font-bold text-amber-500">
-                                        {averageRating}
-                                    </span>
-                                    <span className="text-xs text-zinc-300">|</span>
+                                    {averageRating > 0 && (
+                                        <>
+                                            <div className="flex items-center gap-0.5">
+                                                {renderStars(averageRating)}
+                                            </div>
+                                            <span className="text-sm font-bold text-amber-500">
+                                                {averageRating}
+                                            </span>
+                                            <span className="text-xs text-zinc-300">|</span>
+                                        </>
+                                    )}
                                     <span className="text-sm text-zinc-500">
                                         {totalReviewsCount || product.reviewCount || 0}{" "}
                                         {t("product.detail.reviews", "ulasan")}
