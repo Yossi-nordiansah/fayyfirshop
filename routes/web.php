@@ -101,6 +101,10 @@ Route::get('/about', function () {
     ]);
 })->name('about');
 
+Route::get('/terms', function () {
+    return Inertia::render('terms/TermsAndConditions');
+})->name('terms');
+
 Route::get('/products/{category?}', function ($category = null) {
     if ($category) {
         $catModel = \App\Models\ProductCategory::where('slug', $category)->first();

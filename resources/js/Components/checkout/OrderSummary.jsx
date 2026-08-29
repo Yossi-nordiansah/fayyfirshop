@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "@inertiajs/react";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Activity, Check, ShoppingBag } from "lucide-react";
@@ -184,7 +185,14 @@ export default function OrderSummary({
             </motion.button>
 
             <p className="mt-3.5 text-[10px] text-center text-slate-400 leading-relaxed font-medium px-2">
-                {t("checkout.disclaimer", "Dengan menekan tombol di atas, Anda menyetujui transaksi pembelian & pengiriman barang sesuai ketentuan toko.")}
+                {t("checkout.disclaimer_prefix", "Dengan menekan tombol di atas, Anda menyetujui")}{" "}
+                <Link
+                    href="/terms"
+                    className="underline underline-offset-2 hover:text-amber-600 transition-colors"
+                >
+                    {t("nav.terms", "Syarat & Ketentuan")}
+                </Link>{" "}
+                {t("checkout.disclaimer_suffix", "yang berlaku di Fayyfir Shop.")}
             </p>
         </aside>
     );

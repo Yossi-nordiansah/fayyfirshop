@@ -446,7 +446,9 @@ export default function PaymentCodeCard({
                                 {t("payment.retail.midtrans_notice_title", "Pemberitahuan Kasir")}
                             </span>
                             <span className="text-[11px] text-blue-800 font-medium leading-normal block mt-1">
-                                {t("payment.retail.midtrans_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Xendit")}
+                                {order.payment_method === "indomaret"
+                                    ? t("payment.retail.indomaret_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran merchant Xendit")
+                                    : t("payment.retail.alfamart_notice_desc", "Harap beri tahu kasir bahwa Anda ingin melakukan pembayaran Fayyfirshop")}
                             </span>
                         </div>
                     </div>

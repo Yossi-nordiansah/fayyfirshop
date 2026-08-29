@@ -1590,5 +1590,9 @@
     "checkout.payment.desc.saqu_va": "تحويل الحساب الافتراضي لـ Bank Saqu",
     "checkout.payment.desc.alfamart": "الدفع في أقرب منفذ Alfamart",
     "checkout.payment.desc.indomaret": "الدفع في أقرب منفذ Indomaret",
-    "auth.login_title": "تسجيل الدخول"
+    "auth.login_title": "تسجيل الدخول",
+    "nav.terms": "الشروط والأحكام",
+    "footer.terms": "الشروط والأحكام",
+    "checkout.disclaimer_prefix": "بالنقر على الزر أعلاه، فإنكم توافقون على",
+    "checkout.disclaimer_suffix": "المعمول بها في Fayyfir Shop."
 }

@@ -24,6 +24,7 @@ const Footer = () => {
         { name: t("nav.product", "Product"), href: "#" },
         { name: t("nav.about", "About Us"), href: "#" },
         { name: t("nav.perfume", "Perfume"), href: "#" },
+        { name: t("nav.terms", "Syarat & Ketentuan"), href: "/terms" },
     ];
 
 
@@ -118,8 +119,14 @@ const Footer = () => {
                 {/* Bottom Bar */}
                 <div className="pt-2 lg:pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-zinc-600 text-center md:text-left">
                     <p>{t("footer.rights")}</p>
-                    <div className="flex items-center gap-6 opacity-40">
-                        <span className="tracking-widest uppercase">
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/terms"
+                            className="hover:text-amber-500 transition-colors duration-300 underline underline-offset-2"
+                        >
+                            {t("footer.terms", "Syarat & Ketentuan")}
+                        </Link>
+                        <span className="opacity-30 tracking-widest uppercase">
                             Secure Payments Guaranteed
                         </span>
                     </div>

@@ -18,7 +18,20 @@ class GoogleAuthController extends Controller
     public function redirect(Request $request): RedirectResponse
     {
         if ($request->has('redirect') && $request->input('redirect')) {
-            session(['url.intended' => $request->input('redirect')]);
+            // Bersihkan ?login=1 dari URL intended agar modal login tidak terbuka kembali setelah berhasil login
+            $intendedRedirect = $request->input('redirect');
+            $parsedUrl = parse_url($intendedRedirect);
+            if (isset($parsedUrl['query'])) {
+                parse_str($parsedUrl['query'], $queryParams);
+                unset($queryParams['login']);
+                $cleanQuery = http_build_query($queryParams);
+                $intendedRedirect = ($parsedUrl['scheme'] ?? 'https') . '://' . ($parsedUrl['host'] ?? '') .
+                    (isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '') .
+                    ($parsedUrl['path'] ?? '/') .
+                    ($cleanQuery ? '?' . $cleanQuery : '') .
+                    (isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '');
+            }
+            session(['url.intended' => $intendedRedirect]);
         }
         return Socialite::driver('google')->redirect();
     }
@@ -84,6 +97,21 @@ class GoogleAuthController extends Controller
         // Jika url intended mengarah ke halaman login, ubah ke halaman utama
         if (str_contains($intendedUrl, '/login')) {
             $intendedUrl = '/';
+        }
+
+        // Bersihkan parameter ?login=1 dari URL agar tidak memicu modal login kembali terbuka di frontend
+        $parsedIntended = parse_url($intendedUrl);
+        if (isset($parsedIntended['query'])) {
+            parse_str($parsedIntended['query'], $intendedParams);
+            unset($intendedParams['login']);
+            $cleanIntendedQuery = http_build_query($intendedParams);
+            $intendedUrl = ($parsedIntended['scheme'] ?? '') .
+                (isset($parsedIntended['scheme']) ? '://' : '') .
+                ($parsedIntended['host'] ?? '') .
+                (isset($parsedIntended['port']) ? ':' . $parsedIntended['port'] : '') .
+                ($parsedIntended['path'] ?? '/') .
+                ($cleanIntendedQuery ? '?' . $cleanIntendedQuery : '') .
+                (isset($parsedIntended['fragment']) ? '#' . $parsedIntended['fragment'] : '');
         }
 
         return redirect()->to($intendedUrl);

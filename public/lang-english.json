@@ -1583,5 +1583,9 @@
     "checkout.payment.desc.saqu_va": "Bank Saqu Virtual Account Transfer",
     "checkout.payment.desc.alfamart": "Pay at the nearest Alfamart outlet",
     "checkout.payment.desc.indomaret": "Pay at the nearest Indomaret outlet",
-    "auth.login_title": "Log In"
+    "auth.login_title": "Log In",
+    "nav.terms": "Terms & Conditions",
+    "footer.terms": "Terms & Conditions",
+    "checkout.disclaimer_prefix": "By clicking the button above, you agree to the",
+    "checkout.disclaimer_suffix": "applicable at Fayyfir Shop."
 }

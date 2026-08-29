@@ -1587,5 +1587,9 @@
     "checkout.payment.desc.saqu_va": "Transfer Virtual Account Bank Saqu",
     "checkout.payment.desc.alfamart": "Bayar di gerai Alfamart terdekat",
     "checkout.payment.desc.indomaret": "Bayar di gerai Indomaret terdekat",
-    "auth.login_title": "Masuk"
+    "auth.login_title": "Masuk",
+    "nav.terms": "Syarat & Ketentuan",
+    "footer.terms": "Syarat & Ketentuan",
+    "checkout.disclaimer_prefix": "Dengan menekan tombol di atas, Anda menyetujui",
+    "checkout.disclaimer_suffix": "yang berlaku di Fayyfir Shop."
 }
