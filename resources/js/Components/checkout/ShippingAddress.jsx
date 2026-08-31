@@ -27,6 +27,9 @@ export default function ShippingAddress({
 
     // Find the currently selected address from the addresses list
     const isSelected = (addr) => {
+        if (addressForm.id) {
+            return addr.id === addressForm.id;
+        }
         return (
             addr.address === addressForm.address &&
             addr.receiver_name === addressForm.receiver_name &&
@@ -36,6 +39,7 @@ export default function ShippingAddress({
 
     const handleSelectAddress = (addr) => {
         setAddressForm({
+            id: addr.id,
             receiver_name: addr.receiver_name,
             phone: addr.phone,
             address: addr.address,

@@ -307,8 +307,10 @@ export default function TrackOrderPage({ order, trackingLogs = [], biteshipStatu
                                         <User size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <span className="text-slate-400">{t("orders.track.receiver", "Penerima")}</span>
-                                            <strong className="text-slate-900 block mt-0.5">{order.user?.receiver_name || order.user?.name}</strong>
-                                            <span className="text-slate-500 font-semibold block">{order.user?.phone}</span>
+                                            <strong className="text-slate-900 block mt-0.5">{order.receiver_name || order.user?.receiver_name || order.user?.name}</strong>
+                                            {(order.receiver_phone || order.user?.phone) && (
+                                                <span className="text-slate-500 font-semibold block">{order.receiver_phone || order.user?.phone}</span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -316,13 +318,9 @@ export default function TrackOrderPage({ order, trackingLogs = [], biteshipStatu
                                         <MapPin size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <span className="text-slate-400">{t("orders.track.shipping_address", "Alamat Pengiriman")}</span>
-                                            {order.user?.address ? (
-                                                <p className="text-slate-600 mt-1 leading-normal">
-                                                    {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
-                                                </p>
-                                            ) : (
-                                                <p className="text-slate-600 mt-1 leading-normal">{order.shipping_address}</p>
-                                            )}
+                                            <p className="text-slate-600 mt-1 leading-normal">
+                                                {order.shipping_address || (order.user?.address ? `${order.user.address}, Kec. ${order.user.district}, ${order.user.city}, ${order.user.province} ${order.user.postal_code}` : '-')}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

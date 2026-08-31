@@ -180,6 +180,7 @@ class OrderController extends Controller
 
         $branch = $order->storeBranch;
         $user = $order->user;
+        $destAreaId = $order->destination_area_id ?: ($user ? $user->area_id : null);
 
         if (!$branch || !$branch->area_id) {
             return redirect()
@@ -187,7 +188,7 @@ class OrderController extends Controller
                 ->with('status', 'Error: Processing branch must have a valid Biteship Area ID.');
         }
 
-        if (!$user || !$user->area_id) {
+        if (!$destAreaId) {
             return redirect()
                 ->route('backoffice.orders')
                 ->with('status', 'Error: Customer must have a valid Biteship Area ID in their shipping address.');
@@ -244,56 +245,133 @@ class OrderController extends Controller
 
         $apiKey = env('BITESHIP_API_KEY');
 
-        $courier = strtolower($order->shipping_courier);
-        $service = strtolower($order->shipping_service);
+        $rawCourier = strtolower(trim($order->shipping_courier ?? ''));
+        $rawService = strtolower(trim($order->shipping_service ?? ''));
 
         // Normalize courier company name for Biteship
-        if ($courier === 'j&t') {
+        $courier = $rawCourier;
+        if (str_contains($rawCourier, 'ninja')) {
+            $courier = 'ninja';
+        } elseif (str_contains($rawCourier, 'j&t') || str_contains($rawCourier, 'jnt')) {
             $courier = 'jnt';
-        } elseif ($courier === 'pos indonesia') {
+        } elseif (str_contains($rawCourier, 'pos')) {
             $courier = 'pos';
+        } elseif (str_contains($rawCourier, 'sicepat')) {
+            $courier = 'sicepat';
+        } elseif (str_contains($rawCourier, 'anteraja')) {
+            $courier = 'anteraja';
+        } elseif (str_contains($rawCourier, 'lion')) {
+            $courier = 'lion';
+        } elseif (str_contains($rawCourier, 'tiki')) {
+            $courier = 'tiki';
+        } elseif (str_contains($rawCourier, 'wahana')) {
+            $courier = 'wahana';
+        } elseif (str_contains($rawCourier, 'jne')) {
+            $courier = 'jne';
+        } elseif (str_contains($rawCourier, 'gojek')) {
+            $courier = 'gojek';
+        } elseif (str_contains($rawCourier, 'grab')) {
+            $courier = 'grab';
         }
 
-        // Map service name to Biteship courier_type code
-        $courierType = $service;
-        if (str_contains($service, 'reguler') || str_contains($service, 'regular')) {
-            if ($courier === 'jnt') {
-                $courierType = 'ez'; // J&T regular is 'ez'
+        // Map service name to Biteship courier_type code per expedition
+        $courierType = $rawService;
+        if ($courier === 'ninja') {
+            if (str_contains($rawService, 'fast') || str_contains($rawService, 'express')) {
+                $courierType = 'fast';
+            } elseif (str_contains($rawService, 'sameday') || str_contains($rawService, 'same day')) {
+                $courierType = 'sameday';
+            } else {
+                $courierType = 'standard';
+            }
+        } elseif ($courier === 'jnt') {
+            if (str_contains($rawService, 'cargo') || str_contains($rawService, 'jdr')) {
+                $courierType = 'jdr';
+            } else {
+                $courierType = 'ez';
+            }
+        } elseif ($courier === 'jne') {
+            if (str_contains($rawService, 'trucking') || str_contains($rawService, 'jtr')) {
+                $courierType = 'jtr';
+            } elseif (str_contains($rawService, 'yes')) {
+                $courierType = 'yes';
+            } elseif (str_contains($rawService, 'oke')) {
+                $courierType = 'oke';
             } else {
                 $courierType = 'reg';
             }
-        } elseif (str_contains($service, 'jne trucking') || str_contains($service, 'trucking') || str_contains($service, 'jtr')) {
-            $courierType = 'jtr';
-        } elseif (str_contains($service, 'pos reguler')) {
-            $courierType = 'reg';
-        } elseif (str_contains($service, 'ez')) {
-            $courierType = 'ez';
-        } elseif (str_contains($service, 'yes')) {
-            $courierType = 'yes';
-        } elseif (str_contains($service, 'oke')) {
-            $courierType = 'oke';
-        } elseif (str_contains($service, 'gokil')) {
-            $courierType = 'gokil';
-        } elseif (str_contains($service, 'same day') || str_contains($service, 'sameday')) {
-            $courierType = 'same_day';
-        } elseif (str_contains($service, 'instant')) {
-            $courierType = 'instant';
+        } elseif ($courier === 'sicepat') {
+            if (str_contains($rawService, 'gokil') || str_contains($rawService, 'cargo')) {
+                $courierType = 'gokil';
+            } elseif (str_contains($rawService, 'best') || str_contains($rawService, 'besok')) {
+                $courierType = 'best';
+            } elseif (str_contains($rawService, 'sds') || str_contains($rawService, 'same day') || str_contains($rawService, 'sameday')) {
+                $courierType = 'sds';
+            } elseif (str_contains($rawService, 'siunt') || str_contains($rawService, 'untung')) {
+                $courierType = 'siunt';
+            } else {
+                $courierType = 'reg';
+            }
+        } elseif ($courier === 'pos') {
+            if (str_contains($rawService, 'next') || str_contains($rawService, 'express') || str_contains($rawService, 'kilat')) {
+                $courierType = 'next_day';
+            } else {
+                $courierType = 'reg';
+            }
+        } elseif ($courier === 'anteraja') {
+            if (str_contains($rawService, 'next') || str_contains($rawService, 'nd')) {
+                $courierType = 'next_day';
+            } elseif (str_contains($rawService, 'same') || str_contains($rawService, 'sd')) {
+                $courierType = 'same_day';
+            } elseif (str_contains($rawService, 'cargo')) {
+                $courierType = 'cargo';
+            } elseif (str_contains($rawService, 'eco') || str_contains($rawService, 'hemat')) {
+                $courierType = 'eco';
+            } else {
+                $courierType = 'reg';
+            }
+        } else {
+            if (str_contains($rawService, 'reguler') || str_contains($rawService, 'regular')) {
+                $courierType = 'reg';
+            } elseif (str_contains($rawService, 'same day') || str_contains($rawService, 'sameday')) {
+                $courierType = 'same_day';
+            } elseif (str_contains($rawService, 'instant')) {
+                $courierType = 'instant';
+            }
         }
 
-        $branchPhone = $branch->whatsapp_number ?: '081234567890';
-        $receiverPhone = $user->phone ?: '08123456789';
+        // Clean and normalize phone numbers (digits only, 08... format for courier APIs)
+        $cleanBranchPhone = preg_replace('/[^0-9]/', '', $branch->whatsapp_number ?: '081234567890');
+        if (str_starts_with($cleanBranchPhone, '62')) {
+            $cleanBranchPhone = '0' . substr($cleanBranchPhone, 2);
+        }
+
+        $rawReceiverPhone = $order->receiver_phone ?: ($user ? $user->phone : '08123456789');
+        $cleanReceiverPhone = preg_replace('/[^0-9]/', '', $rawReceiverPhone);
+        if (str_starts_with($cleanReceiverPhone, '62')) {
+            $cleanReceiverPhone = '0' . substr($cleanReceiverPhone, 2);
+        }
+
+        $receiverName = $order->receiver_name ?: ($user ? ($user->receiver_name ?: $user->name) : 'Pelanggan');
+        $destAreaId = $order->destination_area_id ?: ($user ? $user->area_id : null);
+
+        // Ensure robust origin address (minimum character requirements for couriers like Anteraja)
+        $originAddress = $branch->detail_address ?: trim(($branch->street ? $branch->street . ', ' : '') . ($branch->district ? $branch->district . ', ' : '') . ($branch->city ?: '') . ($branch->province ? ', ' . $branch->province : '') . ($branch->postal_code ? ' ' . $branch->postal_code : ''));
+        if (empty($originAddress) || strlen($originAddress) < 10) {
+            $originAddress = 'Gudang / Toko ' . $branch->name . ', ' . ($branch->city ?: 'Kediri') . ', ' . ($branch->province ?: 'Jawa Timur');
+        }
 
         $payload = [
             'shipper_contact_name' => $branch->name,
-            'shipper_contact_phone' => $branchPhone,
+            'shipper_contact_phone' => $cleanBranchPhone,
             'origin_contact_name' => $branch->name,
-            'origin_contact_phone' => $branchPhone,
-            'origin_address' => $branch->detail_address ?: ($branch->street . ', ' . $branch->city),
+            'origin_contact_phone' => $cleanBranchPhone,
+            'origin_address' => $originAddress,
             'origin_area_id' => $branch->area_id,
-            'destination_contact_name' => $user->receiver_name ?: $user->name,
-            'destination_contact_phone' => $receiverPhone,
+            'destination_contact_name' => $receiverName,
+            'destination_contact_phone' => $cleanReceiverPhone,
             'destination_address' => $order->shipping_address,
-            'destination_area_id' => $user->area_id,
+            'destination_area_id' => $destAreaId,
             'courier_company' => $courier,
             'courier_type' => $courierType,
             'delivery_type' => 'now',
@@ -301,52 +379,82 @@ class OrderController extends Controller
             'items' => $biteshipItems
         ];
 
-        // Resolve Origin and Destination Coordinates (Required by Pos Indonesia, Gojek, Grab, etc.)
-        $originAddress = $branch->detail_address ?: ($branch->street . ', ' . $branch->city);
-        $originFallback = ($branch->city ?: 'Kediri') . ', ' . ($branch->province ?: 'Jawa Timur') . ', Indonesia';
-        $destAddress = $order->shipping_address;
-        $destFallback = ($user->district ? $user->district . ', ' : '') . ($user->city ? $user->city . ', ' : '') . 'Indonesia';
+        // Resolve Coordinates only for Instant and Same Day Couriers (Required by Gojek, Grab, etc.)
+        $isInstantOrSameDay = in_array($courier, ['gojek', 'grab']) || str_contains($courierType, 'instant') || str_contains($courierType, 'same_day');
 
-        // 1. Origin Coordinate
-        if (!empty($branch->latitude) && !empty($branch->longitude)) {
-            $originCoord = [
-                'latitude' => (float)$branch->latitude,
-                'longitude' => (float)$branch->longitude,
-            ];
-        } else {
-            $originCoord = $this->resolveCoordinates($originAddress, $originFallback);
-            if ($originCoord) {
-                $branch->update([
-                    'latitude' => $originCoord['latitude'],
-                    'longitude' => $originCoord['longitude'],
-                ]);
+        if ($isInstantOrSameDay) {
+            $originFallback = ($branch->city ?: 'Kediri') . ', ' . ($branch->province ?: 'Jawa Timur') . ', Indonesia';
+            $destAddress = $order->shipping_address;
+            $destFallback = $order->shipping_address;
+
+            if (!empty($branch->latitude) && !empty($branch->longitude)) {
+                $originCoord = [
+                    'latitude' => (float)$branch->latitude,
+                    'longitude' => (float)$branch->longitude,
+                ];
+            } else {
+                $originCoord = $this->resolveCoordinates($originAddress, $originFallback);
+                if ($originCoord) {
+                    $branch->update([
+                        'latitude' => $originCoord['latitude'],
+                        'longitude' => $originCoord['longitude'],
+                    ]);
+                }
             }
-        }
 
-        // 2. Destination Coordinate
-        $destCoord = $this->resolveCoordinates($destAddress, $destFallback);
+            $destCoord = $this->resolveCoordinates($destAddress, $destFallback);
 
-        if ($originCoord) {
-            $payload['origin_coordinate'] = $originCoord;
-        }
-        if ($destCoord) {
-            $payload['destination_coordinate'] = $destCoord;
+            if ($originCoord) {
+                $payload['origin_coordinate'] = $originCoord;
+            }
+            if ($destCoord) {
+                $payload['destination_coordinate'] = $destCoord;
+            }
         }
 
         if ($branch->postal_code) {
             $payload['origin_postal_code'] = (int) $branch->postal_code;
         }
-        if ($user->postal_code) {
-            $payload['destination_postal_code'] = (int) $user->postal_code;
+        // Extract 5-digit postal code from destination address if present (do not use fallback from $user->postal_code)
+        if (preg_match('/\b(\d{5})\b/', $order->shipping_address, $postMatches)) {
+            $payload['destination_postal_code'] = (int) $postMatches[1];
         }
 
         $payload['origin_note'] = $branch->detail_address ?: ('Gudang / Toko ' . $branch->name);
         $payload['destination_note'] = $order->notes ?: 'Tiba di alamat pengiriman';
 
+        \Illuminate\Support\Facades\Log::info('Biteship Order Payload:', $payload);
+
         try {
             $response = Http::withHeaders([
                 'authorization' => $apiKey,
             ])->post('https://api.biteship.com/v1/orders', $payload);
+
+            $isDropOffUsed = false;
+            if (!$response->successful()) {
+                $resJson = $response->json();
+                $errorCode = $resJson['code'] ?? null;
+                $errorMsg = strtolower($resJson['error'] ?? '');
+
+                // If courier cannot provide pickup service in origin location or rate/service issue, retry with drop_off collection method or alternative service code
+                if ($errorCode === 40002031 || $errorCode === 40002007 || $errorCode === 40002021 || str_contains($errorMsg, 'pickup') || str_contains($errorMsg, 'scheduled') || str_contains($errorMsg, 'failed')) {
+                    $dropOffPayload = $payload;
+                    $dropOffPayload['origin_collection_method'] = 'drop_off';
+
+                    if ($courier === 'anteraja') {
+                        $dropOffPayload['courier_type'] = ($courierType === 'reg') ? 'regular' : 'reg';
+                    }
+
+                    $retryResponse = Http::withHeaders([
+                        'authorization' => $apiKey,
+                    ])->post('https://api.biteship.com/v1/orders', $dropOffPayload);
+
+                    if ($retryResponse->successful()) {
+                        $response = $retryResponse;
+                        $isDropOffUsed = true;
+                    }
+                }
+            }
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -355,29 +463,31 @@ class OrderController extends Controller
                 $waybillId = $data['courier']['waybill_id'] ?? null;
                 $biteshipOrderId = $data['id'] ?? null;
 
+                $noteSuffix = $isDropOffUsed ? " (Metode: Drop Off ke Gerai)" : "";
+
                 if ($waybillId) {
                     $order->update([
                         'tracking_number' => $waybillId,
                         'status' => 'shipped', // Langsung masuk ke status dikirim
-                        'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]"),
+                        'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]" . $noteSuffix),
                     ]);
 
                     return redirect()
                         ->route('backoffice.orders')
-                        ->with('status', 'Pengiriman Biteship berhasil dipesan! Resi: ' . $waybillId);
+                        ->with('status', 'Pengiriman Biteship berhasil dipesan!' . $noteSuffix . ' Resi: ' . $waybillId);
                 }
 
-                // If shipment was scheduled, it might not have waybill immediately
+                // If shipment was scheduled/pending, it might not have waybill immediately
                 if ($biteshipOrderId) {
                     $order->update([
                         'tracking_number' => 'PENDING_' . $biteshipOrderId,
                         'status' => 'shipped', // Langsung masuk ke status dikirim
-                        'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]"),
+                        'notes' => trim($order->notes . "\n[Biteship Order ID: " . $biteshipOrderId . "]" . $noteSuffix),
                     ]);
 
                     return redirect()
                         ->route('backoffice.orders')
-                        ->with('status', 'Pengiriman Biteship terdaftar. Status: Dikirim (Biteship ID: ' . $biteshipOrderId . ')');
+                        ->with('status', 'Pengiriman Biteship terdaftar' . $noteSuffix . '. Status: Dikirim (Biteship ID: ' . $biteshipOrderId . ')');
                 }
             }
 
@@ -642,6 +752,16 @@ class OrderController extends Controller
             $courierCode = 'sicepat';
         } elseif (str_contains($courierName, 'anteraja')) {
             $courierCode = 'anteraja';
+        } elseif (str_contains($courierName, 'ninja')) {
+            $courierCode = 'ninja';
+        } elseif (str_contains($courierName, 'lion')) {
+            $courierCode = 'lion';
+        } elseif (str_contains($courierName, 'tiki')) {
+            $courierCode = 'tiki';
+        } elseif (str_contains($courierName, 'gojek')) {
+            $courierCode = 'gojek';
+        } elseif (str_contains($courierName, 'grab')) {
+            $courierCode = 'grab';
         } else {
             $courierCode = 'jne';
         }

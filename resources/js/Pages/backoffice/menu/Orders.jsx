@@ -532,7 +532,10 @@ export default function Orders({ orders = [], status }) {
                                         <div className="bg-slate-50 rounded-2xl p-4 text-xs space-y-2">
                                             <div>
                                                 <span className="text-slate-400 block">{t('backoffice.orders.modal.recipient', 'Recipient')}</span>
-                                                <strong className="text-slate-800">{selectedOrder.user?.receiver_name || selectedOrder.user?.name}</strong>
+                                                <strong className="text-slate-800">{selectedOrder.receiver_name || selectedOrder.user?.receiver_name || selectedOrder.user?.name}</strong>
+                                                {(selectedOrder.receiver_phone || selectedOrder.user?.phone) && (
+                                                    <span className="text-slate-500 block font-mono text-[11px] mt-0.5">{selectedOrder.receiver_phone || selectedOrder.user?.phone}</span>
+                                                )}
                                             </div>
                                             <div>
                                                 <span className="text-slate-400 block">{t('backoffice.orders.modal.courier_service', 'Courier Service')}</span>
@@ -540,13 +543,7 @@ export default function Orders({ orders = [], status }) {
                                             </div>
                                             <div>
                                                 <span className="text-slate-400 block">{t('backoffice.orders.modal.address_details', 'Address Details')}</span>
-                                                {selectedOrder.user?.address ? (
-                                                    <p className="text-slate-600 mt-0.5 leading-normal">
-                                                        {selectedOrder.user.address}, Kec. {selectedOrder.user.district}, {selectedOrder.user.city}, {selectedOrder.user.province} {selectedOrder.user.postal_code}
-                                                    </p>
-                                                ) : (
-                                                    <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address}</p>
-                                                )}
+                                                <p className="text-slate-600 mt-0.5 leading-normal">{selectedOrder.shipping_address || (selectedOrder.user?.address ? `${selectedOrder.user.address}, Kec. ${selectedOrder.user.district}, ${selectedOrder.user.city}, ${selectedOrder.user.province} ${selectedOrder.user.postal_code}` : '-')}</p>
                                             </div>
                                             {selectedOrder.tracking_number && (
                                                 <div className="pt-2 border-t border-slate-200/80 space-y-2">

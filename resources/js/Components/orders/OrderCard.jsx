@@ -318,7 +318,7 @@ export default function OrderCard({
                     </span>
                     <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-xl font-medium max-w-[200px]">
                         <MapPin size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{t('orders.receiver')}: {order.user?.receiver_name || order.user?.name || '-'}</span>
+                        <span className="truncate">{t('orders.receiver')}: {order.receiver_name || order.user?.receiver_name || order.user?.name || '-'}</span>
                     </span>
                 </div>
 
@@ -481,17 +481,13 @@ export default function OrderCard({
                                         <span>{t('orders.shipping_address')}</span>
                                     </h5>
                                     <div className="leading-relaxed bg-slate-50/30 border border-slate-100 p-2.5 rounded-xl text-slate-600">
-                                        {order.user?.address ? (
-                                            <div className="space-y-0.5">
-                                                <p className="font-bold text-slate-800">{order.user.receiver_name || order.user.name}</p>
-                                                <p className="text-slate-500 font-mono text-[10px]">{order.user.phone || '-'}</p>
-                                                <p className="mt-1 leading-normal">
-                                                    {order.user.address}, Kec. {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <p>{order.shipping_address}</p>
-                                        )}
+                                        <div className="space-y-0.5">
+                                            <p className="font-bold text-slate-800">{order.receiver_name || order.user?.receiver_name || order.user?.name}</p>
+                                            <p className="text-slate-500 font-mono text-[10px]">{order.receiver_phone || order.user?.phone || '-'}</p>
+                                            <p className="mt-1 leading-normal">
+                                                {order.shipping_address || (order.user?.address ? `${order.user.address}, Kec. ${order.user.district}, ${order.user.city}, ${order.user.province} ${order.user.postal_code}` : '-')}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 

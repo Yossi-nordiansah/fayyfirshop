@@ -128,17 +128,13 @@ export default function SuccessPage({ order }) {
                                         <MapPin className="text-slate-400 w-4 h-4 mt-0.5 flex-shrink-0" />
                                         <div>
                                             <h4 className="font-bold text-slate-900">{t("checkout.success.address", "Alamat Tujuan")}</h4>
-                                            {order.user?.address ? (
-                                                <div className="mt-0.5 text-slate-500 leading-relaxed">
-                                                    <p className="font-bold text-slate-800">{order.user.receiver_name || order.user.name}</p>
-                                                    <p className="font-mono text-[10px]">{order.user.phone || '-'}</p>
-                                                    <p className="mt-0.5">
-                                                        {order.user.address}, {t("checkout.success.district_label", "Kec.")} {order.user.district}, {order.user.city}, {order.user.province} {order.user.postal_code}
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <p className="mt-0.5 text-slate-500 leading-relaxed">{order.shipping_address}</p>
-                                            )}
+                                            <div className="mt-0.5 text-slate-500 leading-relaxed">
+                                                <p className="font-bold text-slate-800">{order.receiver_name || order.user?.receiver_name || order.user?.name}</p>
+                                                <p className="font-mono text-[10px]">{order.receiver_phone || order.user?.phone || '-'}</p>
+                                                <p className="mt-0.5">
+                                                    {order.shipping_address || (order.user?.address ? `${order.user.address}, ${t("checkout.success.district_label", "Kec.")} ${order.user.district}, ${order.user.city}, ${order.user.province} ${order.user.postal_code}` : '-')}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

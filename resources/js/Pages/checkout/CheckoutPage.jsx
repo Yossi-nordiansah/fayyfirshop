@@ -37,16 +37,21 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
     const [appliedReferral, setAppliedReferral] = useState(null);
 
     // Address States
+    const initialDefaultAddress = addresses && addresses.length > 0
+        ? (addresses.find(a => a.is_default) || addresses[0])
+        : null;
+
     const [addressForm, setAddressForm] = useState({
-        receiver_name: user?.receiver_name ?? user?.name ?? '',
-        phone: user?.phone ?? '',
-        address: user?.address ?? '',
-        province: user?.province ?? '',
-        city: user?.city ?? '',
-        district: user?.district ?? '',
-        postal_code: user?.postal_code ?? '',
-        area_id: user?.area_id ?? '',
-        country: user?.country ?? 'ID',
+        id: initialDefaultAddress?.id ?? null,
+        receiver_name: initialDefaultAddress?.receiver_name ?? user?.receiver_name ?? user?.name ?? '',
+        phone: initialDefaultAddress?.phone ?? user?.phone ?? '',
+        address: initialDefaultAddress?.address ?? user?.address ?? '',
+        province: initialDefaultAddress?.province ?? user?.province ?? '',
+        city: initialDefaultAddress?.city ?? user?.city ?? '',
+        district: initialDefaultAddress?.district ?? user?.district ?? '',
+        postal_code: initialDefaultAddress?.postal_code ?? user?.postal_code ?? '',
+        area_id: initialDefaultAddress?.area_id ?? user?.area_id ?? '',
+        country: initialDefaultAddress?.country ?? user?.country ?? 'ID',
     });
 
     // Reload user and addresses from server on mount (so that going back from Edit Profile gets fresh address data)
@@ -55,7 +60,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
     }, []);
 
     const prevAddresses = useRef(addresses);
-    const prevAddressesLength = useRef(addresses.length);
+    const prevAddressesLength = useRef(addresses?.length || 0);
 
     // Sync addressForm with the latest addresses prop from Inertia
     useEffect(() => {
@@ -65,6 +70,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                 const newAddr = addresses.find(addr => !prevAddresses.current.some(p => p.id === addr.id));
                 if (newAddr) {
                     setAddressForm({
+                        id: newAddr.id,
                         receiver_name: newAddr.receiver_name ?? '',
                         phone: newAddr.phone ?? '',
                         address: newAddr.address ?? '',
@@ -77,10 +83,12 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                     });
                 }
             } else {
-                // Otherwise, fall back to default behavior (e.g. initial mount or update to default status)
-                const activeAddr = addresses.find(a => a.is_default) || addresses[0];
+                // Keep the currently selected address if available, otherwise pick default
+                const currentSelected = addressForm.id ? addresses.find(a => a.id === addressForm.id) : null;
+                const activeAddr = currentSelected || addresses.find(a => a.is_default) || addresses[0];
                 if (activeAddr) {
                     setAddressForm({
+                        id: activeAddr.id,
                         receiver_name: activeAddr.receiver_name ?? '',
                         phone: activeAddr.phone ?? '',
                         address: activeAddr.address ?? '',
@@ -478,14 +486,39 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
             return;
         }
 
-        setIsPlacingOrder(true);
+        // Format shipping address cleanly to prevent duplicating area components
+        const rawAddr = (addressForm.address || '').trim();
+        const districtStr = (addressForm.district || '').trim();
+        const cityStr = (addressForm.city || '').trim();
+        const provStr = (addressForm.province || '').trim();
+        const postalStr = (addressForm.postal_code || '').trim();
+
+        const extraParts = [];
+        if (districtStr && !rawAddr.toLowerCase().includes(districtStr.toLowerCase())) {
+            extraParts.push(districtStr);
+        }
+        if (cityStr && !rawAddr.toLowerCase().includes(cityStr.toLowerCase())) {
+            extraParts.push(cityStr);
+        }
+        if (provStr && !rawAddr.toLowerCase().includes(provStr.toLowerCase())) {
+            extraParts.push(provStr);
+        }
+        if (postalStr && !rawAddr.includes(postalStr)) {
+            extraParts.push(postalStr);
+        }
+
+        const formattedShippingAddress = extraParts.length > 0
+            ? `${rawAddr}, ${extraParts.join(', ')}`
+            : rawAddr;
 
         const payload = {
             store_branch_id: selectedBranchId,
             shipping_courier: selectedRate.courier_name,
             shipping_service: selectedRate.courier_service_name,
             shipping_cost: shippingCost,
-            shipping_address: `${addressForm.address}, ${addressForm.district ? addressForm.district + ', ' : ''}${addressForm.city}, ${addressForm.province} ${addressForm.postal_code}`,
+            receiver_name: addressForm.receiver_name,
+            receiver_phone: addressForm.phone,
+            shipping_address: formattedShippingAddress,
             notes: notes,
             payment_method: paymentMethod,
             area_id: addressForm.area_id,

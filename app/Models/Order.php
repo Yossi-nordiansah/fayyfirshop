@@ -18,6 +18,8 @@ class Order extends Model
     protected $fillable = [
         'invoice_number',
         'user_id',
+        'receiver_name',
+        'receiver_phone',
         'store_branch_id',
         'subtotal',
         'discount_amount',
@@ -27,6 +29,7 @@ class Order extends Model
         'shipping_service',
         'tracking_number',
         'shipping_address',
+        'destination_area_id',
         'status',
         'payment_status',
         'payment_token',

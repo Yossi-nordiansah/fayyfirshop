@@ -113,18 +113,16 @@ export default function PrintWaybillPage({ order, totalWeightGrams = 1000 }) {
 
 
     const recipientName = maskString(
-        order.user?.receiver_name || order.user?.name || "Pelanggan",
+        order.receiver_name || order.user?.receiver_name || order.user?.name || "Pelanggan",
         1, 2
     );
-    const recipientPhone = maskPhone(order.user?.phone || "");
+    const recipientPhone = maskPhone(order.receiver_phone || order.user?.phone || "");
 
-    const addressParts = [];
-    if (order.shipping_address) addressParts.push(order.shipping_address);
-    if (order.user?.district) addressParts.push("Kec. " + order.user.district);
-    if (order.user?.city) addressParts.push(order.user.city.toUpperCase());
-    if (order.user?.province) addressParts.push(order.user.province.toUpperCase());
-    if (order.user?.postal_code) addressParts.push(order.user.postal_code);
-    const addressLine = addressParts.join(", ");
+    const addressLine = order.shipping_address || (
+        order.user?.address
+            ? `${order.user.address}, Kec. ${order.user.district || ''}, ${(order.user.city || '').toUpperCase()}, ${(order.user.province || '').toUpperCase()} ${order.user.postal_code || ''}`
+            : ""
+    );
 
     // Pengirim: nama cabang + nomor WA dari backoffice cabang
     const senderName = order.store_branch?.name || "Fayyfir Store";
