@@ -116,10 +116,10 @@ const CustomerRating = ({ reviews: dbReviews = [] }) => {
                 <div className="md:px-4 px-2">
                     <SlickSlider>
                         {activeReviews.map((review) => (
-                            <div key={review.id} className="px-3 py-4">
+                            <div key={review.id} className="px-1 lg:px-3 py-4">
                                 <motion.div
                                     whileHover={{ y: -6, scale: 1.01 }}
-                                    className="bg-slate-100 rounded-2xl border border-zinc-100 p-6 shadow-lg relative flex flex-col justify-between h-[270px] group transition-all duration-300 w-full"
+                                    className="bg-slate-100 lg:rounded-2xl rounded-lg border border-zinc-100 p-3 lg:p-6 shadow-lg relative flex flex-col justify-between h-[270px] group transition-all duration-300 w-full"
                                 >
                                     {/* Quote Icon Background Accent */}
                                     <Quote className="absolute right-6 top-6 text-zinc-200/40 group-hover:text-amber-500/10 transition-colors duration-300 w-10 h-10 -scale-x-100 pointer-events-none" />

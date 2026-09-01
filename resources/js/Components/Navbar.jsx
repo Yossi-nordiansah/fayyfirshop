@@ -350,14 +350,6 @@ const Navbar = ({ alwaysSolid = false, topOffset = "var(--ticker-height)" }) => 
         window.addEventListener("storage", updateCartCount);
         window.addEventListener("fayyfir-cart-updated", updateCartCount);
 
-        // Check for login=1 query parameter to trigger login modal
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("login") === "1") {
-            setShowLoginModal(true);
-            const url = new URL(window.location.href);
-            url.searchParams.delete("login");
-            window.history.replaceState({}, document.title, url.pathname + url.search);
-        }
 
         return () => {
             window.removeEventListener("scroll", handleScroll);

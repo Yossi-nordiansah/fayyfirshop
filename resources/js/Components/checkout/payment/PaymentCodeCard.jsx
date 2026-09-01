@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle, Smartphone, Monitor, Download
+    Copy, ExternalLink, RefreshCw, CheckCircle2, CreditCard, QrCode, AlertCircle, Smartphone, Monitor, Download, Store, ArrowRight
 } from "lucide-react";
 import LoadingSpinner from "@/Components/LoadingSpinner";
 
@@ -8,6 +8,7 @@ export default function PaymentCodeCard({
     order,
     details,
     qrCodeUrl,
+    mobileCheckoutUrl,
     cardForm,
     setCardForm,
     isPayingCard,
@@ -20,21 +21,39 @@ export default function PaymentCodeCard({
     isProduction = false,
     isSimulating = false,
     handleSimulatePayment,
+    onChangeMethod,
     t,
 }) {
-    const [isMobile, setIsMobile] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
+
+    // Detect mobile — runs lazily so the correct value is set before first render
+    const detectMobile = () => {
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        const isNarrowScreen = window.innerWidth <= 1024;
+        const isTouchDevice = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+        return isMobileUA || (isTouchDevice && isNarrowScreen);
+    };
+
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return detectMobile();
+    });
 
     useEffect(() => {
-        const checkDevice = () => {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-            const isTouchScreen = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
-            setIsMobile(isMobileUA || (isTouchScreen && window.innerWidth <= 768));
-        };
-        checkDevice();
-        window.addEventListener("resize", checkDevice);
-        return () => window.removeEventListener("resize", checkDevice);
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        setIsAndroid(/Android/i.test(ua));
+        setIsIOS(/iPhone|iPad|iPod/i.test(ua));
+
+        const handleResize = () => setIsMobile(detectMobile());
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
+
+
+
+
 
     // Helper to download QR code image
     const downloadQrCode = async (url, filename = `QR-${order.invoice_number}.png`) => {
@@ -313,8 +332,76 @@ export default function PaymentCodeCard({
                         </div>
                     )}
 
-                    {/* ShopeePay, GoPay, DANA */}
-                    {order.payment_method !== "ovo" && (
+                    {/* 4. LinkAja Dedicated Direct Web Checkout (No QR Code) */}
+                    {order.payment_method === "linkaja" && (
+                        <div className="flex flex-col items-center space-y-4 w-full max-w-md mx-auto">
+                            <div className="w-full bg-gradient-to-br from-red-50/80 via-white to-slate-50 border border-red-100 p-6 rounded-3xl text-center shadow-sm space-y-5">
+                                {/* LinkAja Brand Header */}
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center p-2 shadow-sm">
+                                        <img
+                                            src="/images/payment/link-aja.svg"
+                                            alt="LinkAja"
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                    <h4 className="text-base font-black text-slate-900 mt-1">
+                                        {t("payment.linkaja.title", "Pembayaran via LinkAja")}
+                                    </h4>
+                                    <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
+                                        {t("payment.linkaja.desc", "Selesaikan pembayaran dengan mudah dan aman melalui portal resmi LinkAja.")}
+                                    </p>
+                                </div>
+
+                                {/* Step Instructions */}
+                                <div className="p-4 bg-white/90 border border-red-100 rounded-2xl text-left space-y-2 text-xs shadow-xs">
+                                    <span className="font-extrabold text-slate-900 block flex items-center gap-1.5">
+                                        <Smartphone size={14} className="text-red-600 shrink-0" />
+                                        <span>{t("payment.linkaja.steps_title", "Langkah Pembayaran:")}</span>
+                                    </span>
+                                    <ol className="list-decimal list-inside text-slate-600 space-y-1.5 font-medium leading-relaxed">
+                                        <li>
+                                            {t("payment.linkaja.step_1", "Klik tombol 'Bayar Sekarang via LinkAja' di bawah.")}
+                                        </li>
+                                        <li>
+                                            {t("payment.linkaja.step_2", "Masukkan Nomor HP & PIN LinkAja Anda di portal resmi.")}
+                                        </li>
+                                        <li>
+                                            {t("payment.linkaja.step_3", "Konfirmasi pembayaran dan Anda akan otomatis kembali ke toko.")}
+                                        </li>
+                                    </ol>
+                                </div>
+
+                                {/* Direct Payment Button */}
+                                {mobileCheckoutUrl && (
+                                    <a
+                                        href={mobileCheckoutUrl}
+                                        className="inline-flex items-center justify-center gap-2.5 text-sm font-black text-white bg-red-600 hover:bg-red-700 active:scale-[0.98] px-6 py-4 rounded-2xl shadow-lg shadow-red-200 transition-all w-full"
+                                    >
+                                        <span>{t("payment.linkaja.btn_pay_now", "Bayar Sekarang via LinkAja")}</span>
+                                        <ExternalLink size={16} />
+                                    </a>
+                                )}
+
+                                {/* Option to change payment method */}
+                                {order.payment_status === "unpaid" && order.status === "pending" && typeof onChangeMethod === "function" && (
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={onChangeMethod}
+                                            className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition py-1"
+                                        >
+                                            <RefreshCw size={12} />
+                                            <span>{t("payment.change_method", "Pilih Metode Pembayaran Lain")}</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ShopeePay, GoPay, DANA (E-Wallets with QR) */}
+                    {!["ovo", "linkaja"].includes(order.payment_method) && (
                         <div className="flex flex-col items-center space-y-5 w-full">
                             {/* A) DESKTOP / PC MODE: Tampilkan QR Code & Petunjuk Scan HP */}
                             {!isMobile ? (
@@ -351,11 +438,9 @@ export default function PaymentCodeCard({
                                             <li>
                                                 {order.payment_method === "shopeepay"
                                                     ? t("payment.step_shopeepay", "Buka aplikasi Shopee di smartphone Anda.")
-                                                    : order.payment_method === "linkaja"
-                                                        ? t("payment.step_linkaja", "Buka aplikasi LinkAja di smartphone Anda.")
-                                                        : order.payment_method === "gopay"
-                                                            ? t("payment.step_gopay", "Buka aplikasi Gojek / GoPay di smartphone Anda.")
-                                                            : t("payment.step_dana", "Buka aplikasi DANA di smartphone Anda.")}
+                                                    : order.payment_method === "gopay"
+                                                        ? t("payment.step_gopay", "Buka aplikasi Gojek / GoPay di smartphone Anda.")
+                                                        : t("payment.step_dana", "Buka aplikasi DANA di smartphone Anda.")}
                                             </li>
                                             <li>
                                                 {t("payment.step_scan", "Pilih menu Scan / Pindai QR di aplikasi.")}
@@ -367,10 +452,10 @@ export default function PaymentCodeCard({
                                     </div>
 
                                     {/* Fallback Link for Web Checkout */}
-                                    {details.deeplink && (
+                                    {mobileCheckoutUrl && (
                                         <div className="pt-1">
                                             <a
-                                                href={details.deeplink}
+                                                href={mobileCheckoutUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-950 transition underline"
@@ -382,23 +467,22 @@ export default function PaymentCodeCard({
                                     )}
                                 </div>
                             ) : (
-                                /* B) MOBILE / HP MODE: Tampilkan Tombol 'Buka Aplikasi' Utama */
-                                <div className="flex flex-col items-center space-y-5 w-full">
-                                    {details.deeplink && (
+                                /* B) MOBILE / HP MODE: Deeplink */
+                                <div className="flex flex-col items-center space-y-4 w-full">
+                                    {/* Main Payment / Deeplink Button */}
+                                    {mobileCheckoutUrl && (
                                         <a
-                                            href={details.deeplink}
+                                            href={mobileCheckoutUrl}
                                             className="inline-flex items-center justify-center gap-2 text-sm font-black text-white bg-blue-950 px-6 py-4 rounded-2xl shadow-md hover:bg-blue-900 transition active:scale-[0.98] w-full max-w-sm"
                                         >
                                             <span>
-                                                {order.payment_method === "linkaja"
-                                                    ? t("payment.wallet.open_linkaja", "Buka Aplikasi LinkAja")
-                                                    : order.payment_method === "dana"
-                                                        ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
-                                                        : order.payment_method === "gopay"
-                                                            ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
-                                                            : order.payment_method === "shopeepay"
-                                                                ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
-                                                                : t("payment.wallet.open_generic", "Buka Aplikasi E-Wallet")}
+                                                {order.payment_method === "dana"
+                                                    ? t("payment.wallet.open_dana", "Buka Aplikasi DANA")
+                                                    : order.payment_method === "gopay"
+                                                        ? t("payment.wallet.open_gopay", "Buka Aplikasi GoPay / Gojek")
+                                                        : order.payment_method === "shopeepay"
+                                                            ? t("payment.wallet.open_shopeepay", "Buka Aplikasi Shopee")
+                                                            : t("payment.wallet.open_generic", "Buka Pembayaran E-Wallet")}
                                             </span>
                                             <ExternalLink size={16} />
                                         </a>

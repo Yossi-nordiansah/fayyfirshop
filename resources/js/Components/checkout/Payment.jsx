@@ -45,6 +45,8 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             ? details.qr_url
             : `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(derivedQrString)}`
         : null;
+    // For mobile deeplink: prefer native deeplink, fallback to qr_url (Xendit returns qr_url for LinkAja)
+    const mobileCheckoutUrl = details.deeplink || details.qr_url || null;
 
     /* ── Helpers ── */
     const formatPrice = (value) => {
@@ -322,6 +324,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                             order={order}
                             details={details}
                             qrCodeUrl={qrCodeUrl}
+                            mobileCheckoutUrl={mobileCheckoutUrl}
                             cardForm={cardForm}
                             setCardForm={setCardForm}
                             isPayingCard={isPayingCard}
@@ -334,6 +337,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                             isProduction={isProduction}
                             isSimulating={isSimulating}
                             handleSimulatePayment={handleSimulatePayment}
+                            onChangeMethod={() => setIsChangingMethod(true)}
                             t={t}
                         />
                     </div>

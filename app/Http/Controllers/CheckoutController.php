@@ -2098,18 +2098,46 @@ class CheckoutController extends Controller
                 $details['ovo_phone'] = $cleanPhone ?? $phone;
             }
 
-            if (isset($resData['actions']) && is_array($resData['actions'])) {
-                foreach ($resData['actions'] as $action) {
-                    $actionType = $action['action'] ?? '';
-                    $urlType = $action['url_type'] ?? '';
-                    $url = $action['url'] ?? null;
+            // Log response untuk debugging deeplink issues
+            Log::info('Xendit E-Wallet Response', [
+                'method'  => $paymentMethod,
+                'actions' => $resData['actions'] ?? null,
+                'status'  => $resData['status'] ?? null,
+            ]);
 
-                    if (in_array($actionType, ['DEEPLINK', 'MOBILE_DEEPLINK']) || in_array($urlType, ['DEEPLINK', 'MOBILE_DEEPLINK'])) {
-                        $details['deeplink'] = $url;
-                    } elseif (in_array($actionType, ['AUTH_REDIRECT', 'DESKTOP_WEB_CHECKOUT', 'MOBILE_WEB_CHECKOUT', 'PRESENT_TO_CUSTOMER']) || in_array($urlType, ['WEB', 'DESKTOP_WEB', 'MOBILE_WEB'])) {
-                        $details['qr_url'] = $url;
-                    } elseif ($actionType === 'QR_CODE' || $urlType === 'QR_CODE') {
-                        $details['qr_string'] = $action['qr_code'] ?? $url;
+            if (isset($resData['actions'])) {
+                $actions = $resData['actions'];
+
+                // Xendit Payment Requests API v3 returns `actions` as a keyed object:
+                // { mobile_deeplink_checkout_url, mobile_web_checkout_url, desktop_web_checkout_url, qr_checkout_string }
+                if (is_array($actions) && !isset($actions[0])) {
+                    // Associative / keyed object format (API v3)
+                    if (!empty($actions['mobile_deeplink_checkout_url'])) {
+                        $details['deeplink'] = $actions['mobile_deeplink_checkout_url'];
+                    }
+                    if (!empty($actions['mobile_web_checkout_url'])) {
+                        $details['qr_url'] = $actions['mobile_web_checkout_url'];
+                    } elseif (!empty($actions['desktop_web_checkout_url'])) {
+                        $details['qr_url'] = $actions['desktop_web_checkout_url'];
+                    }
+                    if (!empty($actions['qr_checkout_string'])) {
+                        $details['qr_string'] = $actions['qr_checkout_string'];
+                    }
+                } else {
+                    // Legacy array-of-objects format
+                    foreach ($actions as $action) {
+                        if (!is_array($action)) continue;
+                        $actionType = $action['action'] ?? '';
+                        $urlType    = $action['url_type'] ?? '';
+                        $url        = $action['url'] ?? null;
+
+                        if (in_array($actionType, ['DEEPLINK', 'MOBILE_DEEPLINK']) || in_array($urlType, ['DEEPLINK', 'MOBILE_DEEPLINK'])) {
+                            $details['deeplink'] = $url;
+                        } elseif (in_array($actionType, ['AUTH_REDIRECT', 'DESKTOP_WEB_CHECKOUT', 'MOBILE_WEB_CHECKOUT', 'PRESENT_TO_CUSTOMER']) || in_array($urlType, ['WEB', 'DESKTOP_WEB', 'MOBILE_WEB'])) {
+                            $details['qr_url'] = $url;
+                        } elseif ($actionType === 'QR_CODE' || $urlType === 'QR_CODE') {
+                            $details['qr_string'] = $action['qr_code'] ?? $url;
+                        }
                     }
                 }
             }
