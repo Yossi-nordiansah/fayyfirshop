@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 
-export default function FeaturedProductTab({ featuredProducts = [] }) {
+export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
     const { t, locale } = useLanguage();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
@@ -51,7 +51,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
     const [iconSearchText, setIconSearchText] = useState('');
 
     // Single item from database (or empty)
-    const featuredItem = featuredProducts && featuredProducts.length > 0 ? featuredProducts[0] : null;
+    const featuredItem = featuredProduct2 && featuredProduct2.length > 0 ? featuredProduct2[0] : null;
 
     // Comprehensive list of 50+ icons
     const iconList = [
@@ -239,7 +239,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (editingItem) {
-            post(`/backoffice/content/featured-product/${editingItem.id}`, {
+            post(`/backoffice/content/featured-product-2/${editingItem.id}`, {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
@@ -249,7 +249,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
     };
 
     const handleToggleActive = (id) => {
-        router.patch(`/backoffice/content/featured-product/${id}/toggle-active`, {}, {
+        router.patch(`/backoffice/content/featured-product-2/${id}/toggle-active`, {}, {
             preserveScroll: true,
         });
     };
@@ -273,10 +273,10 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                     <h2 className="text-lg font-bold text-slate-800">
-                        {t('backoffice.promo3.title', 'Promo Section 3 (Posisi Bawah - Di Bawah Produk Terlaris)')}
+                        {t('backoffice.promo1.title', 'Promo Section 1 (Posisi Atas - Di Bawah Kategori)')}
                     </h2>
                     <p className="text-xs text-slate-500">
-                        {t('backoffice.promo3.subtitle', 'Kelola banner Promo Section 3 yang tampil di bawah daftar produk terlaris.')}
+                        {t('backoffice.promo1.subtitle', 'Kelola banner Promo Section 1 yang tampil di bawah kategori pilihan (tata letak konten teks di sebelah kanan).')}
                     </p>
                 </div>
             </div>
@@ -284,7 +284,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
             {/* Display Single Featured Product Card */}
             {!featuredItem ? (
                 <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">
-                    {t('backoffice.featured.loading', 'Memuat data Featured Product...')}
+                    {t('backoffice.featured2.loading', 'Memuat data Featured Product 2...')}
                 </div>
             ) : (
                 <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
@@ -312,7 +312,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                 }`}
                             >
                                 {featuredItem.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                <span>{featuredItem.is_active ? t('backoffice.featured.status_active', 'Tampil di Beranda (Aktif)') : t('backoffice.featured.status_inactive', 'Sembunyikan dari Beranda (Non-Aktif)')}</span>
+                                <span>{featuredItem.is_active ? t('backoffice.featured2.status_active', 'Tampil di Beranda (Aktif)') : t('backoffice.featured2.status_inactive', 'Sembunyikan dari Beranda (Non-Aktif)')}</span>
                             </button>
 
                             <button
@@ -321,7 +321,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                 className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
                             >
                                 <Edit2 className="w-3.5 h-3.5" />
-                                <span>{t('backoffice.promo3.edit_btn', 'Edit Konten Promo Section 3')}</span>
+                                <span>{t('backoffice.promo1.edit_btn', 'Edit Konten Promo Section 1')}</span>
                             </button>
                         </div>
                     </div>
@@ -330,7 +330,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left: Background Preview */}
                         <div className="space-y-1">
-                            <span className="block text-xs font-bold text-slate-500">{t('backoffice.featured.bg_label', 'Gambar Background Section')}</span>
+                            <span className="block text-xs font-bold text-slate-500">{t('backoffice.featured2.bg_label', 'Gambar Background Section (Featured Product 2)')}</span>
                             <div className="w-full h-40 bg-slate-900 rounded-xl overflow-hidden border border-slate-200 relative shadow-inner">
                                 {featuredItem.background_image ? (
                                     <img
@@ -419,7 +419,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
                             <h3 className="font-bold text-base flex items-center gap-2">
                                 <Star className="w-4 h-4 text-amber-400" />
-                                {t('backoffice.modal.edit_promo3_title', 'Edit Promo Section 3 (3 Bahasa & Pop-Up Icon)')}
+                                {t('backoffice.modal.edit_promo1_title', 'Edit Promo Section 1 (3 Bahasa & Pop-Up Icon)')}
                             </h3>
                             <button
                                 type="button"
@@ -510,7 +510,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                                         type="text"
                                                         value={data.badge_id}
                                                         onChange={(e) => setData('badge_id', e.target.value)}
-                                                        placeholder={t('backoffice.featured.badge_id_placeholder', 'Contoh: Special Premium Product')}
+                                                        placeholder={t('backoffice.featured.badge_id_placeholder', 'Contoh: Koleksi Eksklusif Pilihan')}
                                                         className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500"
                                                     />
                                                 </div>
@@ -964,7 +964,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="color"
-                                                value={data.button_color || '#f59e0b'}
+                                                value={data.button_color || '#3b82f6'}
                                                 onChange={(e) => setData('button_color', e.target.value)}
                                                 className="w-8 h-8 rounded-md border border-slate-300 cursor-pointer p-0.5 bg-white shrink-0"
                                             />
@@ -996,7 +996,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="color"
-                                                value={data.button_text_color || '#1e1b4b'}
+                                                value={data.button_text_color || '#ffffff'}
                                                 onChange={(e) => setData('button_text_color', e.target.value)}
                                                 className="w-8 h-8 rounded-md border border-slate-300 cursor-pointer p-0.5 bg-white shrink-0"
                                             />
@@ -1083,7 +1083,7 @@ export default function FeaturedProductTab({ featuredProducts = [] }) {
                                     disabled={processing}
                                     className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
                                 >
-                                    {processing ? t('backoffice.common.saving', 'Menyimpan...') : t('backoffice.promo3.save_btn', 'Simpan Promo Section 3')}
+                                    {processing ? t('backoffice.common.saving', 'Menyimpan...') : t('backoffice.promo1.save_btn', 'Simpan Promo Section 1')}
                                 </button>
                             </div>
                         </form>

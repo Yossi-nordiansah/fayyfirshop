@@ -214,7 +214,7 @@ class CheckoutController extends Controller
                 ])->post('https://api.biteship.com/v1/rates/couriers', [
                     'origin_area_id' => $originBranch->area_id ?: 'IDNP6IDNC148IDND843IDZ12270', // fallback to Pesanggrahan if empty
                     'destination_area_id' => $destinationAreaId,
-                    'couriers' => 'jne,jnt,sicepat,tiki,pos,anteraja,ninja,gojek,grab,wahana',
+                    'couriers' => 'jne,jnt,sicepat,tiki,pos,anteraja,gojek,grab,wahana',
                     'items' => $biteshipItems
                 ]);
 
@@ -223,8 +223,13 @@ class CheckoutController extends Controller
                     if (isset($data['pricing']) && is_array($data['pricing'])) {
                         $rates = [];
                         foreach ($data['pricing'] as $pricing) {
+                            $courierName = strtoupper($pricing['courier_name'] ?? $pricing['courier_company'] ?? $pricing['company'] ?? 'UNKNOWN');
+                            // Exclude Ninja Express
+                            if (str_contains($courierName, 'NINJA')) {
+                                continue;
+                            }
                             $rates[] = [
-                                'courier_name' => strtoupper($pricing['courier_name'] ?? $pricing['courier_company'] ?? $pricing['company'] ?? 'UNKNOWN'),
+                                'courier_name' => $courierName,
                                 'courier_service_name' => strtoupper($pricing['courier_service_name'] ?? $pricing['courier_service'] ?? $pricing['courier_service_code'] ?? 'STANDARD'),
                                 'price' => $pricing['price'] ?? $pricing['shipping_fee'] ?? 0,
                                 'duration' => $pricing['duration'] ?? '2-3 days',

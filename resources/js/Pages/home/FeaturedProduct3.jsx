@@ -66,14 +66,14 @@ const ICON_MAP = {
     Coffee, Flame, Info, Sparkle
 };
 
-export default function FeaturedProduct({ featuredProducts = [] }) {
+export default function FeaturedProduct3({ featuredProduct3 = [] }) {
     const { t, locale } = useLanguage();
 
-    if (!featuredProducts || featuredProducts.length === 0) {
+    if (!featuredProduct3 || featuredProduct3.length === 0) {
         return null;
     }
 
-    const activeItem = featuredProducts[0];
+    const activeItem = featuredProduct3[0];
 
     const getTranslatedText = (transObj, directVal) => {
         if (typeof transObj === 'object' && transObj !== null) {
@@ -93,15 +93,15 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
 
     const bgImage = activeItem?.background_image || '/images/featured-product/bg-featured-product.png';
 
-    // Feature 1 Icon
-    const f1IconName = activeItem?.feature_1_icon || 'ShieldCheck';
-    const Feature1IconComp = ICON_MAP[f1IconName] || ShieldCheck;
+    // Feature 1
+    const f1IconName = activeItem?.feature_1_icon || 'Flame';
+    const Feature1IconComp = ICON_MAP[f1IconName] || Flame;
     const f1TitleText = activeItem ? getTranslatedText(activeItem.feature_1_title_translations, activeItem.feature_1_title) : '';
     const f1DescText = activeItem ? getTranslatedText(activeItem.feature_1_desc_translations, activeItem.feature_1_desc) : '';
 
-    // Feature 2 Icon
-    const f2IconName = activeItem?.feature_2_icon || 'Award';
-    const Feature2IconComp = ICON_MAP[f2IconName] || Award;
+    // Feature 2
+    const f2IconName = activeItem?.feature_2_icon || 'Leaf';
+    const Feature2IconComp = ICON_MAP[f2IconName] || Leaf;
     const f2TitleText = activeItem ? getTranslatedText(activeItem.feature_2_title_translations, activeItem.feature_2_title) : '';
     const f2DescText = activeItem ? getTranslatedText(activeItem.feature_2_desc_translations, activeItem.feature_2_desc) : '';
 
@@ -112,7 +112,7 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
     // Button
     const btnText = activeItem ? getTranslatedText(activeItem.button_text_translations, activeItem.button_text) : '';
 
-    const rawButtonUrl = activeItem?.button_url || '/products/kesehatan-dan-nutrisi';
+    const rawButtonUrl = activeItem?.button_url || '/products/mabkhara';
     const targetUrl = rawButtonUrl.startsWith('http://') || rawButtonUrl.startsWith('https://') || rawButtonUrl.startsWith('/')
         ? rawButtonUrl
         : `/products/${rawButtonUrl}`;
@@ -136,21 +136,19 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
     };
 
     return (
-        <section className="relative w-full min-h-[80vh] md:max-h-[80vh] flex items-center justify-start overflow-hidden bg-amber-950/20">
+        <section className="relative w-full min-h-[80vh] md:max-h-[80vh] flex items-center overflow-hidden bg-emerald-950/20">
             {/* Background Image */}
             <div
                 className="absolute inset-0 bg-cover bg-[right_-170px_center] md:bg-[position:85%_center] lg:bg-[position:center_center] bg-no-repeat"
-                style={{
-                    backgroundImage: `url('${bgImage}')`,
-                }}
+                style={{ backgroundImage: `url('${bgImage}')` }}
             />
-            {/* Premium Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent md:bg-gradient-to-r" />
+            {/* Overlay — gelap dari KIRI */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
             <div className="absolute inset-0 bg-black/30 md:hidden" />
 
             {/* Content Container */}
             <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                {/* Teks & Deskripsi Kiri */}
+                {/* Konten di KIRI */}
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
@@ -158,27 +156,27 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                     viewport={{ once: true, margin: "-100px" }}
                     className="flex flex-col space-y-6 text-white max-w-xl"
                 >
-                    {/* Badge Atas (Opsional) */}
+                    {/* Badge (Opsional) */}
                     {badgeText && (
                         <motion.div
                             variants={itemVariants}
-                            className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-500/40 backdrop-blur-md px-3 py-1 rounded-full w-fit"
+                            className="inline-flex items-center space-x-2 bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md px-3 py-1 rounded-full w-fit"
                         >
-                            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span className="text-xs font-semibold tracking-wider uppercase text-amber-300">
+                            <Sparkles className="w-4 h-4 text-emerald-300 shrink-0" />
+                            <span className="text-xs font-semibold tracking-wider uppercase text-emerald-200">
                                 {badgeText}
                             </span>
                         </motion.div>
                     )}
 
-                    {/* Judul & Caption (Opsional) */}
+                    {/* Judul & Deskripsi (Opsional) */}
                     {(titleText || descText) && (
                         <div className="space-y-3">
                             {titleText && (
                                 <motion.h2
                                     variants={itemVariants}
                                     style={activeItem?.text_color ? { color: activeItem.text_color, WebkitTextFillColor: activeItem.text_color, backgroundImage: 'none' } : undefined}
-                                    className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200"
+                                    className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 via-teal-300 to-emerald-200"
                                 >
                                     {titleText}
                                 </motion.h2>
@@ -203,12 +201,12 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                             {/* Keunggulan 1 */}
                             {hasFeature1 && (
                                 <div className="flex items-start space-x-3">
-                                    <div className="p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
+                                    <div className="p-2 bg-emerald-950/40 border border-emerald-400/30 rounded-lg text-emerald-300 backdrop-blur-sm shrink-0">
                                         <Feature1IconComp className="w-5 h-5" />
                                     </div>
                                     <div>
                                         {f1TitleText && (
-                                            <h4 className="text-sm font-semibold text-amber-200">
+                                            <h4 className="text-sm font-semibold text-emerald-100">
                                                 {f1TitleText}
                                             </h4>
                                         )}
@@ -224,12 +222,12 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                             {/* Keunggulan 2 */}
                             {hasFeature2 && (
                                 <div className="flex items-start space-x-3">
-                                    <div className="p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
+                                    <div className="p-2 bg-emerald-950/40 border border-emerald-400/30 rounded-lg text-emerald-300 backdrop-blur-sm shrink-0">
                                         <Feature2IconComp className="w-5 h-5" />
                                     </div>
                                     <div>
                                         {f2TitleText && (
-                                            <h4 className="text-sm font-semibold text-amber-200">
+                                            <h4 className="text-sm font-semibold text-emerald-100">
                                                 {f2TitleText}
                                             </h4>
                                         )}
@@ -244,7 +242,7 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                         </motion.div>
                     )}
 
-                    {/* Tombol Buy Now / CTA (Opsional) */}
+                    {/* Tombol CTA (Opsional) */}
                     {btnText && (
                         <motion.div variants={itemVariants} className="pt-4">
                             {isFullExternal ? (
@@ -255,19 +253,13 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                                         ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
                                     }}
                                     className={`group relative inline-flex items-center justify-center px-8 py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${
-                                        activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
+                                        activeItem?.button_color ? '' : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500'
                                     } ${
-                                        activeItem?.button_text_color ? '' : 'text-blue-950'
-                                    } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
+                                        activeItem?.button_text_color ? '' : 'text-white'
+                                    } rounded-xl shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.55)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
                                 >
-                                    <span
-                                        className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
-                                        style={{ animationDuration: "1.5s" }}
-                                    />
                                     <ShoppingBag className="w-5 h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
-                                    <span className="font-bold text-sm md:text-base">
-                                        {btnText}
-                                    </span>
+                                    <span className="font-bold text-sm md:text-base">{btnText}</span>
                                 </a>
                             ) : (
                                 <Link
@@ -277,26 +269,20 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                                         ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
                                     }}
                                     className={`group relative inline-flex items-center justify-center px-8 py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${
-                                        activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
+                                        activeItem?.button_color ? '' : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500'
                                     } ${
-                                        activeItem?.button_text_color ? '' : 'text-blue-950'
-                                    } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
+                                        activeItem?.button_text_color ? '' : 'text-white'
+                                    } rounded-xl shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_4px_25px_rgba(16,185,129,0.55)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
                                 >
-                                    <span
-                                        className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
-                                        style={{ animationDuration: "1.5s" }}
-                                    />
                                     <ShoppingBag className="w-5 h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
-                                    <span className="font-bold text-sm md:text-base">
-                                        {btnText}
-                                    </span>
+                                    <span className="font-bold text-sm md:text-base">{btnText}</span>
                                 </Link>
                             )}
                         </motion.div>
                     )}
                 </motion.div>
 
-                {/* Kolom Kanan dikosongkan secara strategis agar botol madu di background kanan tidak tertutup teks */}
+                {/* Kolom kanan — area gambar produk dari background */}
                 <div className="hidden md:block" />
             </div>
         </section>

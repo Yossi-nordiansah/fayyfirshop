@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\HeroSlide;
 use App\Models\HomeCategoryCard;
 use App\Models\FeaturedProductItem;
+use App\Models\FeaturedProduct2Item;
+use App\Models\FeaturedProduct3Item;
 use App\Models\UspItem;
 use App\Models\AboutUsSetting;
 use Illuminate\Http\Request;
@@ -22,6 +24,8 @@ class ContentController extends Controller
         $heroSlides = [];
         $homeCategoryCards = [];
         $featuredProducts = [];
+        $featuredProduct2 = [];
+        $featuredProduct3 = [];
         $uspItems = [];
         $aboutUsSettings = [];
 
@@ -53,6 +57,20 @@ class ContentController extends Controller
                 $featuredProducts = FeaturedProductItem::orderBy('sort_order', 'asc')->get();
             }
 
+            if (Schema::hasTable('featured_products2')) {
+                if (FeaturedProduct2Item::count() === 0) {
+                    $this->seedDefaultFeaturedProduct2();
+                }
+                $featuredProduct2 = FeaturedProduct2Item::orderBy('sort_order', 'asc')->get();
+            }
+
+            if (Schema::hasTable('featured_products3')) {
+                if (FeaturedProduct3Item::count() === 0) {
+                    $this->seedDefaultFeaturedProduct3();
+                }
+                $featuredProduct3 = FeaturedProduct3Item::orderBy('sort_order', 'asc')->get();
+            }
+
             if (Schema::hasTable('usp_items')) {
                 if (UspItem::count() === 0) {
                     $this->seedDefaultUspItems();
@@ -74,6 +92,8 @@ class ContentController extends Controller
             'heroSlides' => $heroSlides,
             'homeCategoryCards' => $homeCategoryCards,
             'featuredProducts' => $featuredProducts,
+            'featuredProduct2' => $featuredProduct2,
+            'featuredProduct3' => $featuredProduct3,
             'uspItems' => $uspItems,
             'aboutUsSettings' => $aboutUsSettings,
             'status' => session('status'),
@@ -460,7 +480,7 @@ class ContentController extends Controller
     public function storeFeaturedProduct(Request $request)
     {
         $request->validate([
-            'title_id' => 'required|string|max:255',
+            'title_id' => 'nullable|string|max:255',
             'title_en' => 'nullable|string|max:255',
             'title_ar' => 'nullable|string|max:255',
             'badge_id' => 'nullable|string|max:255',
@@ -487,6 +507,9 @@ class ContentController extends Controller
             'button_text_en' => 'nullable|string|max:255',
             'button_text_ar' => 'nullable|string|max:255',
             'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
             'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
             'background_image_url' => 'nullable|string',
             'sort_order' => 'nullable|integer',
@@ -532,6 +555,9 @@ class ContentController extends Controller
             'button_text' => $request->button_text_id,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
             'sort_order' => $request->sort_order ?? 0,
             'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : true,
         ]);
@@ -550,7 +576,7 @@ class ContentController extends Controller
         $item = FeaturedProductItem::findOrFail($id);
 
         $request->validate([
-            'title_id' => 'required|string|max:255',
+            'title_id' => 'nullable|string|max:255',
             'title_en' => 'nullable|string|max:255',
             'title_ar' => 'nullable|string|max:255',
             'badge_id' => 'nullable|string|max:255',
@@ -577,6 +603,9 @@ class ContentController extends Controller
             'button_text_en' => 'nullable|string|max:255',
             'button_text_ar' => 'nullable|string|max:255',
             'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
             'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
             'background_image_url' => 'nullable|string',
             'sort_order' => 'nullable|integer',
@@ -630,6 +659,9 @@ class ContentController extends Controller
             'button_text' => $request->button_text_id,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
             'sort_order' => $request->sort_order ?? $item->sort_order,
             'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : $item->is_active,
         ]);
@@ -814,6 +846,470 @@ class ContentController extends Controller
 
         return redirect()->back()->with([
             'status' => 'Status kartu USP berhasil diubah.',
+            'statusAction' => 'toggled',
+        ]);
+    }
+
+    /**
+     * Store a new Featured Product 2 with 3 languages.
+     */
+    public function storeFeaturedProduct2(Request $request)
+    {
+        $request->validate([
+            'title_id' => 'nullable|string|max:255',
+            'title_en' => 'nullable|string|max:255',
+            'title_ar' => 'nullable|string|max:255',
+            'badge_id' => 'nullable|string|max:255',
+            'badge_en' => 'nullable|string|max:255',
+            'badge_ar' => 'nullable|string|max:255',
+            'description_id' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
+            'feature_1_icon' => 'nullable|string|max:100',
+            'feature_1_title_id' => 'nullable|string|max:255',
+            'feature_1_title_en' => 'nullable|string|max:255',
+            'feature_1_title_ar' => 'nullable|string|max:255',
+            'feature_1_desc_id' => 'nullable|string',
+            'feature_1_desc_en' => 'nullable|string',
+            'feature_1_desc_ar' => 'nullable|string',
+            'feature_2_icon' => 'nullable|string|max:100',
+            'feature_2_title_id' => 'nullable|string|max:255',
+            'feature_2_title_en' => 'nullable|string|max:255',
+            'feature_2_title_ar' => 'nullable|string|max:255',
+            'feature_2_desc_id' => 'nullable|string',
+            'feature_2_desc_en' => 'nullable|string',
+            'feature_2_desc_ar' => 'nullable|string',
+            'button_text_id' => 'nullable|string|max:255',
+            'button_text_en' => 'nullable|string|max:255',
+            'button_text_ar' => 'nullable|string|max:255',
+            'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
+            'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'background_image_url' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
+        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
+        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+
+        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
+        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+
+        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
+        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+
+        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+
+        $backgroundImagePath = $request->background_image_url;
+        if ($request->hasFile('background_image_file')) {
+            $path = $request->file('background_image_file')->store('featured2', 'public');
+            $backgroundImagePath = '/storage/' . $path;
+        }
+
+        FeaturedProduct2Item::create([
+            'title' => $request->title_id,
+            'title_translations' => $titleTranslations,
+            'badge' => $request->badge_id,
+            'badge_translations' => $badgeTranslations,
+            'description' => $request->description_id,
+            'description_translations' => $descTranslations,
+            'background_image' => $backgroundImagePath,
+            'feature_1_icon' => $request->feature_1_icon ?: 'Gem',
+            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title_translations' => $f1TitleTranslations,
+            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc_translations' => $f1DescTranslations,
+            'feature_2_icon' => $request->feature_2_icon ?: 'Crown',
+            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title_translations' => $f2TitleTranslations,
+            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc_translations' => $f2DescTranslations,
+            'button_text' => $request->button_text_id,
+            'button_text_translations' => $btnTextTranslations,
+            'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
+            'sort_order' => $request->sort_order ?? 0,
+            'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : true,
+        ]);
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 2 berhasil ditambahkan.',
+            'statusAction' => 'created',
+        ]);
+    }
+
+    /**
+     * Update an existing Featured Product 2.
+     */
+    public function updateFeaturedProduct2(Request $request, $id)
+    {
+        $item = FeaturedProduct2Item::findOrFail($id);
+
+        $request->validate([
+            'title_id' => 'nullable|string|max:255',
+            'title_en' => 'nullable|string|max:255',
+            'title_ar' => 'nullable|string|max:255',
+            'badge_id' => 'nullable|string|max:255',
+            'badge_en' => 'nullable|string|max:255',
+            'badge_ar' => 'nullable|string|max:255',
+            'description_id' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
+            'feature_1_icon' => 'nullable|string|max:100',
+            'feature_1_title_id' => 'nullable|string|max:255',
+            'feature_1_title_en' => 'nullable|string|max:255',
+            'feature_1_title_ar' => 'nullable|string|max:255',
+            'feature_1_desc_id' => 'nullable|string',
+            'feature_1_desc_en' => 'nullable|string',
+            'feature_1_desc_ar' => 'nullable|string',
+            'feature_2_icon' => 'nullable|string|max:100',
+            'feature_2_title_id' => 'nullable|string|max:255',
+            'feature_2_title_en' => 'nullable|string|max:255',
+            'feature_2_title_ar' => 'nullable|string|max:255',
+            'feature_2_desc_id' => 'nullable|string',
+            'feature_2_desc_en' => 'nullable|string',
+            'feature_2_desc_ar' => 'nullable|string',
+            'button_text_id' => 'nullable|string|max:255',
+            'button_text_en' => 'nullable|string|max:255',
+            'button_text_ar' => 'nullable|string|max:255',
+            'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
+            'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'background_image_url' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
+        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
+        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+
+        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
+        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+
+        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
+        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+
+        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+
+        $backgroundImagePath = $item->background_image;
+        if ($request->hasFile('background_image_file')) {
+            if ($item->background_image && str_starts_with($item->background_image, '/storage/')) {
+                $storagePath = str_replace('/storage/', '', $item->background_image);
+                if (Storage::disk('public')->exists($storagePath)) {
+                    Storage::disk('public')->delete($storagePath);
+                }
+            }
+            $path = $request->file('background_image_file')->store('featured2', 'public');
+            $backgroundImagePath = '/storage/' . $path;
+        } elseif ($request->filled('background_image_url')) {
+            $backgroundImagePath = $request->background_image_url;
+        }
+
+        $item->update([
+            'title' => $request->title_id,
+            'title_translations' => $titleTranslations,
+            'badge' => $request->badge_id,
+            'badge_translations' => $badgeTranslations,
+            'description' => $request->description_id,
+            'description_translations' => $descTranslations,
+            'background_image' => $backgroundImagePath,
+            'feature_1_icon' => $request->feature_1_icon ?: $item->feature_1_icon,
+            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title_translations' => $f1TitleTranslations,
+            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc_translations' => $f1DescTranslations,
+            'feature_2_icon' => $request->feature_2_icon ?: $item->feature_2_icon,
+            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title_translations' => $f2TitleTranslations,
+            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc_translations' => $f2DescTranslations,
+            'button_text' => $request->button_text_id,
+            'button_text_translations' => $btnTextTranslations,
+            'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
+            'sort_order' => $request->sort_order ?? $item->sort_order,
+            'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : $item->is_active,
+        ]);
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 2 berhasil diperbarui.',
+            'statusAction' => 'updated',
+        ]);
+    }
+
+    /**
+     * Delete a Featured Product 2.
+     */
+    public function destroyFeaturedProduct2($id)
+    {
+        $item = FeaturedProduct2Item::findOrFail($id);
+
+        if ($item->background_image && str_starts_with($item->background_image, '/storage/')) {
+            $storagePath = str_replace('/storage/', '', $item->background_image);
+            if (Storage::disk('public')->exists($storagePath)) {
+                Storage::disk('public')->delete($storagePath);
+            }
+        }
+
+        $item->delete();
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 2 berhasil dihapus.',
+            'statusAction' => 'deleted',
+        ]);
+    }
+
+    /**
+     * Toggle status active of a Featured Product 2.
+     */
+    public function toggleFeaturedProduct2Active($id)
+    {
+        $item = FeaturedProduct2Item::findOrFail($id);
+        $item->is_active = !$item->is_active;
+        $item->save();
+
+        return redirect()->back()->with([
+            'status' => 'Status Featured Product 2 berhasil diubah.',
+            'statusAction' => 'toggled',
+        ]);
+    }
+
+    /**
+     * Store a new Featured Product 3 with 3 languages.
+     */
+    public function storeFeaturedProduct3(Request $request)
+    {
+        $request->validate([
+            'title_id' => 'nullable|string|max:255',
+            'title_en' => 'nullable|string|max:255',
+            'title_ar' => 'nullable|string|max:255',
+            'badge_id' => 'nullable|string|max:255',
+            'badge_en' => 'nullable|string|max:255',
+            'badge_ar' => 'nullable|string|max:255',
+            'description_id' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
+            'feature_1_icon' => 'nullable|string|max:100',
+            'feature_1_title_id' => 'nullable|string|max:255',
+            'feature_1_title_en' => 'nullable|string|max:255',
+            'feature_1_title_ar' => 'nullable|string|max:255',
+            'feature_1_desc_id' => 'nullable|string',
+            'feature_1_desc_en' => 'nullable|string',
+            'feature_1_desc_ar' => 'nullable|string',
+            'feature_2_icon' => 'nullable|string|max:100',
+            'feature_2_title_id' => 'nullable|string|max:255',
+            'feature_2_title_en' => 'nullable|string|max:255',
+            'feature_2_title_ar' => 'nullable|string|max:255',
+            'feature_2_desc_id' => 'nullable|string',
+            'feature_2_desc_en' => 'nullable|string',
+            'feature_2_desc_ar' => 'nullable|string',
+            'button_text_id' => 'nullable|string|max:255',
+            'button_text_en' => 'nullable|string|max:255',
+            'button_text_ar' => 'nullable|string|max:255',
+            'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
+            'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'background_image_url' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
+        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
+        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
+        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
+        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+
+        $backgroundImagePath = $request->background_image_url;
+        if ($request->hasFile('background_image_file')) {
+            $path = $request->file('background_image_file')->store('featured3', 'public');
+            $backgroundImagePath = '/storage/' . $path;
+        }
+
+        FeaturedProduct3Item::create([
+            'title' => $request->title_id,
+            'title_translations' => $titleTranslations,
+            'badge' => $request->badge_id,
+            'badge_translations' => $badgeTranslations,
+            'description' => $request->description_id,
+            'description_translations' => $descTranslations,
+            'background_image' => $backgroundImagePath,
+            'feature_1_icon' => $request->feature_1_icon ?: 'Flame',
+            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title_translations' => $f1TitleTranslations,
+            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc_translations' => $f1DescTranslations,
+            'feature_2_icon' => $request->feature_2_icon ?: 'Leaf',
+            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title_translations' => $f2TitleTranslations,
+            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc_translations' => $f2DescTranslations,
+            'button_text' => $request->button_text_id,
+            'button_text_translations' => $btnTextTranslations,
+            'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
+            'sort_order' => $request->sort_order ?? 0,
+            'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : true,
+        ]);
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 3 berhasil ditambahkan.',
+            'statusAction' => 'created',
+        ]);
+    }
+
+    /**
+     * Update an existing Featured Product 3.
+     */
+    public function updateFeaturedProduct3(Request $request, $id)
+    {
+        $item = FeaturedProduct3Item::findOrFail($id);
+
+        $request->validate([
+            'title_id' => 'nullable|string|max:255',
+            'title_en' => 'nullable|string|max:255',
+            'title_ar' => 'nullable|string|max:255',
+            'badge_id' => 'nullable|string|max:255',
+            'badge_en' => 'nullable|string|max:255',
+            'badge_ar' => 'nullable|string|max:255',
+            'description_id' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'description_ar' => 'nullable|string',
+            'feature_1_icon' => 'nullable|string|max:100',
+            'feature_1_title_id' => 'nullable|string|max:255',
+            'feature_1_title_en' => 'nullable|string|max:255',
+            'feature_1_title_ar' => 'nullable|string|max:255',
+            'feature_1_desc_id' => 'nullable|string',
+            'feature_1_desc_en' => 'nullable|string',
+            'feature_1_desc_ar' => 'nullable|string',
+            'feature_2_icon' => 'nullable|string|max:100',
+            'feature_2_title_id' => 'nullable|string|max:255',
+            'feature_2_title_en' => 'nullable|string|max:255',
+            'feature_2_title_ar' => 'nullable|string|max:255',
+            'feature_2_desc_id' => 'nullable|string',
+            'feature_2_desc_en' => 'nullable|string',
+            'feature_2_desc_ar' => 'nullable|string',
+            'button_text_id' => 'nullable|string|max:255',
+            'button_text_en' => 'nullable|string|max:255',
+            'button_text_ar' => 'nullable|string|max:255',
+            'button_url' => 'nullable|string',
+            'text_color' => 'nullable|string|max:50',
+            'button_color' => 'nullable|string|max:50',
+            'button_text_color' => 'nullable|string|max:50',
+            'background_image_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'background_image_url' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
+        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
+        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
+        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
+        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+
+        $backgroundImagePath = $item->background_image;
+        if ($request->hasFile('background_image_file')) {
+            if ($item->background_image && str_starts_with($item->background_image, '/storage/')) {
+                $storagePath = str_replace('/storage/', '', $item->background_image);
+                if (Storage::disk('public')->exists($storagePath)) {
+                    Storage::disk('public')->delete($storagePath);
+                }
+            }
+            $path = $request->file('background_image_file')->store('featured3', 'public');
+            $backgroundImagePath = '/storage/' . $path;
+        } elseif ($request->filled('background_image_url')) {
+            $backgroundImagePath = $request->background_image_url;
+        }
+
+        $item->update([
+            'title' => $request->title_id,
+            'title_translations' => $titleTranslations,
+            'badge' => $request->badge_id,
+            'badge_translations' => $badgeTranslations,
+            'description' => $request->description_id,
+            'description_translations' => $descTranslations,
+            'background_image' => $backgroundImagePath,
+            'feature_1_icon' => $request->feature_1_icon ?: $item->feature_1_icon,
+            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title_translations' => $f1TitleTranslations,
+            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc_translations' => $f1DescTranslations,
+            'feature_2_icon' => $request->feature_2_icon ?: $item->feature_2_icon,
+            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title_translations' => $f2TitleTranslations,
+            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc_translations' => $f2DescTranslations,
+            'button_text' => $request->button_text_id,
+            'button_text_translations' => $btnTextTranslations,
+            'button_url' => $request->button_url,
+            'text_color' => $request->text_color,
+            'button_color' => $request->button_color,
+            'button_text_color' => $request->button_text_color,
+            'sort_order' => $request->sort_order ?? $item->sort_order,
+            'is_active' => $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : $item->is_active,
+        ]);
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 3 berhasil diperbarui.',
+            'statusAction' => 'updated',
+        ]);
+    }
+
+    /**
+     * Delete a Featured Product 3.
+     */
+    public function destroyFeaturedProduct3($id)
+    {
+        $item = FeaturedProduct3Item::findOrFail($id);
+
+        if ($item->background_image && str_starts_with($item->background_image, '/storage/')) {
+            $storagePath = str_replace('/storage/', '', $item->background_image);
+            if (Storage::disk('public')->exists($storagePath)) {
+                Storage::disk('public')->delete($storagePath);
+            }
+        }
+
+        $item->delete();
+
+        return redirect()->back()->with([
+            'status' => 'Featured Product 3 berhasil dihapus.',
+            'statusAction' => 'deleted',
+        ]);
+    }
+
+    /**
+     * Toggle status active of a Featured Product 3.
+     */
+    public function toggleFeaturedProduct3Active($id)
+    {
+        $item = FeaturedProduct3Item::findOrFail($id);
+        $item->is_active = !$item->is_active;
+        $item->save();
+
+        return redirect()->back()->with([
+            'status' => 'Status Featured Product 3 berhasil diubah.',
             'statusAction' => 'toggled',
         ]);
     }
@@ -1296,5 +1792,131 @@ class ContentController extends Controller
         foreach ($defaults as $item) {
             AboutUsSetting::create($item);
         }
+    }
+
+    /**
+     * Seed default Featured Product 2 banner.
+     */
+    private function seedDefaultFeaturedProduct2()
+    {
+        FeaturedProduct2Item::create([
+            'badge' => 'Koleksi Eksklusif Pilihan',
+            'badge_translations' => [
+                'id' => 'Koleksi Eksklusif Pilihan',
+                'en' => 'Exclusive Selected Collection',
+                'ar' => 'مجموعة مختارة حصرية',
+            ],
+            'title' => 'Wewangian Oud Premium',
+            'title_translations' => [
+                'id' => 'Wewangian Oud Premium',
+                'en' => 'Premium Oud Fragrance',
+                'ar' => 'عطر العود الفاخر',
+            ],
+            'description' => 'Temukan keanggunan aroma oud otentik yang dipilih dari sumber terbaik Timur Tengah. Setiap tetes menghadirkan keharuman mewah yang tahan lama dan memukau.',
+            'description_translations' => [
+                'id' => 'Temukan keanggunan aroma oud otentik yang dipilih dari sumber terbaik Timur Tengah. Setiap tetes menghadirkan keharuman mewah yang tahan lama dan memukau.',
+                'en' => 'Discover the elegance of authentic oud aroma sourced from the finest Middle Eastern origins. Every drop delivers a luxurious, long-lasting and captivating fragrance.',
+                'ar' => 'اكتشف أناقة عبق العود الأصيل المُختار من أفضل مصادر الشرق الأوسط. كل قطرة تمنحك عطرًا فاخرًا يدوم طويلاً ويسحر الحواس.',
+            ],
+            'background_image' => '/images/featured-product/bg-featured-product.png',
+            'feature_1_icon' => 'Gem',
+            'feature_1_title' => 'Aroma Tahan Lama',
+            'feature_1_title_translations' => [
+                'id' => 'Aroma Tahan Lama',
+                'en' => 'Long-Lasting Scent',
+                'ar' => 'رائحة تدوم طويلاً',
+            ],
+            'feature_1_desc' => 'Bertahan hingga 12 jam di kulit.',
+            'feature_1_desc_translations' => [
+                'id' => 'Bertahan hingga 12 jam di kulit.',
+                'en' => 'Lasts up to 12 hours on skin.',
+                'ar' => 'يدوم حتى 12 ساعة على الجلد.',
+            ],
+            'feature_2_icon' => 'Crown',
+            'feature_2_title' => 'Bahan Baku Pilihan',
+            'feature_2_title_translations' => [
+                'id' => 'Bahan Baku Pilihan',
+                'en' => 'Premium Selected Ingredients',
+                'ar' => 'مكونات مختارة بعناية',
+            ],
+            'feature_2_desc' => 'Dipilih langsung dari ladang oud terbaik.',
+            'feature_2_desc_translations' => [
+                'id' => 'Dipilih langsung dari ladang oud terbaik.',
+                'en' => 'Sourced directly from the finest oud farms.',
+                'ar' => 'مُختار مباشرة من أفضل مزارع العود.',
+            ],
+            'button_text' => 'Jelajahi Koleksi',
+            'button_text_translations' => [
+                'id' => 'Jelajahi Koleksi',
+                'en' => 'Explore Collection',
+                'ar' => 'استكشف المجموعة',
+            ],
+            'button_url' => '/products/parfum',
+            'sort_order' => 0,
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Seed default Featured Product 3 banner (between New Products and Best Sellers).
+     */
+    private function seedDefaultFeaturedProduct3()
+    {
+        FeaturedProduct3Item::create([
+            'badge' => 'Produk Terlaris Pilihan',
+            'badge_translations' => [
+                'id' => 'Produk Terlaris Pilihan',
+                'en' => 'Top Best-Seller Picks',
+                'ar' => 'أفضل المنتجات مبيعًا',
+            ],
+            'title' => 'Mabkhara & Bukhur Premium',
+            'title_translations' => [
+                'id' => 'Mabkhara & Bukhur Premium',
+                'en' => 'Premium Mabkhara & Bukhur',
+                'ar' => 'مبخرة وبخور فاخر',
+            ],
+            'description' => 'Hadirkan nuansa Timur Tengah yang autentik di rumah Anda. Rangkaian mabkhara dan bukhur kami menghadirkan keharuman yang mendalam dan penuh ketenangan.',
+            'description_translations' => [
+                'id' => 'Hadirkan nuansa Timur Tengah yang autentik di rumah Anda. Rangkaian mabkhara dan bukhur kami menghadirkan keharuman yang mendalam dan penuh ketenangan.',
+                'en' => 'Bring the authentic essence of the Middle East into your home. Our mabkhara and bukhur collection delivers deep, calming and enchanting fragrances.',
+                'ar' => 'أضف إلى منزلك أجواء الشرق الأصيلة. تمنحك مجموعة المباخر والبخور لدينا عطرًا عميقًا ومريحًا يسحر الحواس.',
+            ],
+            'background_image' => '/images/featured-product/bg-featured-product.png',
+            'feature_1_icon' => 'Flame',
+            'feature_1_title' => 'Asap Harum Autentik',
+            'feature_1_title_translations' => [
+                'id' => 'Asap Harum Autentik',
+                'en' => 'Authentic Fragrant Smoke',
+                'ar' => 'دخان عطري أصيل',
+            ],
+            'feature_1_desc' => 'Formula tradisional Timur Tengah asli.',
+            'feature_1_desc_translations' => [
+                'id' => 'Formula tradisional Timur Tengah asli.',
+                'en' => 'Authentic traditional Middle Eastern formula.',
+                'ar' => 'تركيبة تقليدية أصيلة من الشرق الأوسط.',
+            ],
+            'feature_2_icon' => 'Leaf',
+            'feature_2_title' => 'Bahan Alami 100%',
+            'feature_2_title_translations' => [
+                'id' => 'Bahan Alami 100%',
+                'en' => '100% Natural Ingredients',
+                'ar' => '100% مكونات طبيعية',
+            ],
+            'feature_2_desc' => 'Tanpa bahan kimia berbahaya.',
+            'feature_2_desc_translations' => [
+                'id' => 'Tanpa bahan kimia berbahaya.',
+                'en' => 'Free from harmful chemicals.',
+                'ar' => 'خالٍ من المواد الكيميائية الضارة.',
+            ],
+            'button_text' => 'Lihat Produk Laris',
+            'button_text_translations' => [
+                'id' => 'Lihat Produk Laris',
+                'en' => 'View Best Sellers',
+                'ar' => 'عرض الأكثر مبيعًا',
+            ],
+            'button_url' => '/products/mabkhara',
+            'sort_order' => 0,
+            'is_active' => true,
+        ]);
     }
 }

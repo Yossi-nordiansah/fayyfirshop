@@ -30,7 +30,7 @@ const BestSeller = ({ products = [] }) => {
     const useSlider = products.length > 4 || (isMobile && products.length > 1);
 
     return (
-        <section className="bg-transparent mb-12 pt-3 pb-8 px-2 overflow-hidden">
+        <section className="bg-transparent mb-12 pt-12 pb-8 px-2 overflow-hidden">
             <div className="max-w-7xl 2xl:max-w-none mx-auto">
                 {/* Section Header */}
                 <div className="flex items-center justify-center md:justify-start gap-2 mb-3 px-8">

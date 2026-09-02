@@ -66,6 +66,22 @@ Route::get('/', function () {
         $featuredProducts = \App\Models\FeaturedProductItem::where('is_active', true)->orderBy('sort_order', 'asc')->get();
     }
 
+    $featuredProduct2 = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('featured_products2')) {
+        if (\App\Models\FeaturedProduct2Item::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $featuredProduct2 = \App\Models\FeaturedProduct2Item::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
+    $featuredProduct3 = [];
+    if (\Illuminate\Support\Facades\Schema::hasTable('featured_products3')) {
+        if (\App\Models\FeaturedProduct3Item::count() === 0) {
+            app(ContentController::class)->index();
+        }
+        $featuredProduct3 = \App\Models\FeaturedProduct3Item::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+    }
+
     $uspItems = [];
     if (\Illuminate\Support\Facades\Schema::hasTable('usp_items')) {
         if (\App\Models\UspItem::count() === 0) {
@@ -85,6 +101,8 @@ Route::get('/', function () {
         'heroSlides' => $heroSlides,
         'homeCategoryCards' => $homeCategoryCards,
         'featuredProducts' => $featuredProducts,
+        'featuredProduct2' => $featuredProduct2,
+        'featuredProduct3' => $featuredProduct3,
         'uspItems' => $uspItems,
     ]);
 });
@@ -348,6 +366,16 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
     Route::post('/content/featured-product/{id}', [ContentController::class, 'updateFeaturedProduct'])->name('backoffice.content.featured-product.update');
     Route::delete('/content/featured-product/{id}', [ContentController::class, 'destroyFeaturedProduct'])->name('backoffice.content.featured-product.destroy');
     Route::patch('/content/featured-product/{id}/toggle-active', [ContentController::class, 'toggleFeaturedProductActive'])->name('backoffice.content.featured-product.toggle-active');
+
+    Route::post('/content/featured-product-2', [ContentController::class, 'storeFeaturedProduct2'])->name('backoffice.content.featured-product-2.store');
+    Route::post('/content/featured-product-2/{id}', [ContentController::class, 'updateFeaturedProduct2'])->name('backoffice.content.featured-product-2.update');
+    Route::delete('/content/featured-product-2/{id}', [ContentController::class, 'destroyFeaturedProduct2'])->name('backoffice.content.featured-product-2.destroy');
+    Route::patch('/content/featured-product-2/{id}/toggle-active', [ContentController::class, 'toggleFeaturedProduct2Active'])->name('backoffice.content.featured-product-2.toggle-active');
+
+    Route::post('/content/featured-product-3', [ContentController::class, 'storeFeaturedProduct3'])->name('backoffice.content.featured-product-3.store');
+    Route::post('/content/featured-product-3/{id}', [ContentController::class, 'updateFeaturedProduct3'])->name('backoffice.content.featured-product-3.update');
+    Route::delete('/content/featured-product-3/{id}', [ContentController::class, 'destroyFeaturedProduct3'])->name('backoffice.content.featured-product-3.destroy');
+    Route::patch('/content/featured-product-3/{id}/toggle-active', [ContentController::class, 'toggleFeaturedProduct3Active'])->name('backoffice.content.featured-product-3.toggle-active');
 
     Route::post('/content/usp', [ContentController::class, 'storeUsp'])->name('backoffice.content.usp.store');
     Route::post('/content/usp/{id}', [ContentController::class, 'updateUsp'])->name('backoffice.content.usp.update');

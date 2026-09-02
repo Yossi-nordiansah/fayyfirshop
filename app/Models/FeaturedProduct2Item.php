@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class FeaturedProductItem extends Model
+class FeaturedProduct2Item extends Model
 {
     use HasFactory;
 
-    protected $table = 'featured_products';
+    protected $table = 'featured_products2';
 
     protected $fillable = [
         'badge',

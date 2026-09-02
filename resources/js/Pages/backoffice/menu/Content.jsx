@@ -19,10 +19,12 @@ import { useLanguage } from '@/Contexts/LanguageContext';
 import HeroTab from '../components/HeroTab';
 import CategoryTab from '../components/CategoryTab';
 import FeaturedProductTab from '../components/FeaturedProductTab';
+import FeaturedProduct2Tab from '../components/FeaturedProduct2Tab';
+import FeaturedProduct3Tab from '../components/FeaturedProduct3Tab';
 import UspTab from '../components/UspTab';
 import AboutUsTab from '../components/AboutUsTab';
 
-export default function Content({ heroSlides = [], homeCategoryCards = [], featuredProducts = [], uspItems = [], aboutUsSettings = {}, status = null, errors = {} }) {
+export default function Content({ heroSlides = [], homeCategoryCards = [], featuredProducts = [], featuredProduct2 = [], featuredProduct3 = [], uspItems = [], aboutUsSettings = {}, status = null, errors = {} }) {
     const { t } = useLanguage();
 
     // Top-level page: 'home' | 'about_us'
@@ -126,16 +128,44 @@ export default function Content({ heroSlides = [], homeCategoryCards = [], featu
                                 </button>
 
                                 <button
-                                    onClick={() => setActiveTab('featured_product')}
+                                    onClick={() => setActiveTab('promo_section_1')}
                                     className={`pb-2.5 text-xs font-bold transition-all relative ${
-                                        activeTab === 'featured_product'
+                                        activeTab === 'promo_section_1'
                                             ? 'text-blue-700 border-b-2 border-blue-700'
                                             : 'text-slate-400 hover:text-slate-500'
                                     }`}
                                 >
                                     <div className="flex items-center gap-1.5">
                                         <Star className="w-3.5 h-3.5" />
-                                        <span>{t('backoffice.content.tab.featured_product', 'Featured Product')}</span>
+                                        <span>{t('backoffice.content.tab.promo_section_1', 'Promo Section 1')}</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('promo_section_2')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'promo_section_2'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <Star className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.promo_section_2', 'Promo Section 2')}</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setActiveTab('promo_section_3')}
+                                    className={`pb-2.5 text-xs font-bold transition-all relative ${
+                                        activeTab === 'promo_section_3'
+                                            ? 'text-blue-700 border-b-2 border-blue-700'
+                                            : 'text-slate-400 hover:text-slate-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5">
+                                        <Star className="w-3.5 h-3.5" />
+                                        <span>{t('backoffice.content.tab.promo_section_3', 'Promo Section 3')}</span>
                                     </div>
                                 </button>
 
@@ -160,7 +190,9 @@ export default function Content({ heroSlides = [], homeCategoryCards = [], featu
                             {/* Home sub-tabs */}
                             {activePage === 'home' && activeTab === 'hero' && <HeroTab heroSlides={heroSlides} />}
                             {activePage === 'home' && activeTab === 'category' && <CategoryTab categoryCards={homeCategoryCards} />}
-                            {activePage === 'home' && activeTab === 'featured_product' && <FeaturedProductTab featuredProducts={featuredProducts} />}
+                            {activePage === 'home' && activeTab === 'promo_section_1' && <FeaturedProduct2Tab featuredProduct2={featuredProduct2} />}
+                            {activePage === 'home' && activeTab === 'promo_section_2' && <FeaturedProduct3Tab featuredProduct3={featuredProduct3} />}
+                            {activePage === 'home' && activeTab === 'promo_section_3' && <FeaturedProductTab featuredProducts={featuredProducts} />}
                             {activePage === 'home' && activeTab === 'usp' && <UspTab uspItems={uspItems} />}
 
                             {/* About Us tab */}
