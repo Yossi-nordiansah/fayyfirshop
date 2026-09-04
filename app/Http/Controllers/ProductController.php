@@ -76,6 +76,7 @@ class ProductController extends Controller
             'name_translations.arabic'    => 'nullable|string|max:255',
             'sku'                         => 'required|string|max:255|unique:products,sku',
             'price'                       => $request->boolean('has_variants') ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price'              => 'nullable|numeric|min:0',
             'product_category_id'         => 'required|exists:product_categories,id',
             'product_sub_category_id'     => 'nullable|exists:product_sub_categories,id',
             'is_new'                      => 'nullable|boolean',
@@ -95,6 +96,7 @@ class ProductController extends Controller
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
                     $rules["variants.{$i}.weight"] = 'nullable|integer|min:0';
+                    $rules["variants.{$i}.discount_price"] = 'nullable|numeric|min:0';
                 } else {
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
@@ -104,6 +106,7 @@ class ProductController extends Controller
                             $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
                             $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
                             $rules["variants.{$i}.sub_variants.{$j}.weight"] = 'nullable|integer|min:0';
+                            $rules["variants.{$i}.sub_variants.{$j}.discount_price"] = 'nullable|numeric|min:0';
                         }
                     }
                 }
@@ -184,6 +187,7 @@ class ProductController extends Controller
                 'description_translations' => $request->description_translations,
                 'sku'                     => trim($request->sku),
                 'price'                   => $price,
+                'discount_price'          => (isset($request->discount_price) && $request->discount_price !== '' && $request->discount_price !== 'null' && is_numeric($request->discount_price) && (float) $request->discount_price > 0) ? (int) $request->discount_price : null,
                 'stock'                   => 0,
                 'product_category_id'     => $request->product_category_id,
                 'product_sub_category_id' => $request->product_sub_category_id ?: null,
@@ -257,6 +261,7 @@ class ProductController extends Controller
                     $usedSkus[] = $varSku;
 
                     $varPrice = ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'];
+                    $varDiscountPrice = (isset($varData['discount_price']) && $varData['discount_price'] !== '' && $varData['discount_price'] !== 'null' && is_numeric($varData['discount_price']) && (float) $varData['discount_price'] > 0) ? (int) $varData['discount_price'] : null;
                     $varStockType = $varData['stock_type'] ?? 'variant';
                     $varUnit = $varData['unit'] ?? null;
                     if (is_array($varUnit)) {
@@ -288,6 +293,7 @@ class ProductController extends Controller
                         'name_translations' => $varData['name_translations'],
                         'sku'              => $varSku,
                         'price'            => $varPrice,
+                        'discount_price'   => $varDiscountPrice,
                         'weight'           => $varData['weight'] ?? 0,
                         'stock'            => 0,
                         'image'            => $varImagePath,
@@ -338,6 +344,7 @@ class ProductController extends Controller
                             $usedSkus[] = $subSku;
 
                             $subPrice = ($subVarData['price'] === null || $subVarData['price'] === '') ? $product->price : $subVarData['price'];
+                            $subDiscountPrice = (isset($subVarData['discount_price']) && $subVarData['discount_price'] !== '' && $subVarData['discount_price'] !== 'null' && is_numeric($subVarData['discount_price']) && (float) $subVarData['discount_price'] > 0) ? (int) $subVarData['discount_price'] : null;
 
                             $childVariant = $product->variants()->create([
                                 'parent_id'        => $parentVariant->id,
@@ -347,6 +354,7 @@ class ProductController extends Controller
                                 'name_translations' => $subVarData['name_translations'],
                                 'sku'              => $subSku,
                                 'price'            => $subPrice,
+                                'discount_price'   => $subDiscountPrice,
                                 'weight'           => $subVarData['weight'] ?? 0,
                                 'stock'            => 0,
                                 'image'            => $subImagePath,
@@ -454,6 +462,7 @@ class ProductController extends Controller
                 ),
                 'sku'              => $v->sku,
                 'price'            => $v->price,
+                'discount_price'   => $v->discount_price,
                 'unit_id'          => $v->unit_id,
                 'weight'           => $v->weight,
                 'image'            => $v->image,
@@ -498,6 +507,7 @@ class ProductController extends Controller
             'name_translations.arabic'    => 'nullable|string|max:255',
             'sku'                         => 'required|string|max:255|unique:products,sku,' . $product->id,
             'price'                       => $request->boolean('has_variants') ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price'              => 'nullable|numeric|min:0',
             'product_category_id'         => 'required|exists:product_categories,id',
             'product_sub_category_id'     => 'nullable|exists:product_sub_categories,id',
             'is_new'                      => 'nullable|boolean',
@@ -526,6 +536,7 @@ class ProductController extends Controller
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
                     $rules["variants.{$i}.weight"] = 'nullable|integer|min:0';
+                    $rules["variants.{$i}.discount_price"] = 'nullable|numeric|min:0';
                 } else {
                     $rules["variants.{$i}.name"] = 'required|string|max:255';
                     $rules["variants.{$i}.image"] = 'nullable|image|max:5120';
@@ -543,6 +554,7 @@ class ProductController extends Controller
                             $rules["variants.{$i}.sub_variants.{$j}.name"] = 'required|string|max:255';
                             $rules["variants.{$i}.sub_variants.{$j}.image"] = 'nullable|image|max:5120';
                             $rules["variants.{$i}.sub_variants.{$j}.weight"] = 'nullable|integer|min:0';
+                            $rules["variants.{$i}.sub_variants.{$j}.discount_price"] = 'nullable|numeric|min:0';
                         }
                     }
                 }
@@ -623,6 +635,7 @@ class ProductController extends Controller
                 'description_translations' => $request->description_translations,
                 'sku'                     => trim($request->sku),
                 'price'                   => $price,
+                'discount_price'          => (isset($request->discount_price) && $request->discount_price !== '' && $request->discount_price !== 'null' && is_numeric($request->discount_price) && (float) $request->discount_price > 0) ? (int) $request->discount_price : null,
                 'product_category_id'     => $request->product_category_id,
                 'product_sub_category_id' => $request->product_sub_category_id ?: null,
                 'is_new'                  => $request->boolean('is_new'),
@@ -725,6 +738,7 @@ class ProductController extends Controller
                     $varImgFile  = $request->file("variants.{$i}.image");
                     $varSku = trim($varData['sku'] ?? '');
                     $varPrice = ($varData['price'] === null || $varData['price'] === '') ? $product->price : $varData['price'];
+                    $varDiscountPrice = (isset($varData['discount_price']) && $varData['discount_price'] !== '' && $varData['discount_price'] !== 'null' && is_numeric($varData['discount_price']) && (float) $varData['discount_price'] > 0) ? (int) $varData['discount_price'] : null;
                     $varStockType = $varData['stock_type'] ?? 'variant';
                     $varUnit = $varData['unit'] ?? null;
                     if (is_array($varUnit)) {
@@ -762,6 +776,7 @@ class ProductController extends Controller
                                 'name_translations' => $varData['name_translations'],
                                 'sku'              => $varSku,
                                 'price'            => $varPrice,
+                                'discount_price'   => $varDiscountPrice,
                                 'weight'           => $varData['weight'] ?? 0,
                                 'stock'            => 0,
                                 'unit_id'          => $varUnitId,
@@ -803,6 +818,7 @@ class ProductController extends Controller
                             'name_translations' => $varData['name_translations'],
                             'sku'              => $varSku,
                             'price'            => $varPrice,
+                            'discount_price'   => $varDiscountPrice,
                             'weight'           => $varData['weight'] ?? 0,
                             'stock'            => 0,
                             'image'            => $varImagePath,
@@ -843,6 +859,7 @@ class ProductController extends Controller
                                 $subImgFile = $request->file("variants.{$i}.sub_variants.{$j}.image");
                                 $subSku = trim($subVarData['sku'] ?? '');
                                 $subPrice = ($subVarData['price'] === null || $subVarData['price'] === '') ? $product->price : $subVarData['price'];
+                                $subDiscountPrice = (isset($subVarData['discount_price']) && $subVarData['discount_price'] !== '' && $subVarData['discount_price'] !== 'null' && is_numeric($subVarData['discount_price']) && (float) $subVarData['discount_price'] > 0) ? (int) $subVarData['discount_price'] : null;
 
                                 if ($subVarId) {
                                     $childVariant = $product->variants()->find($subVarId);
@@ -858,6 +875,7 @@ class ProductController extends Controller
                                             'name_translations' => $subVarData['name_translations'],
                                             'sku'              => $subSku,
                                             'price'            => $subPrice,
+                                            'discount_price'   => $subDiscountPrice,
                                             'weight'           => $subVarData['weight'] ?? 0,
                                             'stock'            => 0,
                                             'unit_id'          => ($varStockType === 'parent') ? null : ($subVarData['unit_id'] ?: null),
@@ -898,6 +916,7 @@ class ProductController extends Controller
                                         'name_translations' => $subVarData['name_translations'],
                                         'sku'              => $subSku,
                                         'price'            => $subPrice,
+                                        'discount_price'   => $subDiscountPrice,
                                         'weight'           => $subVarData['weight'] ?? 0,
                                         'stock'            => 0,
                                         'image'            => $subImagePath,

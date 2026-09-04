@@ -122,7 +122,46 @@ export default function ProductClassificationSection({
                     </p>
                 </div>
 
-
+                {/* Discount Price */}
+                <div>
+                    <label className="mb-1.5 block text-nowrap text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span>{t('backoffice.product.discount_price', 'Harga Diskon (IDR)')}</span>
+                        <span className="inline-flex items-center rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-500 uppercase tracking-wide">Opsional</span>
+                    </label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-400">Rp</span>
+                        <input
+                            type="text"
+                            value={formatPriceInput(data.discount_price)}
+                            onChange={e => setData('discount_price', parsePriceInput(e.target.value))}
+                            placeholder="0"
+                            className="w-full rounded-xl border border-rose-200 bg-rose-50/40 py-2.5 pl-9 pr-3 text-sm font-semibold text-rose-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100"
+                        />
+                        {data.discount_price ? (
+                            <button
+                                type="button"
+                                onClick={() => setData('discount_price', '')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 transition"
+                                title="Hapus harga diskon"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        ) : null}
+                    </div>
+                    {errors.discount_price && (
+                        <p className="mt-1 text-xs text-rose-600">{errors.discount_price}</p>
+                    )}
+                    <p className="mt-1 text-[10px] text-slate-400">
+                        {t('backoffice.product.discount_price_hint', 'Jika diisi, harga asli akan dicoret dan digantikan harga diskon ini di tampilan produk.')}
+                    </p>
+                    {data.discount_price && data.price && Number(data.discount_price) >= Number(data.price) && (
+                        <p className="mt-1 text-[10px] font-semibold text-amber-600">
+                            ⚠️ Harga diskon lebih besar atau sama dengan harga asli. Pastikan harga diskon lebih kecil.
+                        </p>
+                    )}
+                </div>
             </div>
         </div>
     );

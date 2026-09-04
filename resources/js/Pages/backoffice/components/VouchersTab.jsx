@@ -61,6 +61,12 @@ export default function VouchersTab({ vouchers = [] }) {
         return dStr.substring(0, 16).replace(' ', 'T');
     };
 
+    const getLocalNowString = (offsetDays = 0) => {
+        const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     const openAddModal = () => {
         setLocalErrors({});
         setModalMode('add');
@@ -75,8 +81,8 @@ export default function VouchersTab({ vouchers = [] }) {
             min_spending: 0,
             total_quota: 100,
             max_use_per_user: 1,
-            start_date: new Date().toISOString().substring(0, 16),
-            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
+            start_date: getLocalNowString(0),
+            end_date: getLocalNowString(7),
             is_active: true,
             distribution_type: 'event'
         });
@@ -176,7 +182,9 @@ export default function VouchersTab({ vouchers = [] }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        const d = new Date(dateStr);
+        const cleanStr = typeof dateStr === 'string' ? dateStr.replace('Z', '') : dateStr;
+        const d = new Date(cleanStr);
+        if (isNaN(d.getTime())) return '-';
         return d.toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'short',

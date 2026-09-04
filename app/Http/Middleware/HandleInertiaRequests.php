@@ -319,6 +319,7 @@ class HandleInertiaRequests extends Middleware
                     ->orderBy('created_at', 'desc')
                     ->get()
                 : [],
+            'activeGlobalDiscount' => fn () => \App\Models\Event::getActiveGlobalDiscount($this->getVisitorCountryCode($request)),
             'navCategories' => fn () => \App\Models\ProductCategory::with('subCategories')
                 ->where('is_active', true)
                 ->orderBy('name')

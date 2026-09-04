@@ -67,6 +67,7 @@ const BestSeller = ({ products = [] }) => {
                                         slug={product.slug}
                                         title={product.name_translations?.[locale] || product.title}
                                         price={product.price}
+                                        discount_price={product.discount_price}
                                         variants={product.variants}
                                         sold={product.sold}
                                         image={getPrimaryImage(product)}
@@ -87,6 +88,7 @@ const BestSeller = ({ products = [] }) => {
                                     slug={product.slug}
                                     title={product.name_translations?.[locale] || product.title}
                                     price={product.price}
+                                    discount_price={product.discount_price}
                                     variants={product.variants}
                                     sold={product.sold}
                                     image={getPrimaryImage(product)}

@@ -120,7 +120,7 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
     }, {});
 
     // Form state
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, transform } = useForm({
         badge_id: '',
         badge_en: '',
         badge_ar: '',
@@ -239,6 +239,37 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (editingItem) {
+            const hasF1 = Boolean(data.feature_1_title_id?.trim() || data.feature_1_desc_id?.trim());
+            const hasF2 = Boolean(data.feature_2_title_id?.trim() || data.feature_2_desc_id?.trim());
+            const hasBadge = Boolean(data.badge_id?.trim());
+            const hasTitle = Boolean(data.title_id?.trim());
+            const hasDesc = Boolean(data.description_id?.trim());
+            const hasBtn = Boolean(data.button_text_id?.trim());
+
+            transform((prevData) => ({
+                ...prevData,
+                badge_en: hasBadge ? prevData.badge_en : '',
+                badge_ar: hasBadge ? prevData.badge_ar : '',
+                title_en: hasTitle ? prevData.title_en : '',
+                title_ar: hasTitle ? prevData.title_ar : '',
+                description_en: hasDesc ? prevData.description_en : '',
+                description_ar: hasDesc ? prevData.description_ar : '',
+                feature_1_title_id: hasF1 ? prevData.feature_1_title_id : '',
+                feature_1_desc_id: hasF1 ? prevData.feature_1_desc_id : '',
+                feature_1_title_en: hasF1 ? prevData.feature_1_title_en : '',
+                feature_1_desc_en: hasF1 ? prevData.feature_1_desc_en : '',
+                feature_1_title_ar: hasF1 ? prevData.feature_1_title_ar : '',
+                feature_1_desc_ar: hasF1 ? prevData.feature_1_desc_ar : '',
+                feature_2_title_id: hasF2 ? prevData.feature_2_title_id : '',
+                feature_2_desc_id: hasF2 ? prevData.feature_2_desc_id : '',
+                feature_2_title_en: hasF2 ? prevData.feature_2_title_en : '',
+                feature_2_desc_en: hasF2 ? prevData.feature_2_desc_en : '',
+                feature_2_title_ar: hasF2 ? prevData.feature_2_title_ar : '',
+                feature_2_desc_ar: hasF2 ? prevData.feature_2_desc_ar : '',
+                button_text_en: hasBtn ? prevData.button_text_en : '',
+                button_text_ar: hasBtn ? prevData.button_text_ar : '',
+            }));
+
             post(`/backoffice/content/featured-product-2/${editingItem.id}`, {
                 onSuccess: () => {
                     setIsModalOpen(false);

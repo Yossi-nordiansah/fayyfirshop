@@ -28,9 +28,16 @@ export default function SummaryItem({ item, locale, formatNumber, formatPrice, t
                     </span>
                 </p>
             </div>
-            <span className="font-extrabold text-slate-900 text-right shrink-0">
-                {formatPrice(item.price * item.quantity)}
-            </span>
+            <div className="flex flex-col items-end shrink-0">
+                <span className={`font-extrabold text-right ${item.original_price && Number(item.original_price) > Number(item.price) ? "text-rose-600" : "text-slate-900"}`}>
+                    {formatPrice(item.price * item.quantity)}
+                </span>
+                {item.original_price && Number(item.original_price) > Number(item.price) && (
+                    <span className="text-[10px] text-slate-400 line-through leading-tight">
+                        {formatPrice(item.original_price * item.quantity)}
+                    </span>
+                )}
+            </div>
         </div>
     );
 }

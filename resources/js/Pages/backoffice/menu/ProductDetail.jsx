@@ -90,6 +90,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         type_translations: pTrans,
                         sku: v.sku,
                         price: v.price,
+                        discount_price: v.discount_price,
                         unit_id: v.unit_id,
                         stock_type: v.stock_type || 'variant',
                         image: v.image,
@@ -162,6 +163,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         unit_id: v.unit_id || '',
                         sku: v.sku || '',
                         price: v.price || '',
+                        discount_price: v.discount_price || '',
                         image: v.image,
                         imagePreview: v.image ? `/storage/${v.image}` : null,
                         branch_stocks: storeBranches.map(branch => {
@@ -241,6 +243,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         type_translations: parentTypeTranslations,
                         sku: hasSub ? '' : v.sku,
                         price: hasSub ? '' : v.price,
+                        discount_price: hasSub ? '' : v.discount_price,
                         unit_id: hasSub ? '' : v.unit_id,
                         stock_type: v.stock_type || 'variant',
                         image: v.image,
@@ -304,6 +307,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                         unit_id: subUnitId || '',
                         sku: v.sku || '',
                         price: v.price || '',
+                        discount_price: v.discount_price || '',
                         image: v.image,
                         imagePreview: v.image ? `/storage/${v.image}` : null,
                         branch_stocks: storeBranches.map(branch => {
@@ -432,7 +436,19 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                 <div className="p-5 space-y-4 bg-white border shadow-sm rounded-2xl border-slate-100">
                                     <div>
                                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.modal.centralized_price', 'Harga Basis Terpusat')}</span>
-                                        <span className="text-2xl font-black text-blue-950">{formatIDR(product.price)}</span>
+                                        {product.discount_price && product.discount_price > 0 ? (
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-2xl font-black text-rose-600">{formatIDR(product.discount_price)}</span>
+                                                    <span className="inline-flex items-center rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-600 uppercase">
+                                                        DISKON {Math.round((1 - product.discount_price / product.price) * 100)}%
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-400 line-through">{formatIDR(product.price)}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-2xl font-black text-blue-950">{formatIDR(product.price)}</span>
+                                        )}
                                     </div>
                                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                                         <div>
@@ -681,9 +697,23 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                                 <div className="grid grid-cols-2 gap-2 sm:col-span-1">
                                                                     <div>
                                                                         <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.detail.price_label', 'Harga')}</span>
-                                                                        <span className="text-xs font-extrabold text-blue-950">
-                                                                            {variant.price ? formatIDR(variant.price) : formatIDR(product.price)}
-                                                                        </span>
+                                                                        {variant.discount_price && variant.discount_price > 0 ? (
+                                                                            <div className="flex flex-col gap-0.5">
+                                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                    <span className="text-xs font-black text-rose-600">{formatIDR(variant.discount_price)}</span>
+                                                                                    <span className="inline-flex items-center rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-600">
+                                                                                        DISKON {Math.round((1 - variant.discount_price / (variant.price || product.price)) * 100)}%
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span className="text-[11px] font-medium text-slate-400 line-through">
+                                                                                    {formatIDR(variant.price || product.price)}
+                                                                                </span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-xs font-extrabold text-blue-950">
+                                                                                {variant.price ? formatIDR(variant.price) : formatIDR(product.price)}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                     <div>
                                                                         <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">{t('backoffice.product.form.variant_unit', 'Satuan (Unit)')}</span>
@@ -798,7 +828,23 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                                                                                 {sv.sku || '-'}
                                                                                             </td>
                                                                                             <td className="px-4 py-2.5 font-bold text-slate-800">
-                                                                                                {sv.price ? formatIDR(sv.price) : formatIDR(product.price)}
+                                                                                                {sv.discount_price && sv.discount_price > 0 ? (
+                                                                                                    <div className="flex flex-col gap-0.5">
+                                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                            <span className="text-xs font-black text-rose-600">{formatIDR(sv.discount_price)}</span>
+                                                                                                            <span className="inline-flex items-center rounded bg-rose-100 px-1 py-0.2 text-[9px] font-bold text-rose-600">
+                                                                                                                DISKON {Math.round((1 - sv.discount_price / (sv.price || product.price)) * 100)}%
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                        <span className="text-[10px] font-medium text-slate-400 line-through">
+                                                                                                            {formatIDR(sv.price || product.price)}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <span className="text-xs font-extrabold text-blue-950">
+                                                                                                        {sv.price ? formatIDR(sv.price) : formatIDR(product.price)}
+                                                                                                    </span>
+                                                                                                )}
                                                                                             </td>
                                                                                             <td className="px-4 py-2.5 text-slate-600">
                                                                                                 {units.find(u => String(u.id) === String(sv.unit_id))?.name || (variant.stock_type === 'parent' ? variant.unit : '-')}

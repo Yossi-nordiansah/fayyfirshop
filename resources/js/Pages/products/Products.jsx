@@ -1194,6 +1194,7 @@ export default function Products({ category = null, subCategory = null, products
                                                     slug={product.slug}
                                                     title={product.title}
                                                     price={product.price}
+                                                    discount_price={product.discount_price}
                                                     variants={product.variants}
                                                     sold={product.sold}
                                                     image={getProductImage(product)}

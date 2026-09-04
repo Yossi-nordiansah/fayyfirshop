@@ -229,8 +229,9 @@ const ProductCard = ({
     product,
     slug,
     title,
-    price = 0, // Prop baru untuk nominal harga (angka murni, misal: 150000)
-    variants = [], // Variant products array
+    price = 0,
+    discount_price = null,
+    variants = [],
     sold = 0,
     image,
     status,
@@ -239,7 +240,7 @@ const ProductCard = ({
     rating = 0,
 }) => {
     const { t, locale } = useLanguage();
-    const { auth, visitorCountryCode = 'ID' } = usePage().props;
+    const { auth, visitorCountryCode = 'ID', activeGlobalDiscount = null } = usePage().props;
 
     const handleAddToCartClick = (e) => {
         e.preventDefault();
@@ -254,11 +255,15 @@ const ProductCard = ({
         let activeVariant = null;
 
         if (isDbProduct) {
-            const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
-            const targetVariants = hasChildren
-                ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
-                : variants;
-            activeVariant = targetVariants[0] || variants[0] || null;
+            if (cardPricing?.bestVariant) {
+                activeVariant = cardPricing.bestVariant;
+            } else {
+                const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
+                const targetVariants = hasChildren
+                    ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
+                    : variants;
+                activeVariant = targetVariants[0] || variants[0];
+            }
         }
 
         const categoryName = typeof product?.category === 'object' && product?.category !== null
@@ -312,7 +317,17 @@ const ProductCard = ({
 
         const resolvedTitle = titleTranslations[locale] || title || '';
 
-        const currentPrice = activeVariant ? activeVariant.price : displayPrice;
+        let activeDiscountPrice = activeVariant
+            ? (activeVariant.discount_price && Number(activeVariant.discount_price) > 0 ? Number(activeVariant.discount_price) : (discount_price && Number(discount_price) > 0 ? Number(discount_price) : null))
+            : (displayDiscountPrice && Number(displayDiscountPrice) > 0 ? Number(displayDiscountPrice) : null);
+        const activeBasePrice = activeVariant ? (Number(activeVariant.price) || Number(price) || 0) : displayPrice;
+
+        if (activeGlobalDiscount && activeGlobalDiscount.percentage > 0 && activeBasePrice > 0) {
+            const eventDiscPrice = Math.round(activeBasePrice * (1 - activeGlobalDiscount.percentage / 100));
+            activeDiscountPrice = activeDiscountPrice ? Math.min(activeDiscountPrice, eventDiscPrice) : eventDiscPrice;
+        }
+
+        const currentPrice = (activeDiscountPrice && activeDiscountPrice > 0) ? activeDiscountPrice : activeBasePrice;
 
         const getBranchStock = (item) => {
             if (!item) return 0;
@@ -362,6 +377,8 @@ const ProductCard = ({
             variantNameTranslations,
             subVariantNameTranslations,
             price: currentPrice,
+            original_price: activeBasePrice,
+            discount_price: (activeDiscountPrice && activeDiscountPrice > 0) ? activeDiscountPrice : null,
             stock: currentStock,
             quantity: 1,
             sku: activeVariant?.sku || product?.sku || `SKU-${id}`,
@@ -385,6 +402,8 @@ const ProductCard = ({
                 quantity: Math.min(existingItem.quantity + 1, currentStock),
                 stock: currentStock,
                 price: currentPrice,
+                original_price: activeBasePrice,
+                discount_price: (activeDiscountPrice && activeDiscountPrice > 0) ? activeDiscountPrice : null,
                 image: cartItem.image,
                 variantName,
                 subVariantName,
@@ -410,24 +429,101 @@ const ProductCard = ({
         );
     };
 
-    // Determine lowest price if variants exist, otherwise use base price
-    const displayPrice = React.useMemo(() => {
+    // Resolusi harga & diskon pada kartu produk
+    const cardPricing = React.useMemo(() => {
+        let bestDiscountVariant = null;
+        let lowestPrice = Number(price) || 0;
+        const globalPercent = (activeGlobalDiscount && Number(activeGlobalDiscount.percentage) > 0)
+            ? Number(activeGlobalDiscount.percentage)
+            : null;
+
         if (variants && variants.length > 0) {
             const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
             const targetVariants = hasChildren
                 ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
                 : variants;
 
-            const prices = targetVariants
-                .map(v => v.price)
-                .filter(p => typeof p === 'number' && p > 0);
+            const validPrices = targetVariants
+                .map(v => Number(v.price))
+                .filter(p => !isNaN(p) && p > 0);
 
-            if (prices.length > 0) {
-                return Math.min(...prices);
+            if (validPrices.length > 0) {
+                lowestPrice = Math.min(...validPrices);
+            }
+
+            // Cari varian dengan diskon valid (termasuk diskon event global)
+            const discounted = targetVariants
+                .map(v => {
+                    const origP = Number(v.price) || lowestPrice;
+                    let manualD = Number(v.discount_price);
+                    let effectiveD = (!isNaN(manualD) && manualD > 0 && manualD < origP) ? manualD : null;
+
+                    if (globalPercent && origP > 0) {
+                        const eventD = Math.round(origP * (1 - globalPercent / 100));
+                        effectiveD = effectiveD ? Math.min(effectiveD, eventD) : eventD;
+                    }
+
+                    return {
+                        variant: v,
+                        effectiveDiscountPrice: effectiveD,
+                        origPrice: origP,
+                    };
+                })
+                .filter(item => item.effectiveDiscountPrice !== null && item.effectiveDiscountPrice > 0 && item.effectiveDiscountPrice < item.origPrice)
+                .sort((a, b) => a.effectiveDiscountPrice - b.effectiveDiscountPrice);
+
+            if (discounted.length > 0) {
+                bestDiscountVariant = discounted[0];
             }
         }
-        return price;
-    }, [price, variants]);
+
+        if (bestDiscountVariant) {
+            const dPrice = bestDiscountVariant.effectiveDiscountPrice;
+            const origPrice = bestDiscountVariant.origPrice;
+            const percent = origPrice > 0 ? Math.round((1 - dPrice / origPrice) * 100) : null;
+            return {
+                hasDiscount: true,
+                discountPrice: dPrice,
+                originalPrice: origPrice,
+                discountPercent: percent,
+                bestVariant: bestDiscountVariant.variant,
+            };
+        }
+
+        // Jika produk tunggal tanpa varian
+        const pManualDiscount = Number(discount_price);
+        let effectiveProductDiscount = (!isNaN(pManualDiscount) && pManualDiscount > 0 && (!lowestPrice || pManualDiscount < lowestPrice))
+            ? pManualDiscount
+            : null;
+
+        if (globalPercent && lowestPrice > 0) {
+            const eventD = Math.round(lowestPrice * (1 - globalPercent / 100));
+            effectiveProductDiscount = effectiveProductDiscount ? Math.min(effectiveProductDiscount, eventD) : eventD;
+        }
+
+        if (effectiveProductDiscount && effectiveProductDiscount > 0 && (!lowestPrice || effectiveProductDiscount < lowestPrice)) {
+            const percent = lowestPrice > 0 ? Math.round((1 - effectiveProductDiscount / lowestPrice) * 100) : null;
+            return {
+                hasDiscount: true,
+                discountPrice: effectiveProductDiscount,
+                originalPrice: lowestPrice,
+                discountPercent: percent,
+                bestVariant: null,
+            };
+        }
+
+        return {
+            hasDiscount: false,
+            discountPrice: null,
+            originalPrice: lowestPrice,
+            discountPercent: null,
+            bestVariant: null,
+        };
+    }, [price, discount_price, variants, activeGlobalDiscount]);
+
+    const displayPrice = cardPricing.originalPrice;
+    const displayDiscountPrice = cardPricing.discountPrice;
+    const hasAnyDiscount = cardPricing.hasDiscount;
     const showNew = is_new || status === "new";
     const showBestSeller = is_best_seller || status === "best-seller";
 
@@ -452,8 +548,16 @@ const ProductCard = ({
         return template.replace("{count}", count);
     };
 
+    const renderDiscountBadge = (percent) => {
+        if (percent) {
+            const template = t("product.badge.discount_percent", "DISKON {percent}%");
+            return template.replace("{percent}", percent);
+        }
+        return t("product.badge.discount", "DISKON");
+    };
+
     return (
-        <Link href={`/product/${slug}`} className="block">
+        <Link href={cardPricing.bestVariant ? `/product/${slug}?variant=${cardPricing.bestVariant.id}` : `/product/${slug}`} className="block">
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -462,7 +566,7 @@ const ProductCard = ({
                 className="group relative overflow-hidden rounded-2xl bg-white border border-zinc-100 shadow-sm shadow-xl transition-shadow duration-500 mx-2 mt-4 my-7"
             >
                 {/* Badges */}
-                {(showNew || showBestSeller) && (
+                {(showNew || showBestSeller || hasAnyDiscount) && (
                     <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
                         {showBestSeller && (
                             <span
@@ -482,6 +586,14 @@ const ProductCard = ({
                                 {t("product.badge.new", "NEW")}
                             </span>
                         )}
+                        {hasAnyDiscount && (
+                            <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md backdrop-blur-sm bg-gradient-to-r from-rose-500 to-orange-500 text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
+                                {renderDiscountBadge(cardPricing.discountPercent)}
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -497,7 +609,7 @@ const ProductCard = ({
                 </div>
 
                 {/* Content */}
-                <div className="md:px-4 px-2 py-2 space-y-1.5 bg-slate-100">
+                <div className="md:px-2 px-2 py-2 space-y-1.5 bg-slate-100">
                     {/* Title */}
                     <h3 className="text-sm font-semibold text-zinc-800 truncate group-hover:text-amber-600 transition-colors duration-300 tracking-wide">
                         {title}
@@ -505,9 +617,20 @@ const ProductCard = ({
 
                     {/* Price Tag (Premium Component) */}
                     <div className="">
-                        <span className="text-base font-bold text-zinc-900 tracking-tight font-sans">
-                            {formatPrice(displayPrice)}
-                        </span>
+                        {displayDiscountPrice && displayDiscountPrice > 0 ? (
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                                <span className="text-base font-black text-rose-600 tracking-tight font-sans">
+                                    {formatPrice(displayDiscountPrice)}
+                                </span>
+                                <span className="text-[11px] font-medium text-zinc-400 line-through leading-tight">
+                                    {formatPrice(displayPrice)}
+                                </span>
+                            </div>
+                        ) : (
+                            <span className="text-base font-bold text-zinc-900 tracking-tight font-sans">
+                                {formatPrice(displayPrice)}
+                            </span>
+                        )}
                     </div>
 
                     <div className="h-[14px] flex items-center">

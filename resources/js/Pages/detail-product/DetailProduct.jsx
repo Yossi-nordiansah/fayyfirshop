@@ -248,7 +248,7 @@ const parseWeightJs = (variant, product) => {
 
 export default function DetailProduct({ product: initialProduct, slug }) {
     const { t, locale } = useLanguage(); // 2. Inisialisasi fungsi translasi t dan locale proyek
-    const { auth, visitorCountryCode = 'ID', visitorLatitude, visitorLongitude } = usePage().props;
+    const { auth, visitorCountryCode = 'ID', visitorLatitude, visitorLongitude, activeGlobalDiscount = null } = usePage().props;
 
     const product =
         initialProduct ||
@@ -455,6 +455,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         type_translations: pTrans,
                         sku: v.sku,
                         price: v.price,
+                        discount_price: v.discount_price,
                         unit: v.unit || product.unit,
                         image: v.image,
                         stock: getBranchStockForUser(v),
@@ -519,6 +520,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         unit: v.unit || parentUnit || product.unit,
                         sku: v.sku || '',
                         price: v.price || '',
+                        discount_price: v.discount_price,
                         image: v.image,
                         stock: getBranchStockForUser(v),
                     });
@@ -596,6 +598,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         type_translations: parentTypeTranslations,
                         sku: hasSub ? '' : v.sku,
                         price: hasSub ? '' : v.price,
+                        discount_price: hasSub ? null : v.discount_price,
                         unit: v.unit || product.unit,
                         image: v.image,
                         stock: hasSub ? 0 : getBranchStockForUser(v),
@@ -637,6 +640,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                         unit: v.unit || parentGroups[parentKey].unit || product.unit,
                         sku: v.sku || '',
                         price: v.price || '',
+                        discount_price: v.discount_price,
                         image: v.image,
                         stock: getBranchStockForUser(v),
                     });
@@ -776,22 +780,39 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                     }
                 }
             } else if (groupedVariants && groupedVariants.length > 0) {
-                const firstParent = groupedVariants[0];
-                setSelectedParentKey(firstParent.key);
-                if (firstParent.has_sub_variants && firstParent.sub_variants.length > 0) {
-                    const firstSub = firstParent.sub_variants[0];
-                    setSelectedVariantId(firstSub.id);
-                    if (firstSub.image) {
-                        setActiveImage(firstSub.image);
-                    } else if (firstParent.image) {
-                        setActiveImage(firstParent.image);
+                // Cari varian yang memiliki diskon aktif terlebih dahulu jika ada
+                let targetParent = groupedVariants[0];
+                let targetSub = null;
+
+                for (const p of groupedVariants) {
+                    if (p.has_sub_variants && p.sub_variants && p.sub_variants.length > 0) {
+                        const foundDiscSub = p.sub_variants.find(s => Number(s.discount_price) > 0);
+                        if (foundDiscSub) {
+                            targetParent = p;
+                            targetSub = foundDiscSub;
+                            break;
+                        }
+                    } else if (Number(p.discount_price) > 0) {
+                        targetParent = p;
+                        break;
+                    }
+                }
+
+                setSelectedParentKey(targetParent.key);
+                if (targetParent.has_sub_variants && targetParent.sub_variants.length > 0) {
+                    const chosenSub = targetSub || targetParent.sub_variants[0];
+                    setSelectedVariantId(chosenSub.id);
+                    if (chosenSub.image) {
+                        setActiveImage(chosenSub.image);
+                    } else if (targetParent.image) {
+                        setActiveImage(targetParent.image);
                     } else {
                         setActiveImage(allImages[0] || null);
                     }
                 } else {
-                    setSelectedVariantId(firstParent.id);
-                    if (firstParent.image) {
-                        setActiveImage(firstParent.image);
+                    setSelectedVariantId(targetParent.id);
+                    if (targetParent.image) {
+                        setActiveImage(targetParent.image);
                     } else {
                         setActiveImage(allImages[0] || null);
                     }
@@ -858,10 +879,52 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const currentPrice = React.useMemo(() => {
         if (activeVariant) {
-            return activeVariant.price;
+            return Number(activeVariant.price) || Number(product.price) || 0;
         }
-        return product.variants?.[0]?.price || product.price || 0;
+        return Number(product.variants?.[0]?.price) || Number(product.price) || 0;
     }, [activeVariant, product.variants, product.price]);
+
+    const currentDiscountPrice = React.useMemo(() => {
+        let manualDiscount = null;
+        if (activeVariant) {
+            const vd = Number(activeVariant.discount_price);
+            if (!isNaN(vd) && vd > 0) {
+                manualDiscount = vd;
+            }
+        } else {
+            const pd = Number(product.discount_price);
+            if (!isNaN(pd) && pd > 0) {
+                manualDiscount = pd;
+            }
+        }
+
+        const globalPercent = (activeGlobalDiscount && Number(activeGlobalDiscount.percentage) > 0)
+            ? Number(activeGlobalDiscount.percentage)
+            : null;
+
+        if (globalPercent && currentPrice > 0) {
+            const eventDiscPrice = Math.round(currentPrice * (1 - globalPercent / 100));
+            return manualDiscount ? Math.min(manualDiscount, eventDiscPrice) : eventDiscPrice;
+        }
+
+        return manualDiscount;
+    }, [activeVariant, product.discount_price, activeGlobalDiscount, currentPrice]);
+
+    const currentDiscountPercent = React.useMemo(() => {
+        const basePrice = Number(currentPrice) || Number(product.price) || 0;
+        if (currentDiscountPrice && currentDiscountPrice > 0 && basePrice > currentDiscountPrice) {
+            return Math.round((1 - currentDiscountPrice / basePrice) * 100);
+        }
+        return null;
+    }, [currentDiscountPrice, currentPrice, product.price]);
+
+    const renderDiscountBadge = (percent) => {
+        if (percent) {
+            const template = t("product.badge.discount_percent", "DISKON {percent}%");
+            return template.replace("{percent}", percent);
+        }
+        return t("product.badge.discount", "DISKON");
+    };
 
     const currentStock = React.useMemo(() => {
         if (product.stock_type === 'parent') {
@@ -1134,7 +1197,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             subVariantName,
             variantNameTranslations,
             subVariantNameTranslations,
-            price: currentPrice,
+            price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : currentPrice,
+            original_price: currentPrice,
+            discount_price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : null,
             stock: currentStock,
             quantity,
             sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
@@ -1156,7 +1221,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                 ...existingItem,
                 quantity: Math.min(existingItem.quantity + quantity, currentStock),
                 stock: currentStock,
-                price: currentPrice,
+                price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : currentPrice,
+                original_price: currentPrice,
+                discount_price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : null,
                 image: cartItem.image,
                 variantName,
                 subVariantName,
@@ -1245,7 +1312,9 @@ export default function DetailProduct({ product: initialProduct, slug }) {
             subVariantName,
             variantNameTranslations,
             subVariantNameTranslations,
-            price: currentPrice,
+            price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : currentPrice,
+            original_price: currentPrice,
+            discount_price: (currentDiscountPrice && currentDiscountPrice > 0) ? currentDiscountPrice : null,
             stock: currentStock,
             quantity,
             sku: activeVariant?.sku || product.sku || `SKU-${product.id}`,
@@ -1407,7 +1476,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/10 via-transparent to-transparent" />
 
                                 {/* Status Badge */}
-                                <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+                                <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-20">
                                     {(product.is_best_seller || product.status === "best-seller") && (
                                         <span className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-amber-400/40">
                                             <Flame
@@ -1420,6 +1489,14 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     {(product.is_new || product.status === "new") && (
                                         <span className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-blue-400/40 text-center justify-center">
                                             {t("product.detail.new_arrival", "New Arrival")}
+                                        </span>
+                                    )}
+                                    {currentDiscountPrice && currentDiscountPrice > 0 && (
+                                        <span className="flex items-center gap-1 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[11px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg shadow-rose-400/40 text-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                            {renderDiscountBadge(currentDiscountPercent)}
                                         </span>
                                     )}
                                 </div>
@@ -1530,11 +1607,27 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <p className="text-xs font-bold tracking-widest text-blue-500 uppercase">
                                     {t("product.detail.price_label", "Harga")}
                                 </p>
-                                <div className="flex items-end gap-3">
-                                    <span className="text-2xl font-extrabold tracking-tight text-blue-900">
-                                        {formatPrice(currentPrice)}
-                                    </span>
-                                </div>
+                                {currentDiscountPrice && currentDiscountPrice > 0 ? (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-2xl font-extrabold tracking-tight text-rose-600">
+                                                {formatPrice(currentDiscountPrice)}
+                                            </span>
+                                            <span className="inline-flex items-center rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-xs font-bold text-rose-600">
+                                                {renderDiscountBadge(currentDiscountPercent)}
+                                            </span>
+                                        </div>
+                                        <span className="text-sm font-medium text-zinc-400 line-through">
+                                            {formatPrice(currentPrice)}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-end gap-3">
+                                        <span className="text-2xl font-extrabold tracking-tight text-blue-900">
+                                            {formatPrice(currentPrice)}
+                                        </span>
+                                    </div>
+                                )}
                                 {((!isDbProduct && uniqueSizes.length > 0) || (isDbProduct && product.variants && product.variants.length > 1)) && (
                                     <p className="text-xs text-zinc-400 mt-1.5">
                                         {t("product.detail.price_notice", "Harga dapat berubah sesuai varian yang dipilih")}
@@ -1616,8 +1709,15 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                             : "bg-white border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
                                                             } ${isParentOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
                                                     >
-                                                        <div className="text-center px-3 w-full">
+                                                        <div className="text-center px-3 w-full flex items-center justify-center gap-1.5 flex-wrap">
                                                             <span className="block leading-tight">{parentName}</span>
+                                                            {((activeGlobalDiscount && Number(activeGlobalDiscount.percentage) > 0) ||
+                                                                (!parent.has_sub_variants && Number(parent.discount_price) > 0) ||
+                                                                (parent.has_sub_variants && parent.sub_variants && parent.sub_variants.some(s => Number(s.discount_price) > 0))) && (
+                                                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isSelected ? "bg-rose-500 text-white" : "bg-rose-100 text-rose-600 border border-rose-200"}`}>
+                                                                    %
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </button>
                                                 );
@@ -1704,8 +1804,13 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                                                     : "bg-white border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
                                                                     } ${isSubOutOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
                                                             >
-                                                                <div className="text-center">
+                                                                <div className="text-center flex items-center justify-center gap-1.5 flex-wrap">
                                                                     <span className="block leading-tight">{subVarDisplayName}</span>
+                                                                    {((activeGlobalDiscount && Number(activeGlobalDiscount.percentage) > 0) || Number(subVar.discount_price) > 0) && (
+                                                                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isSelected ? "bg-rose-500 text-white" : "bg-rose-100 text-rose-600 border border-rose-200"}`}>
+                                                                            %
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </button>
                                                         );

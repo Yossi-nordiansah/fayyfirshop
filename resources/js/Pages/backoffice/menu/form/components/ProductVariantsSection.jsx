@@ -822,11 +822,11 @@ export default function ProductVariantsSection({
 
                                         {/* SKU, Price, and Unit Row */}
                                         {showSkuAndPrice && (
-                                            <div className={`grid grid-cols-1 gap-4 ${(2 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) === 4
-                                                ? 'sm:grid-cols-4'
-                                                : (2 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) === 3
-                                                    ? 'sm:grid-cols-3'
-                                                    : 'sm:grid-cols-2'
+                                            <div className={`grid grid-cols-1 gap-4 ${(3 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) >= 5
+                                                ? 'sm:grid-cols-2 lg:grid-cols-5'
+                                                : (3 + (showUnitSelector || (isSizeVariant && data.stock_type === 'parent') ? 1 : 0) + (!isWeightVariant(variant, data.stock_type === 'parent' ? data : null, units) ? 1 : 0)) === 4
+                                                    ? 'sm:grid-cols-2 lg:grid-cols-4'
+                                                    : 'sm:grid-cols-3'
                                                 }`}>
                                                 {/* SKU */}
                                                 <div>
@@ -860,6 +860,44 @@ export default function ProductVariantsSection({
                                                     {getVariantError(vIdx, null, 'price') && (
                                                         <p className="mt-1 text-[11px] font-semibold text-rose-500">
                                                             {getVariantError(vIdx, null, 'price')}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Discount Price */}
+                                                <div>
+                                                    <label className="mb-1 block text-[11px] font-bold uppercase text-slate-500 text-nowrap flex items-center gap-1">
+                                                        <span>{t('backoffice.product.discount_price', 'Harga Diskon (IDR)')}</span>
+                                                        <span className="font-normal normal-case text-rose-500 text-[10px]">— {t('backoffice.product.form.optional', 'opsional')}</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-400">Rp</span>
+                                                        <input
+                                                            type="text"
+                                                            value={formatPriceInput(variant.discount_price)}
+                                                            onChange={e => updateVariantField(vIdx, 'discount_price', parsePriceInput(e.target.value))}
+                                                            placeholder="0"
+                                                            className="w-full rounded-lg border border-rose-200 bg-rose-50/40 pl-8 pr-7 py-2 text-sm font-semibold text-rose-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                                                        />
+                                                        {variant.discount_price ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateVariantField(vIdx, 'discount_price', '')}
+                                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 transition"
+                                                                title="Hapus harga diskon"
+                                                            >
+                                                                <X className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                    {getVariantError(vIdx, null, 'discount_price') && (
+                                                        <p className="mt-1 text-[11px] font-semibold text-rose-500">
+                                                            {getVariantError(vIdx, null, 'discount_price')}
+                                                        </p>
+                                                    )}
+                                                    {variant.discount_price && (variant.price || data.price) && Number(variant.discount_price) >= Number(variant.price || data.price) && (
+                                                        <p className="mt-0.5 text-[10px] font-medium text-amber-600">
+                                                            ⚠️ Diskon ≥ harga asli
                                                         </p>
                                                     )}
                                                 </div>
@@ -1105,8 +1143,8 @@ export default function ProductVariantsSection({
 
                                                                 {/* Sub-Variant SKU, Price, and Unit Row */}
                                                                 <div className={`grid grid-cols-1 gap-3 pt-2 border-t border-slate-100 ${!isWeightVariant(subVar, variant.stock_type === 'parent' ? variant : null, units)
-                                                                    ? 'sm:grid-cols-4'
-                                                                    : 'sm:grid-cols-3'
+                                                                    ? 'sm:grid-cols-2 lg:grid-cols-5'
+                                                                    : 'sm:grid-cols-2 lg:grid-cols-4'
                                                                     }`}>
                                                                     {/* SKU */}
                                                                     <div>
@@ -1140,6 +1178,44 @@ export default function ProductVariantsSection({
                                                                         {getVariantError(vIdx, svIdx, 'price') && (
                                                                             <p className="mt-1 text-[10px] font-semibold text-rose-500">
                                                                                 {getVariantError(vIdx, svIdx, 'price')}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Discount Price */}
+                                                                    <div>
+                                                                        <label className="mb-1 text-nowrap block text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1">
+                                                                            <span>{t('backoffice.product.discount_price', 'Harga Diskon (IDR)')}</span>
+                                                                            <span className="font-normal normal-case text-rose-500 text-[9px]">— {t('backoffice.product.form.optional', 'opsional')}</span>
+                                                                        </label>
+                                                                        <div className="relative">
+                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-rose-400">Rp</span>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={formatPriceInput(subVar.discount_price)}
+                                                                                onChange={e => updateSubVariantField(vIdx, svIdx, 'discount_price', parsePriceInput(e.target.value))}
+                                                                                placeholder="0"
+                                                                                className="w-full rounded-lg border border-rose-200 bg-rose-50/40 pl-7 pr-6 py-1.5 text-xs font-semibold text-rose-700 outline-none transition focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                                                                            />
+                                                                            {subVar.discount_price ? (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => updateSubVariantField(vIdx, svIdx, 'discount_price', '')}
+                                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 transition"
+                                                                                    title="Hapus harga diskon"
+                                                                                >
+                                                                                    <X className="h-3 w-3" />
+                                                                                </button>
+                                                                            ) : null}
+                                                                        </div>
+                                                                        {getVariantError(vIdx, svIdx, 'discount_price') && (
+                                                                            <p className="mt-1 text-[10px] font-semibold text-rose-500">
+                                                                                {getVariantError(vIdx, svIdx, 'discount_price')}
+                                                                            </p>
+                                                                        )}
+                                                                        {subVar.discount_price && (subVar.price || variant.price || data.price) && Number(subVar.discount_price) >= Number(subVar.price || variant.price || data.price) && (
+                                                                            <p className="mt-0.5 text-[9px] font-medium text-amber-600">
+                                                                                ⚠️ Diskon ≥ harga asli
                                                                             </p>
                                                                         )}
                                                                     </div>

@@ -81,36 +81,66 @@ export default function FeaturedProduct2({ featuredProduct2 = [] }) {
             if (locale === 'arabic' || locale === 'ar') val = transObj.ar || transObj.en || transObj.id;
             else if (locale === 'english' || locale === 'en') val = transObj.en || transObj.id;
             else val = transObj.id;
-            if (val !== undefined && val !== null && val !== '') return val;
+            if (val !== undefined && val !== null && String(val).trim() !== '') return String(val).trim();
         }
-        return directVal || '';
+        return (directVal && String(directVal).trim()) ? String(directVal).trim() : '';
     };
 
+    // Explicit definition checks: If primary Indonesian / direct content was deleted, the element is not defined
+    const isBadgeDefined = Boolean(
+        (activeItem?.badge && String(activeItem.badge).trim() !== '') ||
+        (activeItem?.badge_translations?.id && String(activeItem.badge_translations.id).trim() !== '')
+    );
+    const isTitleDefined = Boolean(
+        (activeItem?.title && String(activeItem.title).trim() !== '') ||
+        (activeItem?.title_translations?.id && String(activeItem.title_translations.id).trim() !== '')
+    );
+    const isDescDefined = Boolean(
+        (activeItem?.description && String(activeItem.description).trim() !== '') ||
+        (activeItem?.description_translations?.id && String(activeItem.description_translations.id).trim() !== '')
+    );
+
     // Values with 3-language resolution (purely optional)
-    const badgeText = activeItem ? getTranslatedText(activeItem.badge_translations, activeItem.badge) : '';
-    const titleText = activeItem ? getTranslatedText(activeItem.title_translations, activeItem.title) : '';
-    const descText = activeItem ? getTranslatedText(activeItem.description_translations, activeItem.description) : '';
+    const badgeText = isBadgeDefined && activeItem ? getTranslatedText(activeItem.badge_translations, activeItem.badge) : '';
+    const titleText = isTitleDefined && activeItem ? getTranslatedText(activeItem.title_translations, activeItem.title) : '';
+    const descText = isDescDefined && activeItem ? getTranslatedText(activeItem.description_translations, activeItem.description) : '';
 
     const bgImage = activeItem?.background_image || '/images/featured-product/bg-featured-product.png';
 
     // Feature 1
+    const isF1Defined = Boolean(
+        (activeItem?.feature_1_title && String(activeItem.feature_1_title).trim() !== '') ||
+        (activeItem?.feature_1_title_translations?.id && String(activeItem.feature_1_title_translations.id).trim() !== '') ||
+        (activeItem?.feature_1_desc && String(activeItem.feature_1_desc).trim() !== '') ||
+        (activeItem?.feature_1_desc_translations?.id && String(activeItem.feature_1_desc_translations.id).trim() !== '')
+    );
     const f1IconName = activeItem?.feature_1_icon || 'Gem';
     const Feature1IconComp = ICON_MAP[f1IconName] || Gem;
-    const f1TitleText = activeItem ? getTranslatedText(activeItem.feature_1_title_translations, activeItem.feature_1_title) : '';
-    const f1DescText = activeItem ? getTranslatedText(activeItem.feature_1_desc_translations, activeItem.feature_1_desc) : '';
+    const f1TitleText = isF1Defined && activeItem ? getTranslatedText(activeItem.feature_1_title_translations, activeItem.feature_1_title) : '';
+    const f1DescText = isF1Defined && activeItem ? getTranslatedText(activeItem.feature_1_desc_translations, activeItem.feature_1_desc) : '';
 
     // Feature 2
+    const isF2Defined = Boolean(
+        (activeItem?.feature_2_title && String(activeItem.feature_2_title).trim() !== '') ||
+        (activeItem?.feature_2_title_translations?.id && String(activeItem.feature_2_title_translations.id).trim() !== '') ||
+        (activeItem?.feature_2_desc && String(activeItem.feature_2_desc).trim() !== '') ||
+        (activeItem?.feature_2_desc_translations?.id && String(activeItem.feature_2_desc_translations.id).trim() !== '')
+    );
     const f2IconName = activeItem?.feature_2_icon || 'Crown';
     const Feature2IconComp = ICON_MAP[f2IconName] || Crown;
-    const f2TitleText = activeItem ? getTranslatedText(activeItem.feature_2_title_translations, activeItem.feature_2_title) : '';
-    const f2DescText = activeItem ? getTranslatedText(activeItem.feature_2_desc_translations, activeItem.feature_2_desc) : '';
+    const f2TitleText = isF2Defined && activeItem ? getTranslatedText(activeItem.feature_2_title_translations, activeItem.feature_2_title) : '';
+    const f2DescText = isF2Defined && activeItem ? getTranslatedText(activeItem.feature_2_desc_translations, activeItem.feature_2_desc) : '';
 
-    const hasFeature1 = Boolean(f1TitleText || f1DescText);
-    const hasFeature2 = Boolean(f2TitleText || f2DescText);
+    const hasFeature1 = isF1Defined && Boolean(f1TitleText || f1DescText);
+    const hasFeature2 = isF2Defined && Boolean(f2TitleText || f2DescText);
     const hasAnyFeature = hasFeature1 || hasFeature2;
 
     // Button
-    const btnText = activeItem ? getTranslatedText(activeItem.button_text_translations, activeItem.button_text) : '';
+    const isBtnDefined = Boolean(
+        (activeItem?.button_text && String(activeItem.button_text).trim() !== '') ||
+        (activeItem?.button_text_translations?.id && String(activeItem.button_text_translations.id).trim() !== '')
+    );
+    const btnText = isBtnDefined && activeItem ? getTranslatedText(activeItem.button_text_translations, activeItem.button_text) : '';
 
     const rawButtonUrl = activeItem?.button_url || '/products/parfum';
     const targetUrl = rawButtonUrl.startsWith('http://') || rawButtonUrl.startsWith('https://') || rawButtonUrl.startsWith('/')
@@ -149,7 +179,7 @@ export default function FeaturedProduct2({ featuredProduct2 = [] }) {
             <div className="absolute inset-0 bg-black/30 md:hidden" />
 
             {/* Content Container */}
-            <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="relative z-10 max-w-8xl mx-auto px-6 md:px-14 py-16 md:py-24 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 {/* Kolom Kiri dikosongkan — area gambar produk di background */}
                 <div className="hidden md:block" />
 
@@ -181,7 +211,7 @@ export default function FeaturedProduct2({ featuredProduct2 = [] }) {
                                 <motion.h2
                                     variants={itemVariants}
                                     style={activeItem?.text_color ? { color: activeItem.text_color, WebkitTextFillColor: activeItem.text_color, backgroundImage: 'none' } : undefined}
-                                    className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-300 to-blue-200"
+                                    className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-300 to-blue-200 md:leading-[60px]"
                                 >
                                     {titleText}
                                 </motion.h2>

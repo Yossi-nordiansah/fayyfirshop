@@ -146,20 +146,27 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
             items: items.map(item => ({ id: item.id, variantId: item.variantId }))
         })
             .then(res => {
-                if (res.data) {
-                    let updatedItems = [...items];
-                    if (res.data.weights) {
-                        updatedItems = items.map(item => {
-                            const key = `${item.id}-${item.variantId ?? 'null'}`;
-                            const freshWeight = res.data.weights[key];
-                            if (freshWeight !== undefined && freshWeight !== item.weight) {
-                                return { ...item, weight: freshWeight };
-                            }
-                            return item;
-                        });
-                        setCartItems(updatedItems);
-                        localStorage.setItem(checkoutKey, JSON.stringify(updatedItems));
-                    }
+                    if (res.data) {
+                        let updatedItems = [...items];
+                        if (res.data.weights || res.data.prices) {
+                            updatedItems = items.map(item => {
+                                const key = `${item.id}-${item.variantId ?? 'null'}`;
+                                const freshWeight = res.data.weights?.[key];
+                                const freshPriceInfo = res.data.prices?.[key];
+                                let newItem = { ...item };
+                                if (freshWeight !== undefined && freshWeight !== item.weight) {
+                                    newItem.weight = freshWeight;
+                                }
+                                if (freshPriceInfo) {
+                                    newItem.price = Number(freshPriceInfo.price);
+                                    newItem.original_price = Number(freshPriceInfo.original_price);
+                                    newItem.discount_price = freshPriceInfo.discount_price ? Number(freshPriceInfo.discount_price) : null;
+                                }
+                                return newItem;
+                            });
+                            setCartItems(updatedItems);
+                            localStorage.setItem(checkoutKey, JSON.stringify(updatedItems));
+                        }
 
                     if (res.data.stocks) {
                         setStocksData(res.data.stocks);

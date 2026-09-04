@@ -11,6 +11,7 @@ import {
     X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import MainLayout from "@/Layouts/MainLayout";
 import { useLanguage } from "@/Contexts/LanguageContext";
 
@@ -32,6 +33,30 @@ export default function CartPage() {
         const items = JSON.parse(localStorage.getItem(cartKey) || "[]");
         setCartItems(items);
         setCheckedKeys([]);
+
+        if (items.length > 0) {
+            axios.post(route('checkout.check-stock'), {
+                items: items.map(item => ({ id: item.id, variantId: item.variantId }))
+            }).then(res => {
+                if (res.data?.prices) {
+                    const freshItems = items.map(item => {
+                        const key = `${item.id}-${item.variantId ?? 'null'}`;
+                        const pInfo = res.data.prices[key];
+                        if (pInfo) {
+                            return {
+                                ...item,
+                                price: Number(pInfo.price),
+                                original_price: Number(pInfo.original_price),
+                                discount_price: pInfo.discount_price ? Number(pInfo.discount_price) : null,
+                            };
+                        }
+                        return item;
+                    });
+                    setCartItems(freshItems);
+                    localStorage.setItem(cartKey, JSON.stringify(freshItems));
+                }
+            }).catch(() => {});
+        }
     }, [user]);
 
     const saveCart = (nextCart) => {
@@ -341,9 +366,16 @@ export default function CartPage() {
                                                         <p className="text-sm font-semibold text-zinc-500 sm:hidden">
                                                             {t("cart.subtotal", "Subtotal")}
                                                         </p>
-                                                        <p className="text-base font-extrabold text-blue-900">
-                                                            {formatPrice(item.price * item.quantity)}
-                                                        </p>
+                                                        <div className="flex flex-col sm:items-end">
+                                                            <p className={`text-base font-extrabold ${item.original_price && Number(item.original_price) > Number(item.price) ? "text-rose-600" : "text-blue-900"}`}>
+                                                                {formatPrice(item.price * item.quantity)}
+                                                            </p>
+                                                            {item.original_price && Number(item.original_price) > Number(item.price) && (
+                                                                <p className="text-xs text-zinc-400 line-through">
+                                                                    {formatPrice(item.original_price * item.quantity)}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                         <p className="mt-1 text-xs text-zinc-400">
                                                             {t("cart.price_per_item", "{price} / item").replace("{price}", formatPrice(item.price))}
                                                         </p>

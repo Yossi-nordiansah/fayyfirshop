@@ -9,7 +9,8 @@ import {
     MapPin,
     Ticket,
     X,
-    Check
+    Check,
+    Percent,
 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import { useLanguage } from '@/Contexts/LanguageContext';
@@ -34,6 +35,8 @@ export default function EventsTab({ events = [], vouchers = [] }) {
         imageFile: null,
         image_path: '', // existing path
         is_active: true,
+        discount_type: 'voucher', // 'voucher' | 'all_products'
+        discount_percentage: '',
         vouchers: [] // array voucher_id
     });
 
@@ -45,17 +48,25 @@ export default function EventsTab({ events = [], vouchers = [] }) {
         return dStr.substring(0, 16).replace(' ', 'T');
     };
 
+    const getLocalNowString = (offsetDays = 0) => {
+        const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     const openAddModal = () => {
         setModalMode('add');
         setEventFields({
             id: null,
             name: '',
-            start_date: new Date().toISOString().substring(0, 16),
-            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
+            start_date: getLocalNowString(0),
+            end_date: getLocalNowString(7),
             countries: ['Indonesia'],
             imageFile: null,
             image_path: '',
             is_active: true,
+            discount_type: 'voucher',
+            discount_percentage: '',
             vouchers: []
         });
         setIsModalOpen(true);
@@ -73,6 +84,8 @@ export default function EventsTab({ events = [], vouchers = [] }) {
             imageFile: null,
             image_path: item.image_path || '',
             is_active: item.is_active,
+            discount_type: item.discount_type || 'voucher',
+            discount_percentage: item.discount_percentage !== null && item.discount_percentage !== undefined ? item.discount_percentage : '',
             vouchers: voucherIds
         });
         setIsModalOpen(true);
@@ -86,7 +99,9 @@ export default function EventsTab({ events = [], vouchers = [] }) {
             end_date: eventFields.end_date,
             countries: eventFields.countries,
             is_active: eventFields.is_active ? 1 : 0,
-            vouchers: eventFields.vouchers
+            discount_type: eventFields.discount_type || 'voucher',
+            discount_percentage: eventFields.discount_type === 'all_products' ? eventFields.discount_percentage : null,
+            vouchers: eventFields.discount_type === 'voucher' ? eventFields.vouchers : []
         };
         if (eventFields.imageFile) {
             data.image = eventFields.imageFile;
@@ -110,7 +125,9 @@ export default function EventsTab({ events = [], vouchers = [] }) {
             start_date: item.start_date,
             end_date: item.end_date,
             countries: item.countries,
-            vouchers: voucherIds,
+            discount_type: item.discount_type || 'voucher',
+            discount_percentage: item.discount_percentage,
+            vouchers: item.discount_type === 'voucher' ? voucherIds : [],
             is_active: item.is_active ? 0 : 1
         });
     };
@@ -162,7 +179,9 @@ export default function EventsTab({ events = [], vouchers = [] }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        const d = new Date(dateStr);
+        const cleanStr = typeof dateStr === 'string' ? dateStr.replace('Z', '') : dateStr;
+        const d = new Date(cleanStr);
+        if (isNaN(d.getTime())) return '-';
         return d.toLocaleDateString('id-ID', {
             year: 'numeric',
             month: 'short',
@@ -253,24 +272,38 @@ export default function EventsTab({ events = [], vouchers = [] }) {
                                     </div>
                                 </div>
 
-                                {/* Associated Vouchers */}
+                                {/* Associated Vouchers or All Products Discount */}
                                 <div>
-                                    <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">
-                                        {t('backoffice.promotion.event.card.linked_vouchers', 'Linked Vouchers ({count})').replace('{count}', linkedVouchersList.length)}
-                                    </h4>
-                                    {linkedVouchersList.length === 0 ? (
-                                        <span className="text-xs text-slate-400 italic">{t('backoffice.promotion.event.card.no_vouchers_linked', 'No vouchers linked')}</span>
+                                    {item.discount_type === 'all_products' ? (
+                                        <div>
+                                            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">
+                                                {t('backoffice.promotion.event.card.promo_type', 'Tipe Promosi')}
+                                            </h4>
+                                            <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 text-xs font-black uppercase px-3 py-1 rounded-lg border border-rose-200 shadow-xs">
+                                                <Percent className="w-3.5 h-3.5 text-rose-600" />
+                                                {t('backoffice.promotion.event.card.discount_all_badge', 'Diskon Semua Produk: {percent}%').replace('{percent}', item.discount_percentage || 0)}
+                                            </span>
+                                        </div>
                                     ) : (
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {linkedVouchersList.map(v => (
-                                                <span
-                                                    key={v.id}
-                                                    className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-md border border-emerald-200"
-                                                >
-                                                    <Ticket className="w-3 h-3 text-emerald-600" />
-                                                    {v.code}
-                                                </span>
-                                            ))}
+                                        <div>
+                                            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">
+                                                {t('backoffice.promotion.event.card.linked_vouchers', 'Linked Vouchers ({count})').replace('{count}', linkedVouchersList.length)}
+                                            </h4>
+                                            {linkedVouchersList.length === 0 ? (
+                                                <span className="text-xs text-slate-400 italic">{t('backoffice.promotion.event.card.no_vouchers_linked', 'No vouchers linked')}</span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {linkedVouchersList.map(v => (
+                                                        <span
+                                                            key={v.id}
+                                                            className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-md border border-emerald-200"
+                                                        >
+                                                            <Ticket className="w-3 h-3 text-emerald-600" />
+                                                            {v.code}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -424,37 +457,126 @@ export default function EventsTab({ events = [], vouchers = [] }) {
                                 </p>
                             </div>
 
-                            {/* Event Voucher Associations */}
-                            <div className="border border-blue-50 rounded-lg p-4 bg-blue-50/20">
-                                <h3 className="text-xs font-extrabold text-blue-950 uppercase tracking-wide mb-2">{t('backoffice.promotion.event.form.linked_vouchers_section', 'Voucher Terkait Dengan Event Ini')}</h3>
-                                {vouchers.length === 0 ? (
-                                    <p className="text-xs text-slate-400 italic">{t('backoffice.promotion.event.form.no_vouchers_warning', 'Belum ada data voucher, buat voucher terlebih dahulu.')}</p>
+                            {/* Mode Promosi Event: Gunakan Voucher ATAU Discount Semua Product */}
+                            <div className="border border-blue-100 rounded-xl p-4 bg-blue-50/30 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-2">
+                                        {t('backoffice.promotion.event.form.promo_type_label', 'Pilihan Promosi Event')}
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEventFields({ ...eventFields, discount_type: 'voucher' })}
+                                            className={`p-3 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${
+                                                eventFields.discount_type === 'voucher'
+                                                    ? 'bg-blue-950 border-blue-950 text-white shadow-md'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className={`p-2 rounded-lg ${eventFields.discount_type === 'voucher' ? 'bg-white/10 text-amber-300' : 'bg-blue-50 text-blue-950'}`}>
+                                                <Ticket className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <span className="font-extrabold text-sm block">
+                                                    {t('backoffice.promotion.event.form.use_voucher', 'Gunakan Voucher')}
+                                                </span>
+                                                <span className={`text-[11px] block mt-0.5 ${eventFields.discount_type === 'voucher' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    {t('backoffice.promotion.event.form.use_voucher_desc', 'Hubungkan satu atau beberapa voucher khusus.')}
+                                                </span>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setEventFields({ ...eventFields, discount_type: 'all_products' })}
+                                            className={`p-3 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${
+                                                eventFields.discount_type === 'all_products'
+                                                    ? 'bg-rose-700 border-rose-700 text-white shadow-md'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:border-rose-300 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className={`p-2 rounded-lg ${eventFields.discount_type === 'all_products' ? 'bg-white/10 text-white' : 'bg-rose-50 text-rose-600'}`}>
+                                                <Percent className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <span className="font-extrabold text-sm block">
+                                                    {t('backoffice.promotion.event.form.discount_all', 'Discount Semua Product')}
+                                                </span>
+                                                <span className={`text-[11px] block mt-0.5 ${eventFields.discount_type === 'all_products' ? 'text-rose-100' : 'text-slate-400'}`}>
+                                                    {t('backoffice.promotion.event.form.discount_all_desc', 'Diskon otomatis semua produk tanpa terkecuali.')}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Content if Discount Semua Product */}
+                                {eventFields.discount_type === 'all_products' ? (
+                                    <div className="bg-white rounded-xl p-4 border border-rose-200 shadow-xs space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                                {t('backoffice.promotion.event.form.percentage_label', 'Jumlah Persentase Discount (%)')}
+                                            </label>
+                                            <div className="relative max-w-xs">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    step="0.1"
+                                                    required={eventFields.discount_type === 'all_products'}
+                                                    value={eventFields.discount_percentage}
+                                                    onChange={(e) => setEventFields({ ...eventFields, discount_percentage: e.target.value })}
+                                                    placeholder="Contoh: 15"
+                                                    className="w-full px-3 py-2 pr-8 border border-rose-300 rounded-lg text-sm font-black text-rose-700 focus:outline-none focus:border-rose-600"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-rose-500">%</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 bg-rose-50/60 rounded-lg border border-rose-100 text-xs text-rose-800 space-y-1">
+                                            <p className="font-bold">
+                                                💡 {t('backoffice.promotion.event.form.percentage_hint_title', 'Ketentuan Diskon Semua Produk:')}
+                                            </p>
+                                            <p className="text-[11px] leading-relaxed text-rose-700">
+                                                {t('backoffice.promotion.event.form.percentage_hint_desc', 'Seluruh produk dan varian akan otomatis terpotong sebesar persentase ini selama event aktif. Jika waktu event habis, harga otomatis kembali normal tanpa terkecuali.')}
+                                            </p>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-40 overflow-y-auto pr-1">
-                                        {vouchers.map((v) => (
-                                            <button
-                                                type="button"
-                                                key={v.id}
-                                                onClick={() => toggleEventVoucher(v.id)}
-                                                className={`p-2.5 rounded-lg border text-left flex items-center justify-between text-xs transition ${eventFields.vouchers.includes(v.id)
-                                                    ? 'bg-emerald-50/70 border-emerald-500 text-emerald-950'
-                                                    : 'bg-white border-slate-200 text-slate-707 hover:bg-slate-50'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Ticket className={`w-4 h-4 ${eventFields.vouchers.includes(v.id) ? 'text-emerald-600' : 'text-slate-400'}`} />
-                                                    <div>
-                                                        <span className="font-extrabold tracking-wide uppercase block">{v.code}</span>
-                                                        <span className="text-[10px] text-slate-500 font-medium line-clamp-1">{v.name}</span>
-                                                    </div>
-                                                </div>
-                                                {eventFields.vouchers.includes(v.id) && (
-                                                    <div className="h-4.5 w-4.5 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0">
-                                                        <Check className="w-3 h-3" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
+                                    /* Content if Gunakan Voucher */
+                                    <div className="space-y-2">
+                                        <h4 className="text-xs font-bold text-slate-700 uppercase">
+                                            {t('backoffice.promotion.event.form.linked_vouchers_section', 'Pilih Voucher Terkait:')}
+                                        </h4>
+                                        {vouchers.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">{t('backoffice.promotion.event.form.no_vouchers_warning', 'Belum ada data voucher, buat voucher terlebih dahulu.')}</p>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-40 overflow-y-auto pr-1">
+                                                {vouchers.map((v) => (
+                                                    <button
+                                                        type="button"
+                                                        key={v.id}
+                                                        onClick={() => toggleEventVoucher(v.id)}
+                                                        className={`p-2.5 rounded-lg border text-left flex items-center justify-between text-xs transition cursor-pointer ${eventFields.vouchers.includes(v.id)
+                                                            ? 'bg-emerald-50/70 border-emerald-500 text-emerald-950'
+                                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Ticket className={`w-4 h-4 ${eventFields.vouchers.includes(v.id) ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                                            <div>
+                                                                <span className="font-extrabold tracking-wide uppercase block">{v.code}</span>
+                                                                <span className="text-[10px] text-slate-500 font-medium line-clamp-1">{v.name}</span>
+                                                            </div>
+                                                        </div>
+                                                        {eventFields.vouchers.includes(v.id) && (
+                                                            <div className="h-4.5 w-4.5 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0">
+                                                                <Check className="w-3 h-3" />
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -261,6 +261,8 @@ class PromotionController extends Controller
             'countries' => 'required|array',
             'image' => 'nullable|file|image|max:3072',
             'is_active' => 'boolean',
+            'discount_type' => 'nullable|string|in:voucher,all_products',
+            'discount_percentage' => 'nullable|numeric|min:0.01|max:100',
             'vouchers' => 'nullable|array',
         ]);
 
@@ -269,6 +271,11 @@ class PromotionController extends Controller
             $imagePath = $request->file('image')->store('events', 'public');
         }
 
+        $discountType = $request->discount_type === 'all_products' ? 'all_products' : 'voucher';
+        $discountPercentage = ($discountType === 'all_products' && $request->filled('discount_percentage'))
+            ? (float)$request->discount_percentage
+            : null;
+
         $event = Event::create([
             'name' => $request->name,
             'start_date' => $request->start_date,
@@ -276,10 +283,14 @@ class PromotionController extends Controller
             'countries' => $request->countries,
             'image_path' => $imagePath ? '/storage/' . $imagePath : null,
             'is_active' => $request->is_active ?? true,
+            'discount_type' => $discountType,
+            'discount_percentage' => $discountPercentage,
         ]);
 
-        if ($request->filled('vouchers')) {
+        if ($discountType === 'voucher' && $request->filled('vouchers')) {
             $event->vouchers()->sync($request->vouchers);
+        } else {
+            $event->vouchers()->sync([]);
         }
 
         return redirect()->back()->with([
@@ -302,6 +313,8 @@ class PromotionController extends Controller
             'countries' => 'required|array',
             'image' => 'nullable|file|image|max:3072',
             'is_active' => 'boolean',
+            'discount_type' => 'nullable|string|in:voucher,all_products',
+            'discount_percentage' => 'nullable|numeric|min:0.01|max:100',
             'vouchers' => 'nullable|array',
         ]);
 
@@ -317,6 +330,11 @@ class PromotionController extends Controller
             $imagePath = '/storage/' . $request->file('image')->store('events', 'public');
         }
 
+        $discountType = $request->discount_type === 'all_products' ? 'all_products' : 'voucher';
+        $discountPercentage = ($discountType === 'all_products' && $request->filled('discount_percentage'))
+            ? (float)$request->discount_percentage
+            : null;
+
         $event->update([
             'name' => $request->name,
             'start_date' => $request->start_date,
@@ -324,9 +342,15 @@ class PromotionController extends Controller
             'countries' => $request->countries,
             'image_path' => $imagePath,
             'is_active' => $request->is_active,
+            'discount_type' => $discountType,
+            'discount_percentage' => $discountPercentage,
         ]);
 
-        $event->vouchers()->sync($request->vouchers ?? []);
+        if ($discountType === 'voucher') {
+            $event->vouchers()->sync($request->vouchers ?? []);
+        } else {
+            $event->vouchers()->sync([]);
+        }
 
         return redirect()->back()->with([
             'status' => 'Event successfully updated.',

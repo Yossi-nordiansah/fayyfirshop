@@ -207,6 +207,7 @@ Route::get('/product/{slug}', function ($slug) {
             'name_translations'=> $v->name_translations,
             'sku'              => $v->sku,
             'price'            => $v->price,
+            'discount_price'   => $v->discount_price,
             'stock'            => $v->stock,
             'stock_type'       => $v->stock_type,
             'unit_id'          => $v->unit_id,

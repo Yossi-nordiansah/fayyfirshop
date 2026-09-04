@@ -61,25 +61,57 @@ export default function ProductManagement({ products = [], status, statusAction 
         }).format(value);
     };
 
-    // Helper to determine lowest price if variants exist, otherwise use base price
-    const getDisplayPrice = (product) => {
+    // Helper to determine pricing and discount for product listing
+    const getProductPricing = (product) => {
         const variants = product.variants;
-        const price = product.price;
+        let basePrice = Number(product.price) || 0;
+
         if (variants && variants.length > 0) {
             const hasChildren = variants.some(v => v.parent_id !== null && v.parent_id !== undefined);
             const targetVariants = hasChildren
                 ? variants.filter(v => v.parent_id !== null && v.parent_id !== undefined)
                 : variants;
 
-            const prices = targetVariants
-                .map(v => v.price)
-                .filter(p => typeof p === 'number' && p > 0);
+            const validPrices = targetVariants
+                .map(v => Number(v.price))
+                .filter(p => !isNaN(p) && p > 0);
 
-            if (prices.length > 0) {
-                return Math.min(...prices);
+            if (validPrices.length > 0) {
+                basePrice = Math.min(...validPrices);
+            }
+
+            const discounted = targetVariants
+                .filter(v => {
+                    const d = Number(v.discount_price);
+                    const p = Number(v.price) || basePrice;
+                    return !isNaN(d) && d > 0 && (!p || d < p);
+                })
+                .sort((a, b) => Number(a.discount_price) - Number(b.discount_price));
+
+            if (discounted.length > 0) {
+                const best = discounted[0];
+                return {
+                    hasDiscount: true,
+                    discountPrice: Number(best.discount_price),
+                    originalPrice: Number(best.price) || basePrice,
+                };
             }
         }
-        return price;
+
+        const pDiscount = Number(product.discount_price);
+        if (!isNaN(pDiscount) && pDiscount > 0 && (!basePrice || pDiscount < basePrice)) {
+            return {
+                hasDiscount: true,
+                discountPrice: pDiscount,
+                originalPrice: basePrice,
+            };
+        }
+
+        return {
+            hasDiscount: false,
+            discountPrice: null,
+            originalPrice: basePrice,
+        };
     };
 
     return (
@@ -246,9 +278,20 @@ export default function ProductManagement({ products = [], status, statusAction 
                                                                  </span>
                                                              )}
                                                          </div>
-                                                     </td>
+                                                    </td>
                                                     <td className="px-6 py-4 text-right font-bold text-slate-900">
-                                                         {formatIDR(getDisplayPrice(product))}
+                                                         {(() => {
+                                                             const pricing = getProductPricing(product);
+                                                             if (pricing.hasDiscount) {
+                                                                 return (
+                                                                     <div className="flex flex-col items-end">
+                                                                         <span className="font-black text-rose-600">{formatIDR(pricing.discountPrice)}</span>
+                                                                         <span className="text-[11px] font-normal text-slate-400 line-through">{formatIDR(pricing.originalPrice)}</span>
+                                                                     </div>
+                                                                 );
+                                                             }
+                                                             return formatIDR(pricing.originalPrice);
+                                                         })()}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {product.variants && product.variants.length > 0 ? (

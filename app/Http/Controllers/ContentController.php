@@ -516,17 +516,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
         
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
         
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
 
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $request->background_image_url;
         if ($request->hasFile('background_image_file')) {
@@ -535,24 +569,24 @@ class ContentController extends Controller
         }
 
         FeaturedProductItem::create([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: 'ShieldCheck',
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: 'Award',
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,
@@ -612,17 +646,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
         
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
         
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
 
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $item->background_image;
         if ($request->hasFile('background_image_file')) {
@@ -639,24 +707,24 @@ class ContentController extends Controller
         }
 
         $item->update([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: $item->feature_1_icon,
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: $item->feature_2_icon,
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,
@@ -892,17 +960,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
 
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
 
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
 
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $request->background_image_url;
         if ($request->hasFile('background_image_file')) {
@@ -911,24 +1013,24 @@ class ContentController extends Controller
         }
 
         FeaturedProduct2Item::create([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: 'Gem',
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: 'Crown',
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,
@@ -988,17 +1090,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
 
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
 
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
 
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $item->background_image;
         if ($request->hasFile('background_image_file')) {
@@ -1015,24 +1151,24 @@ class ContentController extends Controller
         }
 
         $item->update([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: $item->feature_1_icon,
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: $item->feature_2_icon,
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,
@@ -1127,14 +1263,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
+
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
+
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
+
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $request->background_image_url;
         if ($request->hasFile('background_image_file')) {
@@ -1143,24 +1316,24 @@ class ContentController extends Controller
         }
 
         FeaturedProduct3Item::create([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: 'Flame',
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: 'Leaf',
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,
@@ -1220,14 +1393,51 @@ class ContentController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $titleTranslations = ['id' => $request->title_id, 'en' => $request->title_en ?: $request->title_id, 'ar' => $request->title_ar ?: $request->title_id];
-        $badgeTranslations = ['id' => $request->badge_id ?: '', 'en' => $request->badge_en ?: ($request->badge_id ?: ''), 'ar' => $request->badge_ar ?: ($request->badge_id ?: '')];
-        $descTranslations = ['id' => $request->description_id ?: '', 'en' => $request->description_en ?: ($request->description_id ?: ''), 'ar' => $request->description_ar ?: ($request->description_id ?: '')];
-        $f1TitleTranslations = ['id' => $request->feature_1_title_id ?: '', 'en' => $request->feature_1_title_en ?: ($request->feature_1_title_id ?: ''), 'ar' => $request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')];
-        $f1DescTranslations = ['id' => $request->feature_1_desc_id ?: '', 'en' => $request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: ''), 'ar' => $request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')];
-        $f2TitleTranslations = ['id' => $request->feature_2_title_id ?: '', 'en' => $request->feature_2_title_en ?: ($request->feature_2_title_id ?: ''), 'ar' => $request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')];
-        $f2DescTranslations = ['id' => $request->feature_2_desc_id ?: '', 'en' => $request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: ''), 'ar' => $request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')];
-        $btnTextTranslations = ['id' => $request->button_text_id ?: '', 'en' => $request->button_text_en ?: ($request->button_text_id ?: ''), 'ar' => $request->button_text_ar ?: ($request->button_text_id ?: '')];
+        $titleTranslations = [
+            'id' => $request->title_id ?: '',
+            'en' => $request->title_id ? ($request->title_en ?: $request->title_id) : '',
+            'ar' => $request->title_id ? ($request->title_ar ?: $request->title_id) : ''
+        ];
+        $badgeTranslations = [
+            'id' => $request->badge_id ?: '',
+            'en' => $request->badge_id ? ($request->badge_en ?: $request->badge_id) : '',
+            'ar' => $request->badge_id ? ($request->badge_ar ?: $request->badge_id) : ''
+        ];
+        $descTranslations = [
+            'id' => $request->description_id ?: '',
+            'en' => $request->description_id ? ($request->description_en ?: $request->description_id) : '',
+            'ar' => $request->description_id ? ($request->description_ar ?: $request->description_id) : ''
+        ];
+
+        $hasF1 = !empty(trim($request->feature_1_title_id ?? '')) || !empty(trim($request->feature_1_desc_id ?? ''));
+        $f1TitleTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_title_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_title_en ?: ($request->feature_1_title_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_title_ar ?: ($request->feature_1_title_id ?: '')) : ''
+        ];
+        $f1DescTranslations = [
+            'id' => $hasF1 ? ($request->feature_1_desc_id ?: '') : '',
+            'en' => $hasF1 ? ($request->feature_1_desc_en ?: ($request->feature_1_desc_id ?: '')) : '',
+            'ar' => $hasF1 ? ($request->feature_1_desc_ar ?: ($request->feature_1_desc_id ?: '')) : ''
+        ];
+
+        $hasF2 = !empty(trim($request->feature_2_title_id ?? '')) || !empty(trim($request->feature_2_desc_id ?? ''));
+        $f2TitleTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_title_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_title_en ?: ($request->feature_2_title_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_title_ar ?: ($request->feature_2_title_id ?: '')) : ''
+        ];
+        $f2DescTranslations = [
+            'id' => $hasF2 ? ($request->feature_2_desc_id ?: '') : '',
+            'en' => $hasF2 ? ($request->feature_2_desc_en ?: ($request->feature_2_desc_id ?: '')) : '',
+            'ar' => $hasF2 ? ($request->feature_2_desc_ar ?: ($request->feature_2_desc_id ?: '')) : ''
+        ];
+
+        $btnTextTranslations = [
+            'id' => $request->button_text_id ?: '',
+            'en' => $request->button_text_id ? ($request->button_text_en ?: $request->button_text_id) : '',
+            'ar' => $request->button_text_id ? ($request->button_text_ar ?: $request->button_text_id) : ''
+        ];
 
         $backgroundImagePath = $item->background_image;
         if ($request->hasFile('background_image_file')) {
@@ -1244,24 +1454,24 @@ class ContentController extends Controller
         }
 
         $item->update([
-            'title' => $request->title_id,
+            'title' => $request->title_id ?: null,
             'title_translations' => $titleTranslations,
-            'badge' => $request->badge_id,
+            'badge' => $request->badge_id ?: null,
             'badge_translations' => $badgeTranslations,
-            'description' => $request->description_id,
+            'description' => $request->description_id ?: null,
             'description_translations' => $descTranslations,
             'background_image' => $backgroundImagePath,
             'feature_1_icon' => $request->feature_1_icon ?: $item->feature_1_icon,
-            'feature_1_title' => $request->feature_1_title_id,
+            'feature_1_title' => $hasF1 ? ($request->feature_1_title_id ?: null) : null,
             'feature_1_title_translations' => $f1TitleTranslations,
-            'feature_1_desc' => $request->feature_1_desc_id,
+            'feature_1_desc' => $hasF1 ? ($request->feature_1_desc_id ?: null) : null,
             'feature_1_desc_translations' => $f1DescTranslations,
             'feature_2_icon' => $request->feature_2_icon ?: $item->feature_2_icon,
-            'feature_2_title' => $request->feature_2_title_id,
+            'feature_2_title' => $hasF2 ? ($request->feature_2_title_id ?: null) : null,
             'feature_2_title_translations' => $f2TitleTranslations,
-            'feature_2_desc' => $request->feature_2_desc_id,
+            'feature_2_desc' => $hasF2 ? ($request->feature_2_desc_id ?: null) : null,
             'feature_2_desc_translations' => $f2DescTranslations,
-            'button_text' => $request->button_text_id,
+            'button_text' => $request->button_text_id ?: null,
             'button_text_translations' => $btnTextTranslations,
             'button_url' => $request->button_url,
             'text_color' => $request->text_color,

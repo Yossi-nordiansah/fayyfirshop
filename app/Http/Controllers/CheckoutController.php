@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -128,6 +129,9 @@ class CheckoutController extends Controller
         }
 
         $weights = [];
+        $prices = [];
+        $globalDiscount = Event::getActiveGlobalDiscount();
+
         foreach ($request->items as $item) {
             $productId = $item['id'];
             $variantId = $item['variantId'] ?? null;
@@ -138,13 +142,36 @@ class CheckoutController extends Controller
 
             if ($product) {
                 $weights[$key] = $this->parseWeight($variant, $product);
+
+                $basePrice = $variant ? (($variant->price !== null && $variant->price !== '' && (float)$variant->price > 0) ? (float)$variant->price : (float)$product->price) : (float)$product->price;
+                $discPrice = null;
+
+                if ($variant && $variant->discount_price !== null && (float)$variant->discount_price > 0) {
+                    $discPrice = (float)$variant->discount_price;
+                } elseif ($product->discount_price !== null && (float)$product->discount_price > 0 && (!$variant || !$variant->price || $variant->price == $product->price)) {
+                    $discPrice = (float)$product->discount_price;
+                }
+
+                if ($globalDiscount && $globalDiscount['percentage'] > 0) {
+                    $eventDiscPrice = round($basePrice * (1 - $globalDiscount['percentage'] / 100));
+                    $discPrice = $discPrice ? min($discPrice, $eventDiscPrice) : $eventDiscPrice;
+                }
+
+                $effectivePrice = ($discPrice && $discPrice > 0 && $discPrice < $basePrice) ? $discPrice : $basePrice;
+
+                $prices[$key] = [
+                    'price' => (float) $effectivePrice,
+                    'original_price' => (float) $basePrice,
+                    'discount_price' => ($discPrice && $discPrice > 0 && $discPrice < $basePrice) ? (float) $discPrice : null,
+                ];
             }
         }
 
         return response()->json([
             'success' => true,
             'stocks' => $stockData,
-            'weights' => $weights
+            'weights' => $weights,
+            'prices' => $prices,
         ]);
     }
 
@@ -166,6 +193,7 @@ class CheckoutController extends Controller
         $totalWeight = 0;
         $totalValue = 0;
         $biteshipItems = [];
+        $globalDiscount = Event::getActiveGlobalDiscount();
 
         foreach ($request->items as $item) {
             $product = Product::find($item['id']);
@@ -174,7 +202,21 @@ class CheckoutController extends Controller
 
             if (!$product) continue;
 
-            $price = $variant ? $variant->price : $product->price;
+            $basePrice = $variant ? (($variant->price !== null && $variant->price !== '' && (float)$variant->price > 0) ? (float)$variant->price : (float)$product->price) : (float)$product->price;
+            $discPrice = null;
+
+            if ($variant && $variant->discount_price !== null && (float)$variant->discount_price > 0) {
+                $discPrice = (float)$variant->discount_price;
+            } elseif ($product->discount_price !== null && (float)$product->discount_price > 0 && (!$variant || !$variant->price || $variant->price == $product->price)) {
+                $discPrice = (float)$product->discount_price;
+            }
+
+            if ($globalDiscount && $globalDiscount['percentage'] > 0) {
+                $eventDiscPrice = round($basePrice * (1 - $globalDiscount['percentage'] / 100));
+                $discPrice = $discPrice ? min($discPrice, $eventDiscPrice) : $eventDiscPrice;
+            }
+
+            $price = ($discPrice && $discPrice > 0 && $discPrice < $basePrice) ? $discPrice : $basePrice;
             $quantity = $item['quantity'];
             $weight = $this->parseWeight($variant, $product);
 
@@ -652,16 +694,28 @@ class CheckoutController extends Controller
                 // Calculate subtotal
                 $subtotal = 0;
                 $orderItemsData = [];
+                $globalDiscount = Event::getActiveGlobalDiscount();
 
                 foreach ($items as $item) {
                     $product = Product::findOrFail($item['id']);
-                    $price = $product->price;
                     $variantId = $item['variantId'] ?? null;
+                    $variant = $variantId ? ProductVariant::find($variantId) : null;
 
-                    if ($variantId) {
-                        $variant = ProductVariant::findOrFail($variantId);
-                        $price = $variant->price;
+                    $basePrice = $variant ? (($variant->price !== null && $variant->price !== '' && (float)$variant->price > 0) ? (float)$variant->price : (float)$product->price) : (float)$product->price;
+                    $discPrice = null;
+
+                    if ($variant && $variant->discount_price !== null && (float)$variant->discount_price > 0) {
+                        $discPrice = (float)$variant->discount_price;
+                    } elseif ($product->discount_price !== null && (float)$product->discount_price > 0 && (!$variant || !$variant->price || $variant->price == $product->price)) {
+                        $discPrice = (float)$product->discount_price;
                     }
+
+                    if ($globalDiscount && $globalDiscount['percentage'] > 0) {
+                        $eventDiscPrice = round($basePrice * (1 - $globalDiscount['percentage'] / 100));
+                        $discPrice = $discPrice ? min($discPrice, $eventDiscPrice) : $eventDiscPrice;
+                    }
+
+                    $price = ($discPrice && $discPrice > 0 && $discPrice < $basePrice) ? $discPrice : $basePrice;
 
                     $subtotal += ($price * $item['quantity']);
 
