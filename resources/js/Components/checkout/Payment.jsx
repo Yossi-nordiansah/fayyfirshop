@@ -82,7 +82,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             title: t("checkout.payment.e_wallet", "E-Wallet"),
             methods: [
                 // { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
-                { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
+                // { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" }, // SEMENTARA DINONAKTIFKAN
                 // { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
                 { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" },
             ],
@@ -98,7 +98,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             id: "virtual_account",
             title: t("checkout.payment.virtual_account", "Virtual Account (Verifikasi Otomatis)"),
             methods: [
-                { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca_va", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" },
+                // { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca_va", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" }, // SEMENTARA DINONAKTIFKAN
                 { id: "bri_va", name: "BRI Virtual Account", desc: t("checkout.payment.desc.bri_va", "Transfer Virtual Account BRI"), logo: "/images/payment/bri.svg" },
                 { id: "bni_va", name: "BNI Virtual Account", desc: t("checkout.payment.desc.bni_va", "Transfer Virtual Account BNI"), logo: "/images/payment/bni.svg" },
                 { id: "mandiri_va", name: "Mandiri Bill Payment", desc: t("checkout.payment.desc.mandiri_va", "Transfer Mandiri Bill Payment"), logo: "/images/payment/mandiri.svg" },
@@ -110,13 +110,14 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                 // { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu_va", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" },  // SEMENTARA DINONAKTIFKAN
             ],
         },
-        {
-            id: "card",
-            title: t("checkout.payment.credit_card", "Credit / Debit Card"),
-            methods: [
-                { id: "credit_card", name: "Credit / Debit Card", desc: "Visa • Mastercard • JCB • Amex • UnionPay", isCard: true },
-            ],
-        },
+        // SEMENTARA DINONAKTIFKAN
+        // {
+        //     id: "card",
+        //     title: t("checkout.payment.credit_card", "Credit / Debit Card"),
+        //     methods: [
+        //         { id: "credit_card", name: "Credit / Debit Card", desc: "Visa • Mastercard • JCB • Amex • UnionPay", isCard: true },
+        //     ],
+        // },
         {
             id: "retail",
             title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
@@ -126,6 +127,8 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             ],
         },
     ];
+
+    const activeChangeCategories = changeCategories.filter(cat => cat.methods && cat.methods.length > 0);
 
     /* ── Effects ── */
 
@@ -377,7 +380,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
             <ChangeMethodModal
                 isOpen={isChangingMethod}
                 onClose={() => setIsChangingMethod(false)}
-                changeCategories={changeCategories}
+                changeCategories={activeChangeCategories}
                 loadingChange={loadingChange}
                 onMethodChange={handleMethodChange}
                 currentMethod={order.payment_method}

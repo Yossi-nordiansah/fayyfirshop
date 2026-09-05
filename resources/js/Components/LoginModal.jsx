@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Link, useForm } from "@inertiajs/react";
+import { Link, useForm, usePage } from "@inertiajs/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, X } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, X, AlertCircle } from "lucide-react";
 import AuthStatusModal from "@/Components/AuthStatusModal";
 import LoadingSpinner from "@/Components/LoadingSpinner";
 
 const LoginModal = ({ isOpen, onClose, t }) => {
+    const { flash } = usePage().props;
     const [showPassword, setShowPassword] = useState(false);
     const [showFailureModal, setShowFailureModal] = useState(false);
+    const [oauthError, setOauthError] = useState('');
 
     // Auth method state: 'password' | 'whatsapp'
     const [loginMethod, setLoginMethod] = useState('password');
@@ -39,6 +41,13 @@ const LoginModal = ({ isOpen, onClose, t }) => {
         return () => clearTimeout(timer);
     }, [countdown]);
 
+    // Sync flash error
+    useEffect(() => {
+        if (flash?.error) {
+            setOauthError(flash.error);
+        }
+    }, [flash?.error]);
+
     // Reset states when modal is closed
     useEffect(() => {
         if (!isOpen) {
@@ -49,6 +58,7 @@ const LoginModal = ({ isOpen, onClose, t }) => {
             setWaStep(1);
             setWaError('');
             setCountdown(0);
+            setOauthError('');
         }
     }, [isOpen]);
 
@@ -209,6 +219,26 @@ const LoginModal = ({ isOpen, onClose, t }) => {
                                 </p>
                             </div>
 
+                            {oauthError && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between gap-2 shadow-sm"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle size={16} className="text-red-500 shrink-0" />
+                                        <span>{t(oauthError, oauthError)}</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOauthError('')}
+                                        className="text-red-400 hover:text-red-600 p-0.5 rounded transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </motion.div>
+                            )}
+
                             {loginMethod === 'password' ? (
                                 <>
                                     {/* Google Sign In */}
@@ -261,6 +291,7 @@ const LoginModal = ({ isOpen, onClose, t }) => {
                                                     type="email"
                                                     value={data.email}
                                                     onChange={(e) => setData("email", e.target.value)}
+                                                    autoComplete="username"
                                                     placeholder={t("auth.modal.placeholder.email", "Enter your email")}
                                                     className="w-full border rounded-xl pl-12 pr-4 py-3 text-sm placeholder-zinc-600 outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 transition-all"
                                                     required
@@ -281,6 +312,7 @@ const LoginModal = ({ isOpen, onClose, t }) => {
                                                     type={showPassword ? "text" : "password"}
                                                     value={data.password}
                                                     onChange={(e) => setData("password", e.target.value)}
+                                                    autoComplete="current-password"
                                                     placeholder={t("auth.modal.placeholder.password", "Enter your password")}
                                                     className="w-full border rounded-xl pl-12 pr-12 py-3 text-sm placeholder-zinc-600 outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 transition-all"
                                                     required

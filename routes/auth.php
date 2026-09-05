@@ -18,10 +18,10 @@ Route::get('register', [RegisteredUserController::class, 'create'])
 
 Route::post('register', [RegisteredUserController::class, 'store']);
 
-Route::middleware('guest')->group(function () {
-    Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
-    Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
+Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 
+Route::middleware('guest')->group(function () {
     Route::get('login', function () {
         return redirect()->to('/?login=1');
     })->name('login');

@@ -33,8 +33,8 @@ class Referral extends Model
         'min_spending' => 'float',
         'total_quota' => 'integer',
         'used_quota' => 'integer',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
+        'start_date' => 'datetime:Y-m-d H:i:s',
+        'end_date' => 'datetime:Y-m-d H:i:s',
         'is_active' => 'boolean',
     ];
 }

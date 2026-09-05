@@ -115,7 +115,7 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
     const [selectedRate, setSelectedRate] = useState(null);
 
     // Order/Payment details
-    const [paymentMethod, setPaymentMethod] = useState("bca_va");
+    const [paymentMethod, setPaymentMethod] = useState("bri_va");
     const [notes, setNotes] = useState("");
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");

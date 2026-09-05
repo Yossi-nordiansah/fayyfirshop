@@ -45,6 +45,13 @@ export default function EventsTab({ events = [], vouchers = [] }) {
 
     const formatInputDate = (dStr) => {
         if (!dStr) return '';
+        if (typeof dStr === 'string' && (dStr.endsWith('Z') || dStr.includes('+'))) {
+            const d = new Date(dStr);
+            if (!isNaN(d.getTime())) {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+        }
         return dStr.substring(0, 16).replace(' ', 'T');
     };
 
@@ -122,8 +129,8 @@ export default function EventsTab({ events = [], vouchers = [] }) {
         const voucherIds = item.vouchers ? item.vouchers.map(v => v.id) : [];
         router.post(route('backoffice.promotion.event.update', item.id), {
             name: item.name,
-            start_date: item.start_date,
-            end_date: item.end_date,
+            start_date: formatInputDate(item.start_date),
+            end_date: formatInputDate(item.end_date),
             countries: item.countries,
             discount_type: item.discount_type || 'voucher',
             discount_percentage: item.discount_percentage,
@@ -179,7 +186,7 @@ export default function EventsTab({ events = [], vouchers = [] }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        const cleanStr = typeof dateStr === 'string' ? dateStr.replace('Z', '') : dateStr;
+        const cleanStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
         const d = new Date(cleanStr);
         if (isNaN(d.getTime())) return '-';
         return d.toLocaleDateString('id-ID', {
@@ -187,7 +194,8 @@ export default function EventsTab({ events = [], vouchers = [] }) {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     };
 

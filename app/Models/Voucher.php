@@ -35,8 +35,8 @@ class Voucher extends Model
         'total_quota' => 'integer',
         'used_quota' => 'integer',
         'max_use_per_user' => 'integer',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
+        'start_date' => 'datetime:Y-m-d H:i:s',
+        'end_date' => 'datetime:Y-m-d H:i:s',
         'is_active' => 'boolean',
     ];
 

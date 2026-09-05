@@ -17,6 +17,7 @@ class GoogleAuthController extends Controller
      */
     public function redirect(Request $request): RedirectResponse
     {
+        $intendedRedirect = null;
         if ($request->has('redirect') && $request->input('redirect')) {
             // Bersihkan ?login=1 dari URL intended agar modal login tidak terbuka kembali setelah berhasil login
             $intendedRedirect = $request->input('redirect');
@@ -32,67 +33,107 @@ class GoogleAuthController extends Controller
                     (isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '');
             }
             session(['url.intended' => $intendedRedirect]);
+            session()->save();
         }
-        return Socialite::driver('google')->redirect();
+
+        $params = ['prompt' => 'select_account'];
+        if ($intendedRedirect) {
+            $params['state'] = base64_encode(json_encode(['intended' => $intendedRedirect]));
+        }
+
+        return Socialite::driver('google')
+            ->stateless()
+            ->with($params)
+            ->redirect();
     }
 
     /**
      * Handle callback dari Google OAuth.
      * Opsi B: Akun langsung aktif, profil bisa dilengkapi kemudian saat checkout.
      */
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Google OAuth callback failed: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
             return redirect('/?login=1')->with('error', 'Login dengan Google gagal. Silakan coba lagi.');
         }
 
-        // Cek apakah user dengan email ini sudah ada
-        $user = User::where('email', $googleUser->getEmail())->first();
+        $googleId = $googleUser->getId();
+        $googleEmail = strtolower(trim($googleUser->getEmail() ?? ''));
+
+        // 1. Cari user berdasarkan google_id terlebih dahulu
+        $user = User::where('google_id', $googleId)->first();
+
+        // 2. Jika tidak ditemukan berdasarkan google_id, cari berdasarkan email Google
+        if (!$user && !empty($googleEmail)) {
+            $user = User::where('email', $googleEmail)->first();
+            if ($user) {
+                // Tautkan google_id ke user yang sudah terdaftar dengan email ini
+                $user->update(['google_id' => $googleId]);
+            }
+        }
 
         if ($user) {
             $updateData = [];
-            // User sudah ada — perbarui google_id jika belum terisi
-            if (!$user->google_id) {
-                $updateData['google_id'] = $googleUser->getId();
-            }
-            // Selalu perbarui avatar dengan gambar dari email Google
+            // Update avatar dari Google jika ada perubahan
             $avatarUrl = $googleUser->getAvatar();
-            if ($avatarUrl) {
+            if ($avatarUrl && $user->avatar !== $avatarUrl) {
                 $updateData['avatar'] = $avatarUrl;
             }
             if (!empty($updateData)) {
                 $user->update($updateData);
             }
         } else {
-            // User baru — buat akun dengan data parsial dari Google
-            // Avatar dari Google disimpan sebagai URL langsung
+            // User baru — buat akun dengan data dari Google
             $avatarUrl = $googleUser->getAvatar() ?? '/images/default-profile.png';
 
             $user = User::create([
-                'name'       => $googleUser->getName(),
-                'email'      => $googleUser->getEmail(),
-                'google_id'  => $googleUser->getId(),
-                'avatar'     => $avatarUrl,
-                'password'   => bcrypt(Str::random(32)), // password random, tidak dipakai
-                // Field alamat dibiarkan null — user bisa isi saat checkout atau di EditProfile
-                'country'    => 'ID', // default Indonesia
-                'phone'      => null,
-                'address'    => null,
-                'province'   => null,
-                'city'       => null,
-                'district'   => null,
-                'postal_code'=> null,
+                'name'          => $googleUser->getName(),
+                'email'         => $googleEmail,
+                'google_id'     => $googleId,
+                'avatar'        => $avatarUrl,
+                'password'      => bcrypt(Str::random(32)),
+                'country'       => 'ID',
+                'phone'         => null,
+                'address'       => null,
+                'province'      => null,
+                'city'          => null,
+                'district'      => null,
+                'postal_code'   => null,
                 'receiver_name' => $googleUser->getName(),
             ]);
         }
 
-        // Login user
+        // Ambil URL intended SEBELUM session di-invalidate
+        $intendedUrl = session()->pull('url.intended');
+        if (!$intendedUrl && $request->has('state')) {
+            try {
+                $decoded = json_decode(base64_decode($request->input('state')), true);
+                if (isset($decoded['intended']) && is_string($decoded['intended'])) {
+                    $intendedUrl = $decoded['intended'];
+                }
+            } catch (\Throwable $t) {
+                // Ignore parse errors
+            }
+        }
+        $intendedUrl = $intendedUrl ?: '/';
+
+        // Jika sebelumnya ada sesi user yang aktif, logout dan bersihkan
+        if (Auth::check()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+        }
+
+        // Login user yang benar
         Auth::login($user, remember: true);
 
-        // Ambil URL intended dari session
-        $intendedUrl = session()->pull('url.intended', '/');
+        // Regenerate session ID untuk keamanan dan membersihkan session stale
+        $request->session()->regenerate();
+        $request->session()->flash('login_status', 'success_customer');
 
         // Jika url intended mengarah ke halaman login, ubah ke halaman utama
         if (str_contains($intendedUrl, '/login')) {

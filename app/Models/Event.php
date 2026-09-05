@@ -24,8 +24,8 @@ class Event extends Model
 
     protected $casts = [
         'countries' => 'array',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
+        'start_date' => 'datetime:Y-m-d H:i:s',
+        'end_date' => 'datetime:Y-m-d H:i:s',
         'is_active' => 'boolean',
         'discount_percentage' => 'float',
     ];

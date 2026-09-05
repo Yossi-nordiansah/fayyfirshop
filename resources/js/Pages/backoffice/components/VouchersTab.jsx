@@ -58,6 +58,13 @@ export default function VouchersTab({ vouchers = [] }) {
 
     const formatInputDate = (dStr) => {
         if (!dStr) return '';
+        if (typeof dStr === 'string' && (dStr.endsWith('Z') || dStr.includes('+'))) {
+            const d = new Date(dStr);
+            if (!isNaN(d.getTime())) {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+        }
         return dStr.substring(0, 16).replace(' ', 'T');
     };
 
@@ -155,6 +162,8 @@ export default function VouchersTab({ vouchers = [] }) {
     const toggleActive = (item) => {
         router.put(route('backoffice.promotion.voucher.update', item.id), {
             ...item,
+            start_date: formatInputDate(item.start_date),
+            end_date: formatInputDate(item.end_date),
             is_active: !item.is_active
         });
     };
@@ -182,7 +191,7 @@ export default function VouchersTab({ vouchers = [] }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        const cleanStr = typeof dateStr === 'string' ? dateStr.replace('Z', '') : dateStr;
+        const cleanStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
         const d = new Date(cleanStr);
         if (isNaN(d.getTime())) return '-';
         return d.toLocaleDateString('id-ID', {
@@ -190,7 +199,8 @@ export default function VouchersTab({ vouchers = [] }) {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     };
 

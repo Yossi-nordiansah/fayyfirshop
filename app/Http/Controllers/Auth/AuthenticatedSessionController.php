@@ -89,6 +89,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget(Auth::guard('web')->getRecallerName()));
+
         if (in_array($role, ['admin', 'super_admin'], true)) {
             $request->session()->flash('logout_status', 'success_admin');
             return Inertia::location(route('backoffice.login'));

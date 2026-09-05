@@ -6,6 +6,7 @@ use App\Models\PromoTicker;
 use App\Models\Voucher;
 use App\Models\Event;
 use App\Models\Referral;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -196,7 +197,16 @@ class PromotionController extends Controller
             'distribution_type' => 'required|string|in:event,manual',
         ]);
 
-        Voucher::create($request->all());
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $data = $request->all();
+        if ($request->filled('start_date')) {
+            $data['start_date'] = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+        if ($request->filled('end_date')) {
+            $data['end_date'] = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+
+        Voucher::create($data);
 
         return redirect()->back()->with([
             'status' => 'Voucher successfully created.',
@@ -227,7 +237,16 @@ class PromotionController extends Controller
             'distribution_type' => 'required|string|in:event,manual',
         ]);
 
-        $voucher->update($request->all());
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $data = $request->all();
+        if ($request->filled('start_date')) {
+            $data['start_date'] = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+        if ($request->filled('end_date')) {
+            $data['end_date'] = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+
+        $voucher->update($data);
 
         return redirect()->back()->with([
             'status' => 'Voucher successfully updated.',
@@ -276,10 +295,14 @@ class PromotionController extends Controller
             ? (float)$request->discount_percentage
             : null;
 
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $startDate = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        $endDate = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+
         $event = Event::create([
             'name' => $request->name,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'countries' => $request->countries,
             'image_path' => $imagePath ? '/storage/' . $imagePath : null,
             'is_active' => $request->is_active ?? true,
@@ -335,10 +358,14 @@ class PromotionController extends Controller
             ? (float)$request->discount_percentage
             : null;
 
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $startDate = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        $endDate = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+
         $event->update([
             'name' => $request->name,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'countries' => $request->countries,
             'image_path' => $imagePath,
             'is_active' => $request->is_active,
@@ -447,7 +474,16 @@ class PromotionController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        Referral::create($request->all());
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $data = $request->all();
+        if ($request->filled('start_date')) {
+            $data['start_date'] = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+        if ($request->filled('end_date')) {
+            $data['end_date'] = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+
+        Referral::create($data);
 
         return redirect()->back()->with([
             'status' => 'Referral successfully created.',
@@ -476,7 +512,16 @@ class PromotionController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $referral->update($request->all());
+        $tz = config('app.timezone', 'Asia/Jakarta');
+        $data = $request->all();
+        if ($request->filled('start_date')) {
+            $data['start_date'] = Carbon::parse($request->start_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+        if ($request->filled('end_date')) {
+            $data['end_date'] = Carbon::parse($request->end_date)->setTimezone($tz)->format('Y-m-d H:i:s');
+        }
+
+        $referral->update($data);
 
         return redirect()->back()->with([
             'status' => 'Referral successfully updated.',

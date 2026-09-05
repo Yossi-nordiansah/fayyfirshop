@@ -122,10 +122,10 @@ export default function Dashboard({ stats = {}, pendingOrders = [], lowStockProd
             border: 'border-blue-100',
         },
         {
-            title: t('summary.new_orders', 'Total Orders'),
-            value: (stats.totalOrders ?? 0).toLocaleString('id-ID'),
+            title: t('summary.new_orders', 'New Orders'),
+            value: (stats.processingOrdersCount ?? 0).toLocaleString('id-ID'),
             note: t('summary.pending_orders', '{count} pending').replace('{count}', stats.pendingOrdersCount ?? 0),
-            isAlert: (stats.pendingOrdersCount ?? 0) > 0,
+            isAlert: (stats.processingOrdersCount ?? 0) > 0,
             icon: ShoppingBag,
             color: 'text-amber-600',
             bg: 'bg-amber-50',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreditCard, Wallet, QrCode, Store, Landmark, Info, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -33,14 +33,14 @@ export default function PaymentMethodSelection({
     paymentMethod,
     setPaymentMethod
 }) {
-    const categories = [
+    const categories = useMemo(() => [
         {
             id: "e_wallet",
             title: t("checkout.payment.e_wallet", "E-Wallet"),
             icon: <Wallet className="text-indigo-500" size={15} />,
             methods: [
                 // { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
-                { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
+                // { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" }, // SEMENTARA DINONAKTIFKAN
                 // { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
                 { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" }
             ]
@@ -58,7 +58,7 @@ export default function PaymentMethodSelection({
             title: t("checkout.payment.virtual_account", "Virtual Account (Verifikasi Otomatis)"),
             icon: <Landmark className="text-blue-500" size={15} />,
             methods: [
-                { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" },
+                // { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" }, // SEMENTARA DINONAKTIFKAN
                 { id: "bri_va", name: "BRI Virtual Account", desc: t("checkout.payment.desc.bri", "Transfer Virtual Account BRI"), logo: "/images/payment/bri.svg" },
                 { id: "bni_va", name: "BNI Virtual Account", desc: t("checkout.payment.desc.bni", "Transfer Virtual Account BNI"), logo: "/images/payment/bni.svg" },
                 { id: "mandiri_va", name: "Mandiri Bill Payment", desc: t("checkout.payment.desc.mandiri", "Transfer Mandiri Bill Payment"), logo: "/images/payment/mandiri.svg" },
@@ -70,19 +70,20 @@ export default function PaymentMethodSelection({
                 // { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" }  // SEMENTARA DINONAKTIFKAN
             ]
         },
-        {
-            id: "card",
-            title: t("checkout.payment.credit_card", "Credit / Debit Card"),
-            icon: <CreditCard className="text-amber-500" size={15} />,
-            methods: [
-                {
-                    id: "credit_card",
-                    name: t("checkout.payment.credit_card", "Credit / Debit Card"),
-                    desc: t("checkout.payment.desc.card", "Visa • Mastercard • JCB • Amex • UnionPay"),
-                    isCard: true
-                }
-            ]
-        },
+        // SEMENTARA DINONAKTIFKAN
+        // {
+        //     id: "card",
+        //     title: t("checkout.payment.credit_card", "Credit / Debit Card"),
+        //     icon: <CreditCard className="text-amber-500" size={15} />,
+        //     methods: [
+        //         {
+        //             id: "credit_card",
+        //             name: t("checkout.payment.credit_card", "Credit / Debit Card"),
+        //             desc: t("checkout.payment.desc.card", "Visa • Mastercard • JCB • Amex • UnionPay"),
+        //             isCard: true
+        //         }
+        //     ]
+        // },
         {
             id: "retail",
             title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
@@ -92,10 +93,22 @@ export default function PaymentMethodSelection({
                 { id: "indomaret", name: "Indomaret", desc: t("checkout.payment.desc.indomaret", "Bayar di gerai Indomaret terdekat"), logo: "/images/payment/indomaret.svg" }
             ]
         }
-    ];
+    ], [t]);
+
+    const activeCategories = useMemo(() => {
+        return categories.filter(cat => cat.methods && cat.methods.length > 0);
+    }, [categories]);
+
+    // Auto switch if currently selected method is one of the temporarily disabled ones
+    useEffect(() => {
+        const disabledMethods = ["shopeepay", "bca_va", "credit_card"];
+        if (disabledMethods.includes(paymentMethod)) {
+            setPaymentMethod("bri_va");
+        }
+    }, [paymentMethod, setPaymentMethod]);
 
     const [expandedCategory, setExpandedCategory] = useState(() => {
-        for (const cat of categories) {
+        for (const cat of activeCategories) {
             if (cat.methods.some(m => m.id === paymentMethod)) {
                 return cat.id;
             }
@@ -108,14 +121,13 @@ export default function PaymentMethodSelection({
     };
 
     useEffect(() => {
-        for (const cat of categories) {
+        for (const cat of activeCategories) {
             if (cat.methods.some(m => m.id === paymentMethod)) {
-                if (expandedCategory !== cat.id) {
-                    setExpandedCategory(cat.id);
-                }
+                setExpandedCategory(cat.id);
                 break;
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [paymentMethod]);
 
     return (
@@ -126,7 +138,7 @@ export default function PaymentMethodSelection({
             </h2>
 
             <div className="space-y-2.5">
-                {categories.map((category) => {
+                {activeCategories.map((category) => {
                     const isExpanded = expandedCategory === category.id;
                     return (
                         <div key={category.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/10">
