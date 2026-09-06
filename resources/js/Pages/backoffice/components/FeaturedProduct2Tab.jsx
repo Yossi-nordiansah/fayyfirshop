@@ -148,6 +148,8 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
         button_text_en: '',
         button_text_ar: '',
         button_url: '',
+        countdown_start: '',
+        countdown_end: '',
         text_color: '',
         button_color: '',
         button_text_color: '',
@@ -170,6 +172,40 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
         const f2TitleTrans = item.feature_2_title_translations || {};
         const f2DescTrans = item.feature_2_desc_translations || {};
         const btnTextTrans = item.button_text_translations || {};
+
+        let formattedCountdownStart = '';
+        if (item.countdown_start) {
+            try {
+                const d = new Date(item.countdown_start);
+                if (!isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    formattedCountdownStart = `${year}-${month}-${day}T${hours}:${minutes}`;
+                }
+            } catch (err) {
+                formattedCountdownStart = typeof item.countdown_start === 'string' ? item.countdown_start.slice(0, 16) : '';
+            }
+        }
+
+        let formattedCountdown = '';
+        if (item.countdown_end) {
+            try {
+                const d = new Date(item.countdown_end);
+                if (!isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    formattedCountdown = `${year}-${month}-${day}T${hours}:${minutes}`;
+                }
+            } catch (err) {
+                formattedCountdown = typeof item.countdown_end === 'string' ? item.countdown_end.slice(0, 16) : '';
+            }
+        }
 
         setData({
             badge_id: badgeTrans.id || item.badge || '',
@@ -199,6 +235,8 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
             button_text_en: btnTextTrans.en || '',
             button_text_ar: btnTextTrans.ar || '',
             button_url: item.button_url || '',
+            countdown_start: formattedCountdownStart,
+            countdown_end: formattedCountdown,
             text_color: item.text_color || '',
             button_color: item.button_color || '',
             button_text_color: item.button_text_color || '',
@@ -331,7 +369,45 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
                             </h3>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Live Status Pill */}
+                            {(() => {
+                                const now = new Date();
+                                const isUpcoming = featuredItem.countdown_start && new Date(featuredItem.countdown_start) > now;
+                                const isExpired = featuredItem.countdown_end && new Date(featuredItem.countdown_end) < now;
+
+                                if (isExpired) {
+                                    return (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                            <Clock className="w-3.5 h-3.5 text-rose-600" />
+                                            Kedaluwarsa (Otomatis Non-Aktif)
+                                        </span>
+                                    );
+                                }
+                                if (isUpcoming) {
+                                    return (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                            <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                                            Terjadwal (Otomatis Aktif: {new Date(featuredItem.countdown_start).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })})
+                                        </span>
+                                    );
+                                }
+                                if (featuredItem.is_active) {
+                                    return (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                            Aktif di Beranda
+                                        </span>
+                                    );
+                                }
+                                return (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                        <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+                                        Non-Aktif (Manual)
+                                    </span>
+                                );
+                            })()}
+
                             {/* Toggle Active Status */}
                             <button
                                 type="button"
@@ -407,9 +483,33 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
                                 </div>
 
                                 <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-slate-600">
-                                    <div>
-                                        <span className="font-bold">{t('backoffice.featured.target_link_label', 'Target Link Tombol:')}</span>{' '}
-                                        <span className="font-mono text-blue-600 font-semibold">{featuredItem.button_url || '-'}</span>
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <div>
+                                            <span className="font-bold">{t('backoffice.featured.target_link_label', 'Target Link Tombol:')}</span>{' '}
+                                            <span className="font-mono text-blue-600 font-semibold">{featuredItem.button_url || '-'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                            <span className="font-bold">Mulai:</span>{' '}
+                                            {featuredItem.countdown_start ? (
+                                                <span className="font-mono text-blue-700 font-semibold">
+                                                    {new Date(featuredItem.countdown_start).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-400 italic">Langsung Aktif</span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                            <span className="font-bold">Selesai:</span>{' '}
+                                            {featuredItem.countdown_end ? (
+                                                <span className="font-mono text-emerald-600 font-semibold">
+                                                    {new Date(featuredItem.countdown_end).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-400 italic">Tanpa Batas</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3 text-[11px]">
                                         <div className="flex items-center gap-1.5">
@@ -463,8 +563,9 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
 
                         {/* Form Body */}
                         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
-                            {/* URL Target Settings */}
-                            <div className="pb-3 border-b border-slate-100">
+                            {/* URL Target & Periode Countdown Settings */}
+                            <div className="space-y-3 pb-3 border-b border-slate-100">
+                                {/* URL Target Tombol */}
                                 <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-1">
                                     <label className="flex items-center gap-1.5 text-xs font-extrabold text-blue-950">
                                         <Link2 className="w-4 h-4 text-blue-600 shrink-0" />
@@ -480,6 +581,67 @@ export default function FeaturedProduct2Tab({ featuredProduct2 = [] }) {
                                     <p className="text-[10px] text-blue-700">
                                         {t('backoffice.form.url_helper', 'Bisa diisi URL lengkap ("https://..."), path relatif ("/products/..."), atau slug ("kesehatan-dan-nutrisi").')}
                                     </p>
+                                </div>
+
+                                {/* Tanggal Mulai & Tanggal Selesai Countdown */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {/* Tanggal Mulai Promo */}
+                                    <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-1.5 text-xs font-extrabold text-indigo-950">
+                                                <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                <span>{t('backoffice.featured.countdown_start_label', 'Waktu Mulai Promo (Opsional)')}</span>
+                                            </label>
+                                            {data.countdown_start && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('countdown_start', '')}
+                                                    className="text-[10px] text-rose-600 hover:text-rose-700 font-bold hover:underline inline-flex items-center gap-0.5"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                    {t('backoffice.featured.countdown_clear', 'Kosongkan / Nonaktifkan')}
+                                                </button>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="datetime-local"
+                                            value={data.countdown_start}
+                                            onChange={(e) => setData('countdown_start', e.target.value)}
+                                            className="w-full px-3 py-1.5 text-xs border border-indigo-300 rounded-lg focus:outline-none focus:border-indigo-600 bg-white font-mono text-slate-800"
+                                        />
+                                        <p className="text-[10px] text-indigo-800">
+                                            {t('backoffice.featured.countdown_start_helper', 'Jika diisi, section promo otomatis aktif saat memasuki tanggal mulai.')}
+                                        </p>
+                                    </div>
+
+                                    {/* Tanggal Selesai Countdown */}
+                                    <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-1.5 text-xs font-extrabold text-amber-950">
+                                                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                                                <span>{t('backoffice.featured.countdown_end_label', 'Waktu Berakhir Countdown (Opsional)')}</span>
+                                            </label>
+                                            {data.countdown_end && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('countdown_end', '')}
+                                                    className="text-[10px] text-rose-600 hover:text-rose-700 font-bold hover:underline inline-flex items-center gap-0.5"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                    {t('backoffice.featured.countdown_clear', 'Kosongkan / Nonaktifkan')}
+                                                </button>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="datetime-local"
+                                            value={data.countdown_end}
+                                            onChange={(e) => setData('countdown_end', e.target.value)}
+                                            className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg focus:outline-none focus:border-amber-600 bg-white font-mono text-slate-800"
+                                        />
+                                        <p className="text-[10px] text-amber-800">
+                                            {t('backoffice.featured.countdown_helper', 'Kosongkan jika tidak ingin menampilkan countdown di Promo Section 1.')}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 

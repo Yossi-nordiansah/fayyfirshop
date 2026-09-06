@@ -1601,5 +1601,14 @@
     "nav.terms": "Terms & Conditions",
     "footer.terms": "Terms & Conditions",
     "checkout.disclaimer_prefix": "By clicking the button above, you agree to the",
-    "checkout.disclaimer_suffix": "applicable at Fayyfir Shop."
+    "checkout.disclaimer_suffix": "applicable at Fayyfir Shop.",
+    "backoffice.featured.countdown_start_label": "Promo Start Time (Optional)",
+    "backoffice.featured.countdown_end_label": "Countdown End Time (Optional)",
+    "backoffice.featured.countdown_helper": "Leave blank if you do not want to display a countdown in Promo Section 1.",
+    "backoffice.featured.countdown_start_helper": "If set, the promo section will automatically activate when the start date arrives.",
+    "backoffice.featured.countdown_clear": "Clear / Disable",
+    "common.time_days": "Days",
+    "common.time_hours": "Hours",
+    "common.time_minutes": "Mins",
+    "common.time_seconds": "Secs"
 }

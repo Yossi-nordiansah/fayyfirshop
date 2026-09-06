@@ -1605,5 +1605,14 @@
     "nav.terms": "Syarat & Ketentuan",
     "footer.terms": "Syarat & Ketentuan",
     "checkout.disclaimer_prefix": "Dengan menekan tombol di atas, Anda menyetujui",
-    "checkout.disclaimer_suffix": "yang berlaku di Fayyfir Shop."
+    "checkout.disclaimer_suffix": "yang berlaku di Fayyfir Shop.",
+    "backoffice.featured.countdown_start_label": "Waktu Mulai Promo (Opsional)",
+    "backoffice.featured.countdown_end_label": "Waktu Berakhir Countdown (Opsional)",
+    "backoffice.featured.countdown_helper": "Kosongkan jika tidak ingin menampilkan countdown di Promo Section 1.",
+    "backoffice.featured.countdown_start_helper": "Jika diisi, section promo otomatis aktif saat memasuki tanggal mulai.",
+    "backoffice.featured.countdown_clear": "Kosongkan / Nonaktifkan",
+    "common.time_days": "Hari",
+    "common.time_hours": "Jam",
+    "common.time_minutes": "Menit",
+    "common.time_seconds": "Detik"
 }

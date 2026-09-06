@@ -71,7 +71,16 @@ Route::get('/', function () {
         if (\App\Models\FeaturedProduct2Item::count() === 0) {
             app(ContentController::class)->index();
         }
-        $featuredProduct2 = \App\Models\FeaturedProduct2Item::where('is_active', true)->orderBy('sort_order', 'asc')->get();
+        $now = now();
+        $featuredProduct2 = \App\Models\FeaturedProduct2Item::where(function ($q) {
+                $q->where('is_active', true)
+                  ->orWhereNotNull('countdown_start');
+            })
+            ->where(function ($q) use ($now) {
+                $q->whereNull('countdown_end')->orWhere('countdown_end', '>=', $now);
+            })
+            ->orderBy('sort_order', 'asc')
+            ->get();
     }
 
     $featuredProduct3 = [];

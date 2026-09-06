@@ -1608,5 +1608,14 @@
     "nav.terms": "الشروط والأحكام",
     "footer.terms": "الشروط والأحكام",
     "checkout.disclaimer_prefix": "بالنقر على الزر أعلاه، فإنكم توافقون على",
-    "checkout.disclaimer_suffix": "المعمول بها في Fayyfir Shop."
+    "checkout.disclaimer_suffix": "المعمول بها في Fayyfir Shop.",
+    "backoffice.featured.countdown_start_label": "وقت بدء العرض (اختياري)",
+    "backoffice.featured.countdown_end_label": "وقت انتهاء العد التنازلي (اختياري)",
+    "backoffice.featured.countdown_helper": "اتركه فارغاً إذا كنت لا ترغب في إظهار العد التنازلي في قسم العروض 1.",
+    "backoffice.featured.countdown_start_helper": "إذا تم تحديده، فسيتم تنشيط قسم العروض تلقائياً عند حلول تاريخ البدء.",
+    "backoffice.featured.countdown_clear": "تفريغ / تعطيل",
+    "common.time_days": "أيام",
+    "common.time_hours": "ساعات",
+    "common.time_minutes": "دقائق",
+    "common.time_seconds": "ثواني"
 }

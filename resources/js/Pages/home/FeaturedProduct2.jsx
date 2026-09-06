@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/Contexts/LanguageContext";
 import { Link } from "@inertiajs/react";
@@ -66,14 +66,161 @@ const ICON_MAP = {
     Coffee, Flame, Info, Sparkle
 };
 
+function parseTargetTime(targetDate) {
+    if (!targetDate) return null;
+    if (targetDate instanceof Date) {
+        return targetDate.getTime();
+    }
+    if (typeof targetDate === 'string') {
+        const cleanStr = targetDate.trim().replace(' ', 'T');
+        const d = new Date(cleanStr);
+        if (!isNaN(d.getTime())) {
+            return d.getTime();
+        }
+        const fallback = new Date(targetDate.replace(/-/g, '/'));
+        if (!isNaN(fallback.getTime())) {
+            return fallback.getTime();
+        }
+    }
+    return null;
+}
+
+function parseCountdownTime(targetDate) {
+    const parsedTime = parseTargetTime(targetDate);
+    if (!parsedTime) return null;
+
+    const diff = parsedTime - Date.now();
+    if (diff <= 0) return null;
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+
+    return {
+        days: String(days).padStart(2, '0'),
+        hours: String(hours).padStart(2, '0'),
+        minutes: String(minutes).padStart(2, '0'),
+        seconds: String(seconds).padStart(2, '0'),
+    };
+}
+
+function checkIsPromoActive(item) {
+    if (!item) return false;
+    const now = Date.now();
+
+    // 1. Jika countdown_end ada dan sudah lewat, otomatis NON-AKTIF
+    if (item.countdown_end) {
+        const endParsed = parseTargetTime(item.countdown_end);
+        if (endParsed && now > endParsed) {
+            return false;
+        }
+    }
+
+    // 2. Jika countdown_start (waktu mulai promo) diatur:
+    // Waktu mulai ini yang menentukan aktivasi promo:
+    // - Jika belum memasuki waktu mulai: NON-AKTIF (menunggu waktu tiba)
+    // - Jika sudah memasuki waktu mulai (now >= startParsed): OTOMATIS AKTIF (meskipun sebelumnya non-aktif)!
+    if (item.countdown_start) {
+        const startParsed = parseTargetTime(item.countdown_start);
+        if (startParsed) {
+            if (now < startParsed) {
+                return false; // Belum memasuki waktu mulai
+            }
+            return true; // Sudah memasuki waktu mulai -> OTOMATIS AKTIF!
+        }
+    }
+
+    // 3. Jika tidak ada jadwal tanggal mulai, ikuti status is_active manual
+    return Boolean(item.is_active);
+}
+
+function CountdownTimer({ targetDate, t, locale, onExpire }) {
+    const [timeLeft, setTimeLeft] = useState(() => parseCountdownTime(targetDate));
+
+    useEffect(() => {
+        const initial = parseCountdownTime(targetDate);
+        setTimeLeft(initial);
+        if (!targetDate) return;
+
+        const timer = setInterval(() => {
+            const next = parseCountdownTime(targetDate);
+            setTimeLeft(next);
+            if (!next) {
+                clearInterval(timer);
+                if (onExpire) {
+                    onExpire();
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [targetDate, onExpire]);
+
+    if (!timeLeft) return null;
+
+    const isAr = locale === 'arabic' || locale === 'ar';
+    const isEn = locale === 'english' || locale === 'en';
+
+    const daysLabel = t ? t('common.time_days', isAr ? 'أيام' : isEn ? 'Days' : 'Hari') : (isAr ? 'أيام' : isEn ? 'Days' : 'Hari');
+    const hoursLabel = t ? t('common.time_hours', isAr ? 'ساعات' : isEn ? 'Hours' : 'Jam') : (isAr ? 'ساعات' : isEn ? 'Hours' : 'Jam');
+    const minutesLabel = t ? t('common.time_minutes', isAr ? 'دقائق' : isEn ? 'Mins' : 'Menit') : (isAr ? 'دقائق' : isEn ? 'Mins' : 'Menit');
+    const secondsLabel = t ? t('common.time_seconds', isAr ? 'ثواني' : isEn ? 'Secs' : 'Detik') : (isAr ? 'ثواني' : isEn ? 'Secs' : 'Detik');
+
+    const timeBoxes = [
+        { value: timeLeft.days, label: daysLabel },
+        { value: timeLeft.hours, label: hoursLabel },
+        { value: timeLeft.minutes, label: minutesLabel },
+        { value: timeLeft.seconds, label: secondsLabel },
+    ];
+
+    return (
+        <div className="pt-1.5 pb-0.5" dir="ltr">
+            <div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl bg-black/40 border border-blue-400/25 backdrop-blur-md shadow-lg">
+                {timeBoxes.map((item, idx) => (
+                    <React.Fragment key={idx}>
+                        <div className="flex flex-col items-center justify-center min-w-[42px] sm:min-w-[50px] px-1.5 py-1 sm:py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/30 shadow-inner">
+                            <span className="font-mono text-sm sm:text-base md:text-lg font-extrabold text-cyan-300 tracking-tight leading-none drop-shadow-[0_2px_6px_rgba(34,211,238,0.35)]">
+                                {item.value}
+                            </span>
+                            <span className="text-[8px] sm:text-[9px] font-bold text-blue-200/90 uppercase tracking-wider mt-0.5 select-none">
+                                {item.label}
+                            </span>
+                        </div>
+                        {idx < timeBoxes.length - 1 && (
+                            <span className="text-xs sm:text-sm font-black text-cyan-400/60 select-none pb-2">
+                                :
+                            </span>
+                        )}
+                    </React.Fragment>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function FeaturedProduct2({ featuredProduct2 = [] }) {
     const { t, locale } = useLanguage();
 
-    if (!featuredProduct2 || featuredProduct2.length === 0) {
+    const activeItem = (featuredProduct2 && featuredProduct2.length > 0) ? featuredProduct2[0] : null;
+
+    // Real-time promo active state (checks start and end dates continuously)
+    const [isPromoActive, setIsPromoActive] = useState(() => checkIsPromoActive(activeItem));
+
+    useEffect(() => {
+        setIsPromoActive(checkIsPromoActive(activeItem));
+        if (!activeItem) return;
+
+        const interval = setInterval(() => {
+            setIsPromoActive(checkIsPromoActive(activeItem));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [activeItem]);
+
+    if (!activeItem || !isPromoActive) {
         return null;
     }
-
-    const activeItem = featuredProduct2[0];
 
     const getTranslatedText = (transObj, directVal) => {
         if (typeof transObj === 'object' && transObj !== null) {
@@ -225,6 +372,18 @@ export default function FeaturedProduct2({ featuredProduct2 = [] }) {
                                 </motion.p>
                             )}
                         </div>
+                    )}
+
+                    {/* Countdown Timer (Opsional - Di bawah Deskripsi Utama) */}
+                    {activeItem?.countdown_end && (
+                        <motion.div variants={itemVariants}>
+                            <CountdownTimer
+                                targetDate={activeItem.countdown_end}
+                                t={t}
+                                locale={locale}
+                                onExpire={() => setIsPromoActive(false)}
+                            />
+                        </motion.div>
                     )}
 
                     {/* Fitur / Keunggulan Produk (Opsional) */}
