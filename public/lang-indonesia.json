@@ -780,6 +780,8 @@
     "backoffice.customer.detail_modal.notes": "Catatan",
     "backoffice.customer.detail_modal.priority_notes": "Pelanggan prioritas terdaftar dengan aktivitas transaksi belanja berkala di Fayyfir Shop.",
     "backoffice.customer.detail_modal.mock_address": "Jl. Jenderal Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190",
+    "backoffice.customer.detail_modal.other_addresses": "Daftar Alamat Tersimpan ({count})",
+    "backoffice.customer.detail_modal.default_address_badge": "Utama",
     "backoffice.customer.stats_modal.title": "Statistik Belanja Customer",
     "backoffice.customer.stats_modal.loading": "Memuat statistik customer...",
     "backoffice.customer.stats_modal.email": "Email",

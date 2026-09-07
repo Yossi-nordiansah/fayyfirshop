@@ -785,6 +785,8 @@
     "backoffice.customer.detail_modal.notes": "ملاحظات",
     "backoffice.customer.detail_modal.priority_notes": "عميل ذو أولوية مسجل بنشاط معاملات تسوق دورية في متجر فيفير.",
     "backoffice.customer.detail_modal.mock_address": "شارع الجنرال سوديرمان رقم 45، كيبايوران بارو، جنوب جاكرتا، 12190",
+    "backoffice.customer.detail_modal.other_addresses": "قائمة العناوين المحفوظة ({count})",
+    "backoffice.customer.detail_modal.default_address_badge": "الرئيسي",
     "backoffice.customer.stats_modal.title": "إحصائيات تسوق العميل",
     "backoffice.customer.stats_modal.loading": "جاري تحميل إحصائيات العميل...",
     "backoffice.customer.stats_modal.email": "البريد الإلكتروني",

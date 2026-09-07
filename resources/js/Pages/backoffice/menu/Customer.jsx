@@ -37,6 +37,38 @@ import { useLanguage } from '@/Contexts/LanguageContext';
 
 
 
+function CustomerAvatar({ customer, sizeClass = "w-10 h-10", textClass = "text-sm" }) {
+    const [imgError, setImgError] = useState(false);
+
+    const getAvatarUrl = (avatar) => {
+        if (!avatar) return null;
+        if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/')) {
+            return avatar;
+        }
+        return `/storage/${avatar}`;
+    };
+
+    const avatarUrl = getAvatarUrl(customer?.avatar);
+
+    if (avatarUrl && !imgError) {
+        return (
+            <img
+                src={avatarUrl}
+                alt={customer?.name || 'Customer'}
+                className={`${sizeClass} rounded-full object-cover border border-slate-200 shrink-0`}
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
+            />
+        );
+    }
+
+    return (
+        <div className={`${sizeClass} rounded-full bg-blue-100 text-blue-800 font-bold border border-blue-200 flex items-center justify-center ${textClass} uppercase shrink-0`}>
+            {(customer?.name || 'C').substring(0, 2)}
+        </div>
+    );
+}
+
 export default function Customer({ customers = [], vouchers = [], status = null, errors = {} }) {
     const { t } = useLanguage();
 
@@ -86,7 +118,10 @@ export default function Customer({ customers = [], vouchers = [], status = null,
             result = result.filter(c =>
                 (c.name || '').toLowerCase().includes(query) ||
                 (c.email || '').toLowerCase().includes(query) ||
-                (c.phone || '').toLowerCase().includes(query)
+                (c.phone || '').toLowerCase().includes(query) ||
+                (c.formatted_address || '').toLowerCase().includes(query) ||
+                (c.address || '').toLowerCase().includes(query) ||
+                (c.city || '').toLowerCase().includes(query)
             );
         }
 
@@ -342,17 +377,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
                                                 <tr key={customer.id} className="hover:bg-blue-50/20 transition align-middle">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            {customer.avatar ? (
-                                                                <img
-                                                                    src={`/storage/${customer.avatar}`}
-                                                                    alt={customer.name}
-                                                                    className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-800 font-bold border border-blue-200 flex items-center justify-center text-sm uppercase">
-                                                                    {(customer.name || 'C').substring(0, 2)}
-                                                                </div>
-                                                            )}
+                                                            <CustomerAvatar customer={customer} sizeClass="w-10 h-10" />
                                                             <div>
                                                                 <div className="font-bold text-blue-950 text-base flex items-center gap-2">
                                                                     <span>{customer.name}</span>

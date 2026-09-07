@@ -785,6 +785,8 @@
     "backoffice.customer.detail_modal.notes": "Notes",
     "backoffice.customer.detail_modal.priority_notes": "Priority customer registered with regular shopping transactions at Fayyfir Shop.",
     "backoffice.customer.detail_modal.mock_address": "Jl. Jenderal Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190",
+    "backoffice.customer.detail_modal.other_addresses": "Saved Addresses ({count})",
+    "backoffice.customer.detail_modal.default_address_badge": "Default",
     "backoffice.customer.stats_modal.title": "Customer Shopping Statistics",
     "backoffice.customer.stats_modal.loading": "Loading customer statistics...",
     "backoffice.customer.stats_modal.email": "Email",

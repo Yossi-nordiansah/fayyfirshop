@@ -19,15 +19,59 @@ class CustomerController extends Controller
     {
         $customers = User::query()
             ->where('role', 'customer')
-            ->select('id', 'name', 'email', 'phone', 'avatar', 'country', 'created_at')
+            ->with(['addresses' => function ($q) {
+                $q->orderBy('is_default', 'desc')->latest('id');
+            }])
+            ->select('id', 'name', 'email', 'phone', 'avatar', 'country', 'address', 'city', 'district', 'province', 'postal_code', 'receiver_name', 'created_at')
             ->latest('id')
             ->get()
             ->map(function ($user) {
                 // Calculate actual order count and total spent
                 $user->orders_count = DB::table('orders')->where('user_id', $user->id)->count();
-                $user->total_spent = DB::table('orders')->where('user_id', $user->id)->sum('total_amount');
+                $user->total_spent = (float) DB::table('orders')->where('user_id', $user->id)->sum('total_amount');
+
+                // Fallback to default address in user_addresses if user table address is empty
+                $defaultAddr = $user->addresses->firstWhere('is_default', true) ?? $user->addresses->first();
+                if (empty($user->address) && $defaultAddr) {
+                    $user->address = $defaultAddr->address;
+                    $user->city = $defaultAddr->city;
+                    $user->district = $defaultAddr->district;
+                    $user->province = $defaultAddr->province;
+                    $user->postal_code = $defaultAddr->postal_code;
+                    if (empty($user->receiver_name)) {
+                        $user->receiver_name = $defaultAddr->receiver_name;
+                    }
+                    if (empty($user->phone)) {
+                        $user->phone = $defaultAddr->phone;
+                    }
+                    if (empty($user->country)) {
+                        $user->country = $defaultAddr->country;
+                    }
+                }
+
+                // If still empty, check if they have a latest order shipping_address
+                if (empty($user->address)) {
+                    $latestOrder = DB::table('orders')
+                        ->where('user_id', $user->id)
+                        ->whereNotNull('shipping_address')
+                        ->where('shipping_address', '!=', '')
+                        ->latest('id')
+                        ->first();
+
+                    if ($latestOrder) {
+                        $user->shipping_address = $latestOrder->shipping_address;
+                        if (empty($user->phone) && !empty($latestOrder->receiver_phone)) {
+                            $user->phone = $latestOrder->receiver_phone;
+                        }
+                    }
+                }
+
+                // Build formatted address string
+                $user->formatted_address = $this->formatCustomerAddress($user);
+
                 return $user;
             });
+
 
         // Get active vouchers to be assigned manually
         $vouchers = [];
@@ -202,4 +246,58 @@ class CustomerController extends Controller
             'status' => 'Voucher manually assigned to customer.',
         ]);
     }
+
+    /**
+     * Helper to format a clean customer address string.
+     */
+    private function formatCustomerAddress($user): ?string
+    {
+        if (empty($user->address) && !empty($user->shipping_address)) {
+            return $user->shipping_address;
+        }
+
+        $rawAddr = trim((string)($user->address ?? ''));
+
+        if (empty($rawAddr) && empty($user->city) && empty($user->district) && empty($user->province)) {
+            return null;
+        }
+
+        $parts = [];
+        if (!empty($rawAddr)) {
+            $parts[] = $rawAddr;
+        }
+
+        $lowerRaw = strtolower($rawAddr);
+
+        if (!empty($user->district)) {
+            $d = trim($user->district);
+            if (!str_contains($lowerRaw, strtolower($d))) {
+                $parts[] = str_starts_with(strtolower($d), 'kec') ? $d : 'Kec. ' . $d;
+            }
+        }
+
+        if (!empty($user->city)) {
+            $c = trim($user->city);
+            if (!str_contains($lowerRaw, strtolower($c))) {
+                $parts[] = $c;
+            }
+        }
+
+        if (!empty($user->province)) {
+            $p = trim($user->province);
+            if (!str_contains($lowerRaw, strtolower($p))) {
+                $parts[] = $p;
+            }
+        }
+
+        if (!empty($user->postal_code)) {
+            $pc = trim((string)$user->postal_code);
+            if (!str_contains($lowerRaw, strtolower($pc))) {
+                $parts[] = $pc;
+            }
+        }
+
+        return !empty($parts) ? implode(', ', $parts) : null;
+    }
 }
+

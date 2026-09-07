@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, User, Mail, Phone, Calendar, Globe2 } from 'lucide-react';
+import { X, User, Mail, Phone, Calendar, Globe2, MapPin } from 'lucide-react';
 import { useLanguage } from '@/Contexts/LanguageContext';
 
 const getCountryName = (code, t) => {
-    if (!code) return t('backoffice.customer.country.id', 'Indonesia');
+    if (!code) return '-';
     const upperCode = code.toUpperCase();
     const map = {
         'ID': t('backoffice.customer.country.id', 'Indonesia'),
@@ -16,8 +16,64 @@ const getCountryName = (code, t) => {
     return map[upperCode] || upperCode;
 };
 
+const formatSingleAddress = (addr) => {
+    if (!addr) return '-';
+    const raw = (addr.address || '').trim();
+    if (!raw && !addr.city && !addr.district && !addr.province) {
+        return '-';
+    }
+
+    const parts = [];
+    if (raw) parts.push(raw);
+    const lower = raw.toLowerCase();
+
+    if (addr.district) {
+        const d = addr.district.trim();
+        if (!lower.includes(d.toLowerCase())) {
+            parts.push(d.toLowerCase().startsWith('kec') ? d : `Kec. ${d}`);
+        }
+    }
+
+    if (addr.city) {
+        const c = addr.city.trim();
+        if (!lower.includes(c.toLowerCase())) {
+            parts.push(c);
+        }
+    }
+
+    if (addr.province) {
+        const p = addr.province.trim();
+        if (!lower.includes(p.toLowerCase())) {
+            parts.push(p);
+        }
+    }
+
+    if (addr.postal_code) {
+        const pc = String(addr.postal_code).trim();
+        if (!lower.includes(pc.toLowerCase())) {
+            parts.push(pc);
+        }
+    }
+
+    return parts.length > 0 ? parts.join(', ') : '-';
+};
+
+const getCustomerAddress = (customer) => {
+    if (!customer) return '-';
+    if (customer.formatted_address) return customer.formatted_address;
+    if (customer.shipping_address) return customer.shipping_address;
+
+    return formatSingleAddress(customer);
+};
+
 export default function CustomerDetailModal({ show = false, customer, onClose }) {
     const { t } = useLanguage();
+    const [avatarError, setAvatarError] = useState(false);
+
+    useEffect(() => {
+        setAvatarError(false);
+    }, [customer?.id, customer?.avatar]);
+
     if (!customer) return null;
 
     const formatDate = (dateStr) => {
@@ -29,6 +85,10 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
             day: 'numeric',
         });
     };
+
+    const mainAddress = getCustomerAddress(customer);
+    const hasAddress = mainAddress && mainAddress !== '-';
+    const addressesList = Array.isArray(customer.addresses) ? customer.addresses : [];
 
     return (
         <AnimatePresence>
@@ -63,11 +123,13 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                         <div className="p-6 space-y-5 overflow-y-auto">
                             {/* Profile Card Section */}
                             <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 shrink-0">
-                                {customer.avatar ? (
+                                {customer.avatar && !avatarError ? (
                                     <img
-                                        src={`/storage/${customer.avatar}`}
+                                        src={customer.avatar.startsWith('http') || customer.avatar.startsWith('/') ? customer.avatar : `/storage/${customer.avatar}`}
                                         alt={customer.name}
                                         className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md animate-in zoom-in-50 duration-200"
+                                        referrerPolicy="no-referrer"
+                                        onError={() => setAvatarError(true)}
                                     />
                                 ) : (
                                     <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-800 font-extrabold border border-blue-200 flex items-center justify-center text-xl uppercase shadow-sm">
@@ -105,9 +167,47 @@ export default function CustomerDetailModal({ show = false, customer, onClose })
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.address', 'Alamat')}</span>
-                                    <span className="text-sm font-semibold text-slate-600 col-span-2">
-                                        {t('backoffice.customer.detail_modal.mock_address', 'Jl. Jenderal Sudirman No. 45, Kebayoran Baru, Jakarta Selatan, 12190')}
-                                    </span>
+                                    <div className="col-span-2 space-y-2">
+                                        <span className={`text-sm font-semibold block leading-relaxed ${hasAddress ? 'text-slate-700' : 'text-slate-400'}`}>
+                                            {mainAddress}
+                                        </span>
+
+                                        {/* If customer registered multiple addresses */}
+                                        {addressesList.length > 1 && (
+                                            <div className="mt-2 pt-2 border-t border-dashed border-slate-200">
+                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                                                    {t('backoffice.customer.detail_modal.other_addresses', 'Daftar Alamat Tersimpan ({count})').replace('{count}', addressesList.length)}
+                                                </span>
+                                                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                                    {addressesList.map((addr, idx) => (
+                                                        <div
+                                                            key={addr.id || idx}
+                                                            className={`text-xs p-2 rounded-lg border ${
+                                                                addr.is_default
+                                                                    ? 'bg-blue-50/60 border-blue-200 text-blue-950 font-medium'
+                                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                                                                <span className="font-bold text-slate-800">
+                                                                    {addr.receiver_name || customer.name}
+                                                                    {addr.phone && <span className="font-normal text-slate-500 ml-1">({addr.phone})</span>}
+                                                                </span>
+                                                                {addr.is_default && (
+                                                                    <span className="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.2 rounded shrink-0">
+                                                                        {t('backoffice.customer.detail_modal.default_address_badge', 'Utama')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[11px] leading-snug">
+                                                                {formatSingleAddress(addr)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-3 border-b border-slate-100 pb-2">
                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t('backoffice.customer.detail_modal.country', 'Negara')}</span>
