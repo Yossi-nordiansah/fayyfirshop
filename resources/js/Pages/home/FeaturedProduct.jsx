@@ -166,164 +166,166 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
     };
 
     return (
-        <section className="relative w-full min-h-[80vh] md:max-h-[80vh] flex items-center justify-start overflow-hidden bg-amber-950/20">
-            {/* Background Image */}
-            <div
-                className="absolute inset-0 bg-cover bg-[right_-170px_center] md:bg-[position:85%_center] lg:bg-[position:center_center] bg-no-repeat"
-                style={{
-                    backgroundImage: `url('${bgImage}')`,
-                }}
+        <section className="relative w-full overflow-hidden bg-amber-950/20">
+            {/* Background Image: Lebar full 100%, tinggi otomatis menyesuaikan dari ukuran asli gambar */}
+            <img
+                src={bgImage}
+                alt={titleText || "Featured Product"}
+                className="w-full h-auto block select-none pointer-events-none"
             />
+
             {/* Premium Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent md:bg-gradient-to-r" />
-            <div className="absolute inset-0 bg-black/30 md:hidden" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-black/30 md:hidden pointer-events-none" />
 
-            {/* Content Container */}
-            <div className="relative z-10 max-w-8xl mx-auto px-6 md:px-14 py-16 md:py-24 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                {/* Teks & Deskripsi Kiri */}
-                <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, margin: "-100px" }}
-                    className="flex flex-col space-y-6 text-white max-w-xl"
-                >
-                    {/* Badge Atas (Opsional) */}
-                    {badgeText && (
-                        <motion.div
-                            variants={itemVariants}
-                            className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-500/40 backdrop-blur-md px-3 py-1 rounded-full w-fit"
-                        >
-                            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span className="text-xs font-semibold tracking-wider uppercase text-amber-300">
-                                {badgeText}
-                            </span>
-                        </motion.div>
-                    )}
+            {/* Content Container (Overlay tepat di atas gambar) */}
+            <div className="absolute inset-0 z-10 flex items-center">
+                <div className="max-w-8xl mx-auto px-4 sm:px-8 md:px-14 py-4 sm:py-6 md:py-10 lg:py-16 w-full grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8 items-center">
+                    {/* Teks & Deskripsi Kiri */}
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="flex flex-col space-y-2 sm:space-y-4 md:space-y-6 text-white max-w-xl"
+                    >
+                        {/* Badge Atas (Opsional) */}
+                        {badgeText && (
+                            <motion.div
+                                variants={itemVariants}
+                                className="inline-flex items-center space-x-1.5 sm:space-x-2 bg-amber-500/20 border border-amber-500/40 backdrop-blur-md px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full w-fit"
+                            >
+                                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                                <span className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase text-amber-300">
+                                    {badgeText}
+                                </span>
+                            </motion.div>
+                        )}
 
-                    {/* Judul & Caption (Opsional) */}
-                    {(titleText || descText) && (
-                        <div className="space-y-3">
-                            {titleText && (
-                                <motion.h2
-                                    variants={itemVariants}
-                                    style={activeItem?.text_color ? { color: activeItem.text_color, WebkitTextFillColor: activeItem.text_color, backgroundImage: 'none' } : undefined}
-                                    className="md:leading-[60px] text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200"
-                                >
-                                    {titleText}
-                                </motion.h2>
-                            )}
-                            {descText && (
-                                <motion.p
-                                    variants={itemVariants}
-                                    className="text-sm md:text-base text-gray-300 leading-relaxed font-light"
-                                >
-                                    {descText}
-                                </motion.p>
-                            )}
-                        </div>
-                    )}
+                        {/* Judul & Caption (Opsional) */}
+                        {(titleText || descText) && (
+                            <div className="space-y-1 sm:space-y-2.5">
+                                {titleText && (
+                                    <motion.h2
+                                        variants={itemVariants}
+                                        style={activeItem?.text_color ? { color: activeItem.text_color, WebkitTextFillColor: activeItem.text_color, backgroundImage: 'none' } : undefined}
+                                        className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 leading-tight md:leading-[1.15]"
+                                    >
+                                        {titleText}
+                                    </motion.h2>
+                                )}
+                                {descText && (
+                                    <motion.p
+                                        variants={itemVariants}
+                                        className="text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed font-light line-clamp-3 md:line-clamp-none"
+                                    >
+                                        {descText}
+                                    </motion.p>
+                                )}
+                            </div>
+                        )}
 
-                    {/* Fitur / Keunggulan Produk (Opsional) */}
-                    {hasAnyFeature && (
-                        <motion.div
-                            variants={itemVariants}
-                            className={`grid grid-cols-1 ${hasFeature1 && hasFeature2 ? 'sm:grid-cols-2' : ''} gap-4 pt-2`}
-                        >
-                            {/* Keunggulan 1 */}
-                            {hasFeature1 && (
-                                <div className="flex items-start space-x-3">
-                                    <div className="p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
-                                        <Feature1IconComp className="w-5 h-5" />
+                        {/* Fitur / Keunggulan Produk (Opsional) */}
+                        {hasAnyFeature && (
+                            <motion.div
+                                variants={itemVariants}
+                                className={`grid grid-cols-1 ${hasFeature1 && hasFeature2 ? 'sm:grid-cols-2' : ''} gap-2 sm:gap-4 pt-1 sm:pt-2`}
+                            >
+                                {/* Keunggulan 1 */}
+                                {hasFeature1 && (
+                                    <div className="flex items-start space-x-2 sm:space-x-3">
+                                        <div className="p-1.5 sm:p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
+                                            <Feature1IconComp className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        </div>
+                                        <div>
+                                            {f1TitleText && (
+                                                <h4 className="text-xs sm:text-sm font-semibold text-amber-200">
+                                                    {f1TitleText}
+                                                </h4>
+                                            )}
+                                            {f1DescText && (
+                                                <p className="text-[11px] sm:text-xs text-gray-400 line-clamp-2 md:line-clamp-none">
+                                                    {f1DescText}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
-                                        {f1TitleText && (
-                                            <h4 className="text-sm font-semibold text-amber-200">
-                                                {f1TitleText}
-                                            </h4>
-                                        )}
-                                        {f1DescText && (
-                                            <p className="text-xs text-gray-400">
-                                                {f1DescText}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Keunggulan 2 */}
-                            {hasFeature2 && (
-                                <div className="flex items-start space-x-3">
-                                    <div className="p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
-                                        <Feature2IconComp className="w-5 h-5" />
+                                {/* Keunggulan 2 */}
+                                {hasFeature2 && (
+                                    <div className="flex items-start space-x-2 sm:space-x-3">
+                                        <div className="p-1.5 sm:p-2 bg-blue-950/40 border border-amber-500/30 rounded-lg text-amber-400 backdrop-blur-sm shrink-0">
+                                            <Feature2IconComp className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        </div>
+                                        <div>
+                                            {f2TitleText && (
+                                                <h4 className="text-xs sm:text-sm font-semibold text-amber-200">
+                                                    {f2TitleText}
+                                                </h4>
+                                            )}
+                                            {f2DescText && (
+                                                <p className="text-[11px] sm:text-xs text-gray-400 line-clamp-2 md:line-clamp-none">
+                                                    {f2DescText}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
-                                        {f2TitleText && (
-                                            <h4 className="text-sm font-semibold text-amber-200">
-                                                {f2TitleText}
-                                            </h4>
-                                        )}
-                                        {f2DescText && (
-                                            <p className="text-xs text-gray-400">
-                                                {f2DescText}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
+                                )}
+                            </motion.div>
+                        )}
 
-                    {/* Tombol Buy Now / CTA (Opsional) */}
-                    {btnText && (
-                        <motion.div variants={itemVariants} className="pt-4">
-                            {isFullExternal ? (
-                                <a
-                                    href={targetUrl}
-                                    style={{
-                                        ...(activeItem?.button_color ? { backgroundColor: activeItem.button_color, backgroundImage: 'none' } : {}),
-                                        ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
-                                    }}
-                                    className={`group relative inline-flex items-center justify-center px-8 py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
-                                        } ${activeItem?.button_text_color ? '' : 'text-blue-950'
-                                        } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
-                                >
-                                    <span
-                                        className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
-                                        style={{ animationDuration: "1.5s" }}
-                                    />
-                                    <ShoppingBag className="w-5 h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
-                                    <span className="font-bold text-sm md:text-base">
-                                        {btnText}
-                                    </span>
-                                </a>
-                            ) : (
-                                <Link
-                                    href={targetUrl}
-                                    style={{
-                                        ...(activeItem?.button_color ? { backgroundColor: activeItem.button_color, backgroundImage: 'none' } : {}),
-                                        ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
-                                    }}
-                                    className={`group relative inline-flex items-center justify-center px-8 py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
-                                        } ${activeItem?.button_text_color ? '' : 'text-blue-950'
-                                        } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
-                                >
-                                    <span
-                                        className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
-                                        style={{ animationDuration: "1.5s" }}
-                                    />
-                                    <ShoppingBag className="w-5 h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
-                                    <span className="font-bold text-sm md:text-base">
-                                        {btnText}
-                                    </span>
-                                </Link>
-                            )}
-                        </motion.div>
-                    )}
-                </motion.div>
+                        {/* Tombol Buy Now / CTA (Opsional) */}
+                        {btnText && (
+                            <motion.div variants={itemVariants} className="pt-1 sm:pt-3">
+                                {isFullExternal ? (
+                                    <a
+                                        href={targetUrl}
+                                        style={{
+                                            ...(activeItem?.button_color ? { backgroundColor: activeItem.button_color, backgroundImage: 'none' } : {}),
+                                            ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
+                                        }}
+                                        className={`group relative inline-flex items-center justify-center px-5 py-2.5 sm:px-8 sm:py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
+                                            } ${activeItem?.button_text_color ? '' : 'text-blue-950'
+                                            } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
+                                    >
+                                        <span
+                                            className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
+                                            style={{ animationDuration: "1.5s" }}
+                                        />
+                                        <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
+                                        <span className="font-bold text-xs sm:text-sm md:text-base">
+                                            {btnText}
+                                        </span>
+                                    </a>
+                                ) : (
+                                    <Link
+                                        href={targetUrl}
+                                        style={{
+                                            ...(activeItem?.button_color ? { backgroundColor: activeItem.button_color, backgroundImage: 'none' } : {}),
+                                            ...(activeItem?.button_text_color ? { color: activeItem.button_text_color } : {})
+                                        }}
+                                        className={`group relative inline-flex items-center justify-center px-5 py-2.5 sm:px-8 sm:py-3.5 font-medium tracking-wide transition-all duration-300 ease-in-out ${activeItem?.button_color ? '' : 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500'
+                                            } ${activeItem?.button_text_color ? '' : 'text-blue-950'
+                                            } rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] overflow-hidden`}
+                                    >
+                                        <span
+                                            className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"
+                                            style={{ animationDuration: "1.5s" }}
+                                        />
+                                        <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 mr-2 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110 shrink-0" />
+                                        <span className="font-bold text-xs sm:text-sm md:text-base">
+                                            {btnText}
+                                        </span>
+                                    </Link>
+                                )}
+                            </motion.div>
+                        )}
+                    </motion.div>
 
-                {/* Kolom Kanan dikosongkan secara strategis agar botol madu di background kanan tidak tertutup teks */}
-                <div className="hidden md:block" />
+                    {/* Kolom Kanan dikosongkan secara strategis agar botol madu di background kanan tidak tertutup teks */}
+                    <div className="hidden md:block" />
+                </div>
             </div>
         </section>
     );
