@@ -455,10 +455,16 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.th_sku', 'SKU Induk')}</span>
                                             <span className="font-mono text-sm font-bold text-slate-700">{product.sku}</span>
                                         </div>
-                                        <div>
+                                        <div className="text-center">
                                             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.detail.total_stock', 'Total Stok')}</span>
                                             <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-bold text-blue-950">
                                                 {product.stock ?? 0} {product.unit || 'Pcs'}
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">{t('backoffice.product.detail.sold', 'Terjual')}</span>
+                                            <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                                                {product.sold ?? 0}
                                             </span>
                                         </div>
                                     </div>

@@ -1595,7 +1595,8 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                     <span className="text-xs text-zinc-300">|</span>
                                     <span className="flex items-center gap-1 text-sm text-zinc-500">
                                         <Package size={12} className="text-zinc-400" />
-                                        {product.sold || 0} {t("product.detail.sold", "terjual")}
+                                        {(Number(product.sold) || 0).toLocaleString(locale === 'indonesia' ? 'id-ID' : 'en-US')}{" "}
+                                        {t("product.detail.sold", "terjual")}
                                     </span>
                                 </div>
                             </div>

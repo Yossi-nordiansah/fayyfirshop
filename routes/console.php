@@ -18,6 +18,12 @@ Artisan::command('orders:cancel-expired', function () {
     $this->info("Successfully cancelled {$count} expired orders.");
 })->purpose('Cancel orders whose payment time limit has expired');
 
+Artisan::command('products:sync-sold', function () {
+    $this->info('Synchronizing sold counts for all products from valid orders...');
+    \App\Models\Product::recalculateSold();
+    $this->info('Successfully synchronized sold counts for all products.');
+})->purpose('Recalculate and synchronize products.sold from valid completed/paid orders');
+
 Artisan::command('inventory:setup-branch-stocks {--copy-existing-to=ID : Branch country code that receives current products.stock and product_variants.stock values} {--reset : Delete existing branch stock rows before recreating them}', function () {
     if (
         ! Schema::hasTable('store_branches') ||

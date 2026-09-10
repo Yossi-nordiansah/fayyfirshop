@@ -543,6 +543,10 @@ const ProductCard = ({
         return `${currencySymbol} ${formattedNumber}`;
     };
 
+    const effectiveSold = (typeof sold === 'number' && sold > 0)
+        ? sold
+        : (typeof product?.sold === 'number' ? product.sold : (Number(sold) || 0));
+
     const renderSoldCount = (count) => {
         const template = t("product.sold_count", "{count} terjual");
         return template.replace("{count}", count);
@@ -685,7 +689,7 @@ const ProductCard = ({
                         <div className="flex items-center gap-1 text-zinc-500 text-xs">
                             <ShoppingBag size={13} className="text-zinc-400" />
                             <span className="text-zinc-600 font-medium text-[11px]">
-                                {renderSoldCount(sold)}
+                                {renderSoldCount(effectiveSold)}
                             </span>
                         </div>
 

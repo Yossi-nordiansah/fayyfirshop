@@ -26,6 +26,23 @@ class OrderItem extends Model
         'price' => 'decimal:2',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($item) {
+            if ($item->product_id) {
+                Product::recalculateSold($item->product_id);
+            }
+        });
+
+        static::deleted(function ($item) {
+            if ($item->product_id) {
+                Product::recalculateSold($item->product_id);
+            }
+        });
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

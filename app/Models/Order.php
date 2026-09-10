@@ -146,6 +146,9 @@ class Order extends Model
             if (in_array($order->status, $reduced)) {
                 $order->reduceStock();
             }
+            if ($order->isSoldState()) {
+                $order->updateProductsSold();
+            }
         });
 
         static::updating(function ($order) {
@@ -164,6 +167,32 @@ class Order extends Model
                 }
             }
         });
+
+        static::updated(function ($order) {
+            if ($order->wasChanged(['status', 'payment_status'])) {
+                $order->updateProductsSold();
+            }
+        });
+
+        static::deleted(function ($order) {
+            $order->updateProductsSold();
+        });
+    }
+
+    public function isSoldState(): bool
+    {
+        return $this->status !== 'cancelled' && (
+            $this->payment_status === 'paid' ||
+            in_array($this->status, ['processing', 'shipped', 'completed'])
+        );
+    }
+
+    public function updateProductsSold(): void
+    {
+        $productIds = $this->items()->pluck('product_id')->filter()->unique()->toArray();
+        if (!empty($productIds)) {
+            Product::recalculateSold($productIds);
+        }
     }
 
     public function reduceStock(): void
