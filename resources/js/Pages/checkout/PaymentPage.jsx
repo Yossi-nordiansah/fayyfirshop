@@ -23,7 +23,7 @@ export default function PaymentPage({ order, xenditPublicKey, isProduction }) {
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir - ${t("payment.page_title", "Detail Pembayaran")}`} />
+            <Head title={t("payment.page_title", "Detail Pembayaran")} />
 
             <div className="min-h-screen bg-slate-50 pb-8 pt-24">
                 <Payment

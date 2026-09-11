@@ -837,7 +837,7 @@ export default function Products({ category = null, subCategory = null, products
 
     return (
         <div className="min-h-screen text-zinc-100 font-sans selection:bg-amber-500 selection:text-white">
-            <Head title={`Fayyfir - ${bannerTitle}`} />
+            <Head title={bannerTitle} />
 
             <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 {/* 1. Luxurious Banner Header with Category-Specific Background */}

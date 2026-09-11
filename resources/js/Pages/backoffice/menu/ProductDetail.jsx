@@ -354,7 +354,7 @@ export default function ProductDetail({ product, storeBranches = [], units = [] 
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-950 selection:text-white">
-            <Head title={`${product.name_translations?.[activeLang] || product.title} — ${t('backoffice.product.title.detail', 'Detail Produk')}`} />
+            <Head title={`${product.name_translations?.[activeLang] || product.title} — ${t('backoffice.product.title.detail', 'Detail Produk')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

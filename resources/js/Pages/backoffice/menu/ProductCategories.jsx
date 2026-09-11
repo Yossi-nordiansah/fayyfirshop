@@ -104,7 +104,7 @@ export default function ProductCategories({ categories, allProductSlides = [], s
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.category.title', 'Kategori Produk')} />
+            <Head title={`${t('backoffice.category.title', 'Kategori Produk')} - Backoffice`} />
 
             {/* Confirm delete category */}
             <ConfirmModal

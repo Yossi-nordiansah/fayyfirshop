@@ -79,7 +79,7 @@ export default function Reviews({ reviews = [], status }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.review.title', 'Customer Reviews')} />
+            <Head title={`${t('backoffice.review.title', 'Customer Reviews')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

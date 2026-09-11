@@ -81,7 +81,7 @@ export default function AdminForm({
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={isEditing ? t('admin.form.title.edit', 'Edit Admin') : t('admin.form.title.create', 'Create Admin')} />
+            <Head title={`${isEditing ? t('admin.form.title.edit', 'Edit Admin') : t('admin.form.title.create', 'Create Admin')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

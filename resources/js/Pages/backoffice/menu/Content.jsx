@@ -35,7 +35,7 @@ export default function Content({ heroSlides = [], homeCategoryCards = [], featu
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.content.title', 'Content Management')} />
+            <Head title={`${t('backoffice.content.title', 'Content Management')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

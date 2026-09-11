@@ -130,7 +130,7 @@ export default function ProductCategoryForm({
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t(isEditing ? 'backoffice.category.title_edit' : 'backoffice.category.title_create', isEditing ? 'Edit Category' : 'Create Category')} />
+            <Head title={`${t(isEditing ? 'backoffice.category.title_edit' : 'backoffice.category.title_create', isEditing ? 'Edit Category' : 'Create Category')} - Backoffice`} />
 
             <ConfirmModal
                 show={pendingDeleteIndex !== null}

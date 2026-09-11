@@ -32,7 +32,7 @@ export default function SuccessPage({ order }) {
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir - ${t("checkout.success.title_head", "Pesanan Berhasil")}`} />
+            <Head title={t("checkout.success.title_head", "Pesanan Berhasil")} />
 
             <div className="min-h-[calc(100vh-5rem)] bg-slate-50 pt-20 pb-6 flex flex-col justify-center">
                 <div className="max-w-6xl mx-auto w-full px-4">

@@ -375,7 +375,7 @@ export default function OrderHistoryPage({ orders = [], xenditPublicKey, isProdu
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir - ${t("orders.title", "Pesanan Saya")}`} />
+            <Head title={t("orders.title", "Pesanan Saya")} />
 
             <div className="bg-slate-100 pb-6 lg:pb-10 pt-20 lg:pt-28" dir={isRtl ? "rtl" : "ltr"}>
                 <div className="mx-auto px-2 sm:px-6 lg:px-8">

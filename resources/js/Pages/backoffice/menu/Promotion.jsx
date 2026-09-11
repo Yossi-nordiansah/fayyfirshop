@@ -34,7 +34,7 @@ export default function Promotion({ tickers = [], vouchers = [], events = [], re
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.promotion.title', 'Promotion Management')} />
+            <Head title={`${t('backoffice.promotion.title', 'Promotion Management')} - Backoffice`} />
 
             {/* Error Messages Popup Modal */}
             {showErrorModal && (

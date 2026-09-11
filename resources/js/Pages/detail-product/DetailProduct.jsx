@@ -1399,7 +1399,7 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir - ${displayName}`} />
+            <Head title={displayName} />
 
             <div className="min-h-screen pt-24 pb-20 font-sans bg-white">
                 {/* Breadcrumbs */}

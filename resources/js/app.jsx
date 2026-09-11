@@ -10,7 +10,7 @@ import { createRoot } from 'react-dom/client';
 import { LanguageProvider } from './Contexts/LanguageContext';
 import LoadingOverlay from './Components/LoadingOverlay';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Fayyfir Shop';
 
 // Force page reload if page is restored from browser back-forward cache (bfcache)
 if (typeof window !== 'undefined') {
@@ -30,7 +30,20 @@ router.on('invalid', (event) => {
 });
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => {
+        if (!title) return appName;
+        let clean = title.trim();
+        if (clean.startsWith('Fayyfir - ')) {
+            clean = clean.substring(10).trim();
+        } else if (clean.startsWith('Fayyfir Shop — ')) {
+            clean = clean.substring(15).trim();
+        } else if (clean.startsWith('Fayyfir Shop - ')) {
+            clean = clean.substring(15).trim();
+        }
+        if (!clean) return appName;
+        if (clean.includes(appName)) return clean;
+        return `${clean} - ${appName}`;
+    },
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

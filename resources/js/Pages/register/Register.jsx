@@ -314,7 +314,7 @@ export default function Register({ auth, flash }) {
 
     return (
         <div className="min-h-screen font-sans text-slate-900 selection:bg-amber-500 selection:text-white md:pt-16 lg:pt-20">
-            <Head title={`Fayyfir - ${user ? t("register.complete_title", "Lengkapi Pendaftaran") : t("register.title", "Daftar Akun")}`} />
+            <Head title={user ? t("register.complete_title", "Lengkapi Pendaftaran") : t("register.title", "Daftar Akun")} />
 
             {processing && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 backdrop-blur-[3px]">

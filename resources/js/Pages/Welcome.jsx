@@ -16,7 +16,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion, newProducts 
 
     return (
         <div className="min-h-screen">
-            <Head title={`Fayyfir - ${t("nav.home", "Beranda")}`} />
+            <Head title={t("nav.home", "Beranda")} />
             <MainLayout alwaysSolid={false} showWhatsAppFloatingButton={true}>
                 <HeroSlider heroSlides={heroSlides} />
                 <CategorySection categoryCards={homeCategoryCards} />

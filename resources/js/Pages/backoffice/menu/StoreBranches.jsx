@@ -35,7 +35,7 @@ export default function StoreBranches({ storeBranches, status, statusAction }) {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800">
-            <Head title={t('backoffice.store_branches.title', 'Store Branches')} />
+            <Head title={`${t('backoffice.store_branches.title', 'Store Branches')} - Backoffice`} />
 
             {/* GLOBAL CONFIRM MODAL */}
             <ConfirmModal

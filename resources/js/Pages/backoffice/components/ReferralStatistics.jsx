@@ -36,7 +36,7 @@ export default function ReferralStatistics({ referral = {}, stats = {} }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={`Statistik Referral - ${referral.name}`} />
+            <Head title={`Statistik Referral - ${referral.name} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

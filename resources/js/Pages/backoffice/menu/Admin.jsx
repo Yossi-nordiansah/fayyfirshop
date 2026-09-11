@@ -30,7 +30,7 @@ export default function Admin({ admins, status }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('admin.management.title', 'Admin Management')} />
+            <Head title={`${t('admin.management.title', 'Admin Management')} - Backoffice`} />
 
             <ConfirmModal
                 show={Boolean(pendingDelete)}

@@ -38,7 +38,7 @@ export default function ProductCategoryShow({ category }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.category.detail.title', 'Detail Kategori')} />
+            <Head title={`${t('backoffice.category.detail.title', 'Detail Kategori')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

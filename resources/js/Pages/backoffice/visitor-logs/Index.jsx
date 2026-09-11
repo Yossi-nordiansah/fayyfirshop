@@ -30,7 +30,7 @@ export default function Index({ logs, countryStats, timeStats }) {
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.sidebar.visitor_logs', 'Visitor Logs')} />
+            <Head title={`${t('backoffice.sidebar.visitor_logs', 'Visitor Logs')} - Backoffice`} />
 
             <div className="flex min-h-screen">
                 <Sidebar />

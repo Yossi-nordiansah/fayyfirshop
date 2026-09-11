@@ -270,7 +270,7 @@ export default function Customer({ customers = [], vouchers = [], status = null,
 
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title={t('backoffice.customer.title', 'Customer Management')} />
+            <Head title={`${t('backoffice.customer.title', 'Customer Management')} - Backoffice`} />
 
             {/* Confirm Delete Modal */}
             <ConfirmModal

@@ -134,7 +134,7 @@ export default function TrackOrderPage({ order, trackingLogs = [], biteshipStatu
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir - ${t("orders.track.page_title", "Lacak Pesanan")}`} />
+            <Head title={t("orders.track.page_title", "Lacak Pesanan")} />
 
             <div className="min-h-screen bg-slate-50 pb-20 pt-20 lg:pt-28 ">
                 <div className="max-w-4xl mx-auto px-4">

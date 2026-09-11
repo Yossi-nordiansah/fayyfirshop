@@ -116,7 +116,7 @@ export default function ProductManagement({ products = [], status, statusAction 
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-950 selection:text-white">
-            <Head title={t('backoffice.product.title.page', 'Product Management')} />
+            <Head title={`${t('backoffice.product.title.page', 'Product Management')} - Backoffice`} />
 
             <ConfirmModal
                 show={Boolean(pendingDeleteProduct)}

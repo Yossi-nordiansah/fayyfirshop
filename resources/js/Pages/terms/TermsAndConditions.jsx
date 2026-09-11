@@ -594,7 +594,7 @@ export default function TermsAndConditions() {
 
     return (
         <MainLayout>
-            <Head title={`Fayyfir Shop — ${lang.page_title}`}>
+            <Head title={lang.page_title}>
                 <meta name="description" content={lang.page_subtitle} />
             </Head>
 

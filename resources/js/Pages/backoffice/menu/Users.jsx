@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 export default function Users() {
     return (
         <div className="min-h-screen bg-blue-50">
-            <Head title="Users" />
+            <Head title="Users - Backoffice" />
 
             <div className="flex min-h-screen">
                 <Sidebar />

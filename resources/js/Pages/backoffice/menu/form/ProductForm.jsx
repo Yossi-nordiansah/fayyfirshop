@@ -1108,7 +1108,7 @@ export default function ProductForm({
     // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-950 selection:text-white">
-            <Head title={isEditing ? `${t('backoffice.product.form.page_title_edit', 'Edit Produk')} — Fayyfir` : `${t('backoffice.product.form.page_title_create', 'Tambah Produk')} — Fayyfir`} />
+            <Head title={`${isEditing ? t('backoffice.product.form.page_title_edit', 'Edit Produk') : t('backoffice.product.form.page_title_create', 'Tambah Produk')} - Backoffice`} />
 
             <ConfirmModal
                 show={pendingDeleteVariant !== null}

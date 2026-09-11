@@ -54,11 +54,11 @@ export default function StoreBranchForm({ storeBranch = null, countries = [], st
     return (
         <div className="min-h-screen bg-blue-50">
             <Head
-                title={
+                title={`${
                     isEditing
                         ? t('backoffice.store_branches.form.page_title_edit', 'Edit Store Branch')
                         : t('backoffice.store_branches.form.page_title_create', 'Create Store Branch')
-                }
+                } - Backoffice`}
             />
 
             <div className="flex min-h-screen">
