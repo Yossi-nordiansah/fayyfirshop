@@ -34,17 +34,18 @@ export default function PaymentMethodSelection({
     setPaymentMethod
 }) {
     const categories = useMemo(() => [
-        {
-            id: "e_wallet",
-            title: t("checkout.payment.e_wallet", "E-Wallet"),
-            icon: <Wallet className="text-indigo-500" size={15} />,
-            methods: [
-                // { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
-                // { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" }, // SEMENTARA DINONAKTIFKAN
-                // { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
-                { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" }
-            ]
-        },
+        // SEMENTARA DINONAKTIFKAN
+        // {
+        //     id: "e_wallet",
+        //     title: t("checkout.payment.e_wallet", "E-Wallet"),
+        //     icon: <Wallet className="text-indigo-500" size={15} />,
+        //     methods: [
+        //         { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
+        //         { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
+        //         { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
+        //         { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" }
+        //     ]
+        // },
         {
             id: "qris",
             title: t("checkout.payment.qris", "QRIS"),
@@ -58,7 +59,7 @@ export default function PaymentMethodSelection({
             title: t("checkout.payment.virtual_account", "Virtual Account (Verifikasi Otomatis)"),
             icon: <Landmark className="text-blue-500" size={15} />,
             methods: [
-                // { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" }, // SEMENTARA DINONAKTIFKAN
+                // { id: "bca_va", name: "BCA Virtual Account", desc: t("checkout.payment.desc.bca_va", "Transfer Virtual Account BCA"), logo: "/images/payment/bca.svg" }, // SEMENTARA DINONAKTIFKAN
                 { id: "bri_va", name: "BRI Virtual Account", desc: t("checkout.payment.desc.bri", "Transfer Virtual Account BRI"), logo: "/images/payment/bri.svg" },
                 { id: "bni_va", name: "BNI Virtual Account", desc: t("checkout.payment.desc.bni", "Transfer Virtual Account BNI"), logo: "/images/payment/bni.svg" },
                 { id: "mandiri_va", name: "Mandiri Bill Payment", desc: t("checkout.payment.desc.mandiri", "Transfer Mandiri Bill Payment"), logo: "/images/payment/mandiri.svg" },
@@ -70,20 +71,19 @@ export default function PaymentMethodSelection({
                 // { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" }  // SEMENTARA DINONAKTIFKAN
             ]
         },
-        // SEMENTARA DINONAKTIFKAN
-        // {
-        //     id: "card",
-        //     title: t("checkout.payment.credit_card", "Credit / Debit Card"),
-        //     icon: <CreditCard className="text-amber-500" size={15} />,
-        //     methods: [
-        //         {
-        //             id: "credit_card",
-        //             name: t("checkout.payment.credit_card", "Credit / Debit Card"),
-        //             desc: t("checkout.payment.desc.card", "Visa • Mastercard • JCB • Amex • UnionPay"),
-        //             isCard: true
-        //         }
-        //     ]
-        // },
+        {
+            id: "card",
+            title: t("checkout.payment.credit_card", "Credit / Debit Card"),
+            icon: <CreditCard className="text-amber-500" size={15} />,
+            methods: [
+                {
+                    id: "credit_card",
+                    name: t("checkout.payment.credit_card", "Credit / Debit Card"),
+                    desc: t("checkout.payment.desc.card", "Visa • Mastercard • JCB • Amex • UnionPay"),
+                    isCard: true
+                }
+            ]
+        },
         {
             id: "retail",
             title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
@@ -101,7 +101,7 @@ export default function PaymentMethodSelection({
 
     // Auto switch if currently selected method is one of the temporarily disabled ones
     useEffect(() => {
-        const disabledMethods = ["shopeepay", "bca_va", "credit_card"];
+        const disabledMethods = ["bca_va", "shopeepay", "gopay", "dana", "ovo", "linkaja"];
         if (disabledMethods.includes(paymentMethod)) {
             setPaymentMethod("bri_va");
         }

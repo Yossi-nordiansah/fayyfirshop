@@ -42,7 +42,7 @@ trait ResolvesBiteshipArea
             return null;
         }
 
-        $apiKey = env('BITESHIP_API_KEY');
+        $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
         if (empty($apiKey)) {
             Log::warning('Biteship API Key is not set in the .env file.');
             return null;

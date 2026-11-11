@@ -50,6 +50,22 @@ return [
         'webhook_token' => env('XENDIT_WEBHOOK_TOKEN', env('XENDIT_CALLBACK_TOKEN')),
     ],
 
+    'doku' => [
+        'client_id' => env('DOKU_CLIENT_ID', env('DOKU_API_KEY')),
+        'secret_key' => env('DOKU_SECRET_KEY'),
+        'partner_service_id' => env('DOKU_PARTNER_SERVICE_ID'),
+        'public_key' => env('DOKU_PUBLIC_KEY'),
+        'merchant_public_key' => env('DOKU_MERCHANT_PUBLIC_KEY'),
+        'merchant_private_key' => env('DOKU_MERCHANT_PRIVATE_KEY'),
+        'is_production' => env('DOKU_IS_PRODUCTION', false),
+    ],
+
+
+    'biteship' => [
+        'api_key' => env('BITESHIP_API_KEY'),
+        'webhook_token' => env('BITESHIP_WEBHOOK_TOKEN'),
+        'couriers' => env('BITESHIP_COURIERS', 'jne,jnt,sicepat,tiki,pos,anteraja,gojek,grab,wahana'),
+    ],
 
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),

@@ -345,6 +345,9 @@ class Order extends Model
                         \Midtrans\Transaction::cancel($this->payment_details['midtrans_order_id']);
                     } catch (\Throwable $e) {}
                 }
+                if (isset($this->payment_details['doku_invoice_number'])) {
+                    // DOKU payment orders are tracked via invoice number
+                }
             }
 
             $this->update([

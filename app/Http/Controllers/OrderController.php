@@ -243,7 +243,7 @@ class OrderController extends Controller
             ];
         }
 
-        $apiKey = env('BITESHIP_API_KEY');
+        $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
 
         $rawCourier = strtolower(trim($order->shipping_courier ?? ''));
         $rawService = strtolower(trim($order->shipping_service ?? ''));
@@ -539,7 +539,7 @@ class OrderController extends Controller
         $trackingLogs = [];
         $biteshipStatus = null;
         $courierName = strtolower($order->shipping_courier ?? '');
-        $apiKey = env('BITESHIP_API_KEY');
+        $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
 
         // Extract Biteship Order ID if stored in notes or tracking_number
         $biteshipOrderId = null;
@@ -735,7 +735,7 @@ class OrderController extends Controller
         $trackingLogs = [];
         $biteshipStatus = null;
         $courierName = strtolower($order->shipping_courier ?? '');
-        $apiKey = env('BITESHIP_API_KEY');
+        $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
 
         $biteshipOrderId = null;
         if (preg_match('/\[Biteship Order ID:\s*([a-zA-Z0-9_-]+)\]/', $order->notes ?? '', $matches)) {
@@ -1064,7 +1064,7 @@ class OrderController extends Controller
 
         // Verify Biteship webhook token
         $receivedToken = $request->header('biteship-token') ?? $request->header('x-biteship-token') ?? $request->header('authorization');
-        $configuredToken = env('BITESHIP_WEBHOOK_TOKEN');
+        $configuredToken = config('services.biteship.webhook_token') ?? env('BITESHIP_WEBHOOK_TOKEN');
 
         if ($configuredToken && $receivedToken && $receivedToken !== $configuredToken) {
             \Illuminate\Support\Facades\Log::warning('Biteship Webhook Token Mismatch', [

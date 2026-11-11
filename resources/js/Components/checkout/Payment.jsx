@@ -77,16 +77,17 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
 
     /* ── Change Categories (for modal) ── */
     const changeCategories = [
-        {
-            id: "e_wallet",
-            title: t("checkout.payment.e_wallet", "E-Wallet"),
-            methods: [
-                // { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
-                // { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" }, // SEMENTARA DINONAKTIFKAN
-                // { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
-                { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" },
-            ],
-        },
+        // SEMENTARA DINONAKTIFKAN
+        // {
+        //     id: "e_wallet",
+        //     title: t("checkout.payment.e_wallet", "E-Wallet"),
+        //     methods: [
+        //         { id: "gopay", name: "GoPay", desc: t("checkout.payment.desc.gopay", "Bayar menggunakan aplikasi Gojek"), logo: "/images/payment/gopay.svg" },
+        //         { id: "shopeepay", name: "ShopeePay", desc: t("checkout.payment.desc.shopeepay", "Bayar menggunakan aplikasi Shopee"), logo: "/images/payment/shopeepay.svg" },
+        //         { id: "dana", name: "DANA", desc: t("checkout.payment.desc.dana", "Bayar menggunakan aplikasi DANA"), logo: "/images/payment/dana.svg" },
+        //         { id: "linkaja", name: "LinkAja", desc: t("checkout.payment.desc.linkaja", "Bayar menggunakan aplikasi LinkAja"), logo: "/images/payment/link-aja.svg" },
+        //     ],
+        // },
         {
             id: "qris",
             title: t("checkout.payment.qris", "QRIS"),
@@ -110,14 +111,13 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                 // { id: "saqu_va", name: "Bank Saqu Virtual Account", desc: t("checkout.payment.desc.saqu_va", "Transfer Virtual Account Bank Saqu"), logo: "/images/payment/saqu.svg" },  // SEMENTARA DINONAKTIFKAN
             ],
         },
-        // SEMENTARA DINONAKTIFKAN
-        // {
-        //     id: "card",
-        //     title: t("checkout.payment.credit_card", "Credit / Debit Card"),
-        //     methods: [
-        //         { id: "credit_card", name: "Credit / Debit Card", desc: "Visa • Mastercard • JCB • Amex • UnionPay", isCard: true },
-        //     ],
-        // },
+        {
+            id: "card",
+            title: t("checkout.payment.credit_card", "Credit / Debit Card"),
+            methods: [
+                { id: "credit_card", name: "Credit / Debit Card", desc: "Visa • Mastercard • JCB • Amex • UnionPay", isCard: true },
+            ],
+        },
         {
             id: "retail",
             title: t("checkout.payment.retail", "Retail Outlet / Gerai Retail"),
@@ -345,7 +345,8 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                         />
                     </div>
 
-                    {/* Cara Pembayaran */}
+                    {/* Cara Pembayaran (Sementara di-comment atas permintaan user) */}
+                    {/*
                     <div className="order-4 lg:order-none p-5 sm:p-6">
                         <PaymentInstructions
                             order={order}
@@ -354,6 +355,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                             t={t}
                         />
                     </div>
+                    */}
                 </div>
 
                 {/* Right Column Wrapper */}

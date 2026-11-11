@@ -167,20 +167,26 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
 
     return (
         <section className="relative w-full overflow-hidden bg-amber-950/20">
-            {/* Background Image: Lebar full 100%, tinggi otomatis menyesuaikan dari ukuran asli gambar */}
+            {/* Background Image Mobile: Memenuhi seluruh tinggi konten yang fleksibel, fokus ke kanan agar gambar produk/madu terlihat jelas */}
             <img
                 src={bgImage}
                 alt={titleText || "Featured Product"}
-                className="w-full h-auto block select-none pointer-events-none"
+                className="md:hidden absolute inset-0 w-full h-full object-cover object-right select-none pointer-events-none"
             />
 
-            {/* Premium Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent pointer-events-none" />
-            <div className="absolute inset-0 bg-black/30 md:hidden pointer-events-none" />
+            {/* Background Image Desktop: Menjaga rasio asli gambar dan tampilan 2-kolom persis seperti aslinya */}
+            <img
+                src={bgImage}
+                alt={titleText || "Featured Product"}
+                className="hidden md:block w-full h-auto select-none pointer-events-none"
+            />
 
-            {/* Content Container (Overlay tepat di atas gambar) */}
-            <div className="absolute inset-0 z-10 flex items-center">
-                <div className="max-w-8xl mx-auto px-4 sm:px-8 md:px-14 py-4 sm:py-6 md:py-10 lg:py-16 w-full grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8 items-center">
+            {/* Premium Overlay: Gradien halus dari kiri gelap (teks kontras) ke kanan transparan (gambar latar & produk terlihat jelas) */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20 md:from-black/85 md:via-black/50 md:to-transparent pointer-events-none" />
+
+            {/* Content Container: Di mobile relative (normal flow) dengan padding agar tinggi section fit fleksibel mengikuti teks, di desktop absolute inset-0 */}
+            <div className="relative z-10 flex items-center min-h-[340px] sm:min-h-[380px] md:min-h-0 py-8 sm:py-12 md:py-0 md:absolute md:inset-0">
+                <div className="max-w-8xl mx-auto px-4 sm:px-8 md:px-14 py-0 md:py-10 lg:py-16 w-full grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8 items-center">
                     {/* Teks & Deskripsi Kiri */}
                     <motion.div
                         variants={containerVariants}
@@ -217,7 +223,7 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                                 {descText && (
                                     <motion.p
                                         variants={itemVariants}
-                                        className="text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed font-light line-clamp-3 md:line-clamp-none"
+                                        className="text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed font-light"
                                     >
                                         {descText}
                                     </motion.p>
@@ -244,7 +250,7 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                                                 </h4>
                                             )}
                                             {f1DescText && (
-                                                <p className="text-[11px] sm:text-xs text-gray-400 line-clamp-2 md:line-clamp-none">
+                                                <p className="text-[11px] sm:text-xs text-gray-400 leading-normal">
                                                     {f1DescText}
                                                 </p>
                                             )}
@@ -265,7 +271,7 @@ export default function FeaturedProduct({ featuredProducts = [] }) {
                                                 </h4>
                                             )}
                                             {f2DescText && (
-                                                <p className="text-[11px] sm:text-xs text-gray-400 line-clamp-2 md:line-clamp-none">
+                                                <p className="text-[11px] sm:text-xs text-gray-400 leading-normal">
                                                     {f2DescText}
                                                 </p>
                                             )}

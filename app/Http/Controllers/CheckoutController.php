@@ -248,7 +248,8 @@ class CheckoutController extends Controller
         $isDomesticID = ($originBranch->country_code === 'ID' && str_starts_with($destinationAreaId, 'ID'));
 
         if ($isDomesticID) {
-            $apiKey = env('BITESHIP_API_KEY');
+            $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
+            $requestedCouriers = config('services.biteship.couriers') ?? env('BITESHIP_COURIERS', 'jne,jnt,sicepat,tiki,pos,anteraja,gojek,grab,wahana');
 
             try {
                 $response = Http::withHeaders([
@@ -256,7 +257,7 @@ class CheckoutController extends Controller
                 ])->post('https://api.biteship.com/v1/rates/couriers', [
                     'origin_area_id' => $originBranch->area_id ?: 'IDNP6IDNC148IDND843IDZ12270', // fallback to Pesanggrahan if empty
                     'destination_area_id' => $destinationAreaId,
-                    'couriers' => 'jne,jnt,sicepat,tiki,pos,anteraja,gojek,grab,wahana',
+                    'couriers' => $requestedCouriers,
                     'items' => $biteshipItems
                 ]);
 
@@ -987,6 +988,17 @@ class CheckoutController extends Controller
             abort(403);
         }
 
+        // Jika pesanan belum lunas dan bukan COD, sinkronkan status dengan Payment Gateway
+        if ($order->payment_status !== 'paid' && $order->payment_method !== 'cod') {
+            $this->syncPaymentStatusWithGateway($order);
+            $order->refresh();
+
+            // Jika setelah disinkronkan ternyata memang belum dibayar, kembalikan ke halaman pembayaran
+            if ($order->payment_status !== 'paid') {
+                return redirect()->route('checkout.payment', $order->id);
+            }
+        }
+
         return Inertia::render('checkout/SuccessPage', [
             'order' => $order
         ]);
@@ -1442,6 +1454,7 @@ class CheckoutController extends Controller
             'activeGateway' => config('services.payment_gateway', 'xendit'),
             'xenditPublicKey' => config('services.xendit.public_key'),
             'midtransClientKey' => config('services.midtrans.client_key'),
+            'dokuClientId' => config('services.doku.client_id'),
             'isProduction' => app()->environment('production'),
         ]);
     }
@@ -1499,6 +1512,17 @@ class CheckoutController extends Controller
             } catch (\Throwable $e) {
                 Log::warning("Xendit API simulate error: " . $e->getMessage());
             }
+        }
+
+        if (!empty($details['doku_invoice_number']) || !empty($details['doku_trx_id'])) {
+            $order->update([
+                'payment_status' => 'paid',
+                'status'         => 'processing',
+            ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Simulasi pembayaran via DOKU Sandbox berhasil!'
+            ]);
         }
 
         // Update status ke paid
@@ -1600,6 +1624,52 @@ class CheckoutController extends Controller
                             'status' => 'cancelled',
                         ]);
                         return;
+                    }
+                }
+            }
+            // 4. DOKU Payment Status Sync
+            if (!empty($details['doku_invoice_number']) || !empty($details['doku_trx_id'])) {
+                $dokuInv = $details['doku_invoice_number'] ?? $details['doku_trx_id'];
+                $clientId = config('services.doku.client_id');
+                $secretKey = config('services.doku.secret_key');
+                if ($clientId && $secretKey) {
+                    $requestId = (string) Str::uuid();
+                    $requestTimestamp = gmdate('Y-m-d\TH:i:s\Z');
+                    $requestTarget = "/orders/v1/status/{$dokuInv}";
+                    $baseUrl = config('services.doku.is_production') ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+                    
+                    $rawSignature = "Client-Id:" . $clientId . "\n" .
+                                    "Request-Id:" . $requestId . "\n" .
+                                    "Request-Timestamp:" . $requestTimestamp . "\n" .
+                                    "Request-Target:" . $requestTarget;
+                    $signature = "HMACSHA256=" . base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+
+                    $resp = Http::withHeaders([
+                        'Client-Id' => $clientId,
+                        'Request-Id' => $requestId,
+                        'Request-Timestamp' => $requestTimestamp,
+                        'Signature' => $signature,
+                    ])->timeout(4)->get($baseUrl . $requestTarget);
+
+                    if ($resp->successful()) {
+                        $st = strtoupper($resp->json('transaction.status') ?? $resp->json('status') ?? '');
+                        if (in_array($st, ['SUCCESS', 'PAID', 'SETTLED', 'COMPLETED'])) {
+                            $order->update([
+                                'payment_status' => 'paid',
+                                'status' => 'processing',
+                            ]);
+                            Log::info("DOKU Status Sync: Order #{$order->id} successfully synced as PAID");
+                            return;
+                        } elseif (in_array($st, ['EXPIRED', 'FAILED', 'CANCELLED'])) {
+                            $order->update([
+                                'payment_status' => 'expired',
+                                'status' => 'cancelled',
+                            ]);
+                            Log::info("DOKU Status Sync: Order #{$order->id} synced as EXPIRED/CANCELLED");
+                            return;
+                        }
+                    } else {
+                        Log::warning("DOKU Status Sync Failed for Order #{$order->id}: [{$resp->status()}] " . $resp->body());
                     }
                 }
             }
@@ -1784,6 +1854,9 @@ class CheckoutController extends Controller
     public function chargePayment($order, $paymentMethod, $customPhone = null)
     {
         $gateway = config('services.payment_gateway', 'xendit');
+        if ($gateway === 'doku') {
+            return $this->chargeDoku($order, $paymentMethod, $customPhone);
+        }
         if ($gateway === 'midtrans') {
             return $this->chargeMidtrans($order, $paymentMethod, $customPhone);
         }
@@ -1901,6 +1974,139 @@ class CheckoutController extends Controller
     }
 
     /**
+     * DOKU Charge Generator
+     */
+    public function chargeDoku($order, $paymentMethod, $customPhone = null)
+    {
+        $dokuService = app(\App\Services\DokuService::class);
+        return $dokuService->charge($order, $paymentMethod, $customPhone);
+    }
+
+    /**
+     * DOKU Checkout / Standard Callback Handler
+     */
+    public function dokuCallback(Request $request)
+    {
+        Log::info('DOKU Webhook Received:', [
+            'headers' => $request->headers->all(),
+            'body'    => $request->all(),
+        ]);
+
+        $dokuService = app(\App\Services\DokuService::class);
+        if (!$dokuService->verifyWebhookSignature($request)) {
+            Log::warning('DOKU Webhook Signature Mismatch');
+            if (config('services.doku.is_production')) {
+                return response()->json(['message' => 'Invalid signature'], 401);
+            }
+        }
+
+        $payload = $request->all();
+        $invoiceNumber = $payload['order']['invoice_number'] ?? $payload['invoice_number'] ?? $payload['trx_id'] ?? null;
+        $transactionStatus = strtoupper($payload['transaction']['status'] ?? $payload['status'] ?? '');
+
+        $order = null;
+        if ($invoiceNumber) {
+            $order = Order::with('items')->where('invoice_number', $invoiceNumber)->first();
+            if (!$order) {
+                $parts = explode('-', $invoiceNumber);
+                if (count($parts) >= 3) {
+                    $baseInvoice = implode('-', array_slice($parts, 0, 3));
+                    $order = Order::with('items')->where('invoice_number', $baseInvoice)->first();
+                }
+            }
+            if (!$order) {
+                $order = Order::with('items')
+                    ->where('payment_details->doku_invoice_number', $invoiceNumber)
+                    ->orWhere('payment_details->doku_trx_id', $invoiceNumber)
+                    ->first();
+            }
+        }
+
+        if (!$order) {
+            Log::warning('DOKU Webhook: Order not found for invoice ' . ($invoiceNumber ?? 'null'));
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        if ($order->payment_status === 'paid') {
+            return response()->json(['message' => 'Order already paid']);
+        }
+
+        if (in_array($transactionStatus, ['SUCCESS', 'PAID', 'SETTLED', 'COMPLETED', '00', 'SUCCESSFUL'])) {
+            $order->update([
+                'payment_status' => 'paid',
+                'status'         => 'processing',
+            ]);
+
+            Log::info("DOKU Webhook: Order #{$order->id} marked as PAID");
+        } elseif (in_array($transactionStatus, ['FAILED', 'EXPIRED', 'CANCELLED'])) {
+            $order->update([
+                'payment_status'      => 'expired',
+                'status'              => 'cancelled',
+                'cancellation_reason' => 'Pembayaran dibatalkan atau kedaluwarsa oleh DOKU.',
+            ]);
+
+            Log::info("DOKU Webhook: Order #{$order->id} marked as EXPIRED/CANCELLED");
+        }
+
+        return response()->json(['message' => 'DOKU callback handled successfully']);
+    }
+
+    /**
+     * DOKU SNAP Virtual Account Webhook Callback Handler
+     */
+    public function dokuSnapCallback(Request $request)
+    {
+        Log::info('DOKU SNAP Webhook Received:', [
+            'headers' => $request->headers->all(),
+            'body'    => $request->all(),
+        ]);
+
+        $payload = $request->all();
+        $trxId = $payload['trxId'] ?? $payload['partnerReferenceNo'] ?? $payload['virtualAccountNo'] ?? null;
+        $flagStatus = $payload['paymentFlagStatus'] ?? $payload['responseCode'] ?? null;
+
+        $order = null;
+        if ($trxId) {
+            $order = Order::with('items')->where('invoice_number', $trxId)->first();
+            if (!$order) {
+                $parts = explode('-', $trxId);
+                if (count($parts) >= 3) {
+                    $baseInvoice = implode('-', array_slice($parts, 0, 3));
+                    $order = Order::with('items')->where('invoice_number', $baseInvoice)->first();
+                }
+            }
+            if (!$order) {
+                $order = Order::with('items')
+                    ->where('payment_details->doku_trx_id', $trxId)
+                    ->orWhere('payment_details->doku_invoice_number', $trxId)
+                    ->orWhere('payment_details->va_number', $trxId)
+                    ->first();
+            }
+        }
+
+        if ($order && $order->payment_status !== 'paid') {
+            if ($flagStatus === '00' || $flagStatus === '2002500' || $flagStatus === 'SUCCESS') {
+                $order->update([
+                    'payment_status' => 'paid',
+                    'status'         => 'processing',
+                ]);
+                Log::info("DOKU SNAP Webhook: Order #{$order->id} marked as PAID");
+            }
+        }
+
+        return response()->json([
+            'responseCode'    => '2002500',
+            'responseMessage' => 'Successful',
+            'virtualAccountData' => [
+                'partnerServiceId' => $payload['partnerServiceId'] ?? '',
+                'customerNo'       => $payload['customerNo'] ?? '',
+                'virtualAccountNo' => $payload['virtualAccountNo'] ?? '',
+                'paymentFlagStatus'=> '00',
+            ],
+        ]);
+    }
+
+    /**
      * Xendit Charge Generator
      */
     public function chargeXendit($order, $paymentMethod, $customPhone = null)
@@ -1958,7 +2164,8 @@ class CheckoutController extends Controller
                 ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
-                $errorMsg = $response->json('message') ?? $response->body();
+                $rawMsg = $response->json('message') ?? $response->body();
+                $errorMsg = is_array($rawMsg) ? json_encode($rawMsg) : (string)$rawMsg;
                 throw new \Exception("Gagal membuat Nomor Virtual Account (" . $bankCode . "): " . $errorMsg);
             }
 
@@ -1998,7 +2205,8 @@ class CheckoutController extends Controller
                 ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
-                $errorMsg = $response->json('message') ?? $response->body();
+                $rawMsg = $response->json('message') ?? $response->body();
+                $errorMsg = is_array($rawMsg) ? json_encode($rawMsg) : (string)$rawMsg;
                 throw new \Exception("Gagal membuat QRIS: " . $errorMsg);
             }
 
@@ -2056,7 +2264,8 @@ class CheckoutController extends Controller
                 ->post('https://api.xendit.co/payment_requests', $payload);
 
             if ($response->failed()) {
-                $errorMsg = $response->json('message') ?? $response->body();
+                $rawMsg = $response->json('message') ?? $response->body();
+                $errorMsg = is_array($rawMsg) ? json_encode($rawMsg) : (string)$rawMsg;
                 throw new \Exception("Gagal membuat Kode Pembayaran Kasir: " . $errorMsg);
             }
 

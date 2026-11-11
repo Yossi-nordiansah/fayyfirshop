@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AllProductSlideController;
+use App\Http\Controllers\DokuSnapController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -410,6 +411,11 @@ Route::middleware('backoffice.auth')->prefix('backoffice')->group(function () {
 
 Route::post('/checkout/xendit-callback', [CheckoutController::class, 'xenditCallback'])->name('checkout.xendit-callback');
 Route::post('/checkout/midtrans-callback', [CheckoutController::class, 'midtransCallback'])->name('checkout.midtrans-callback');
+Route::match(['get', 'post'], '/checkout/doku-callback', [CheckoutController::class, 'dokuCallback'])->name('checkout.doku-callback');
+Route::match(['get', 'post'], '/checkout/doku-snap-callback/{scenario?}', [DokuSnapController::class, 'paymentVa'])->name('checkout.doku-snap-callback');
+Route::match(['get', 'post'], '/v1.1/transfer-va/payment/{scenario?}', [DokuSnapController::class, 'paymentVa']);
+Route::match(['get', 'post'], '/v1.0/transfer-va/payment/{scenario?}', [DokuSnapController::class, 'paymentVa']);
+Route::match(['get', 'post'], '/transfer-va/payment/{scenario?}', [DokuSnapController::class, 'paymentVa']);
 Route::match(['get', 'post'], '/biteship/webhook', [OrderController::class, 'biteshipWebhook'])->name('biteship.webhook');
 
 Route::middleware('auth')->group(function () {

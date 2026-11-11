@@ -29,7 +29,7 @@ class StoreBranchController extends Controller
             ]);
         }
 
-        $apiKey = env('BITESHIP_API_KEY');
+        $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
 
         try {
             $response = Http::withHeaders([

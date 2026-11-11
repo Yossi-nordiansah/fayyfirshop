@@ -122,6 +122,91 @@ export default function PaymentCodeCard({
                 </button>
             </div>
 
+            {/* Direct Payment Link / Hosted Checkout URL (e.g., DOKU Checkout) */}
+            {(details.payment_url || details.invoice_url) && !details.va_number && !details.payment_code && order.payment_status === "unpaid" && (
+                <div className="space-y-4 text-center">
+                    <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 rounded-3xl max-w-md mx-auto space-y-3">
+                        <span className="text-xs text-blue-900 font-extrabold uppercase tracking-wider block">
+                            {order.payment_method === "credit_card"
+                                ? t("payment.cc.ready_title", "Pembayaran Kartu Siap Diproses")
+                                : t("payment.doku.ready_title", "Pembayaran Siap Diproses")}
+                        </span>
+                        <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                            {order.payment_method === "credit_card"
+                                ? t("payment.cc.ready_desc", "Klik tombol di bawah ini untuk menyelesaikan pembayaran kartu secara aman di halaman 3D-Secure resmi:")
+                                : t("payment.doku.ready_desc", "Klik tombol di bawah ini untuk menyelesaikan pembayaran di halaman resmi:")}
+                        </p>
+
+                        {order.payment_method === "credit_card" && (
+                            <div className="flex gap-2 items-center justify-center bg-white px-3 py-1.5 border border-slate-200/60 rounded-xl w-fit mx-auto">
+                                <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider mr-1 select-none">
+                                    {t("payment.cc.accept", "Menerima:")}
+                                </span>
+                                <div className="flex gap-2 items-center">
+                                    <img src="/images/payment/visa.svg" alt="Visa" className="h-4 object-contain" />
+                                    <img src="/images/payment/mastercard.svg" alt="Mastercard" className="h-4 object-contain" />
+                                    <img src="/images/payment/jcb.svg" alt="JCB" className="h-4 object-contain" />
+                                    <img src="/images/payment/amex.svg" alt="Amex" className="h-4 object-contain" />
+                                    <img src="/images/payment/unionpay.svg" alt="UnionPay" className="h-4 object-contain" />
+                                </div>
+                            </div>
+                        )}
+
+                        <a
+                            href={details.payment_url || details.invoice_url}
+                            target="_self"
+                            className="inline-flex items-center justify-center gap-2 text-sm font-black text-white bg-blue-950 px-6 py-3.5 rounded-2xl shadow-md hover:bg-blue-900 transition active:scale-[0.98] w-full"
+                        >
+                            <span>
+                                {order.payment_method === "credit_card"
+                                    ? t("payment.cc.pay_now_btn", "Bayar via Kartu (3D-Secure)")
+                                    : t("payment.doku.pay_now", "Lanjutkan ke Halaman Pembayaran")}
+                            </span>
+                            <ArrowRight size={16} />
+                        </a>
+
+                        {onChangeMethod && (
+                            <button
+                                type="button"
+                                onClick={onChangeMethod}
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-950 bg-white/90 border border-slate-200 hover:bg-white px-4 py-2.5 rounded-xl transition active:scale-[0.98] w-full shadow-2xs"
+                            >
+                                <RefreshCw size={13} className="text-blue-900" />
+                                <span>{t("checkout.action.change_method", "Ubah Metode Pembayaran")}</span>
+                            </button>
+                        )}
+
+                        {/* Sandbox Testing Helper for DOKU Checkout */}
+                        {!isProduction && handleSimulatePayment && order.payment_status === "unpaid" && (
+                            <div className="w-full pt-3 border-t border-blue-100 text-center space-y-2 mt-2">
+                                <div className="flex items-center justify-center gap-1.5 text-amber-900 font-extrabold text-xs">
+                                    <AlertCircle size={14} className="text-amber-600" />
+                                    <span>{t("payment.sandbox_mode", "Mode Sandbox / Testing")}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={isSimulating}
+                                    onClick={handleSimulatePayment}
+                                    className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                                >
+                                    {isSimulating ? (
+                                        <>
+                                            <LoadingSpinner className="w-3.5 h-3.5" />
+                                            <span>{t("payment.simulating", "Memproses Simulasi...")}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 size={14} />
+                                            <span>{t("payment.simulate_doku_btn", "Simulasikan Pembayaran DOKU Berhasil (Test)")}</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* 1. Virtual Account */}
             {["bca_va", "bri_va", "bni_va", "mandiri_va", "permata_va", "cimb_va", "seabank_va", "danamon_va", "bsi_va", "saqu_va"].includes(order.payment_method) && details.va_number && (
                 <div className="space-y-4 text-center">
@@ -212,7 +297,7 @@ export default function PaymentCodeCard({
             )}
 
             {/* 3. QRIS */}
-            {order.payment_method === "qris" && qrCodeUrl && (
+            {order.payment_method === "qris" && qrCodeUrl && !details.payment_url && (
                 <div className="flex flex-col items-center space-y-4">
                     <span className="text-xs text-slate-400 font-extrabold tracking-wider block uppercase">
                         {t("payment.qris.scan_title", "SCAN QRIS UNTUK MEMBAYAR")}
@@ -456,8 +541,7 @@ export default function PaymentCodeCard({
                                         <div className="pt-1">
                                             <a
                                                 href={mobileCheckoutUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                                target="_self"
                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-950 transition underline"
                                             >
                                                 <span>{t("payment.wallet.open_web_desktop", "Atau buka Halaman Web Pembayaran")}</span>
@@ -547,8 +631,8 @@ export default function PaymentCodeCard({
                 </div>
             )}
 
-            {/* 6. Credit Card Form (unpaid) */}
-            {order.payment_method === "credit_card" && order.payment_status === "unpaid" && (
+            {/* 6. Credit Card Form (unpaid, fallback if no hosted payment URL) */}
+            {order.payment_method === "credit_card" && order.payment_status === "unpaid" && !details.payment_url && !details.invoice_url && (
                 <form onSubmit={handleCardPay} className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                         <CreditCard size={14} className="text-blue-900" />

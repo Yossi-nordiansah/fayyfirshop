@@ -81,7 +81,18 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request)
     {
-        $role = Auth::user()?->role;
+        $user = Auth::user();
+        $role = $user?->role;
+
+        // 1. Reset remember_token di database agar browser/cookie lama tidak bisa auto-login kembali
+        if ($user) {
+            $user->setRememberToken(\Illuminate\Support\Str::random(60));
+            $user->save();
+        }
+
+        $recaller = Auth::guard('web')->getRecallerName();
+        $sessionCookie = config('session.cookie');
+        $sessionDomain = config('session.domain');
 
         Auth::guard('web')->logout();
 
@@ -89,7 +100,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget(Auth::guard('web')->getRecallerName()));
+        // 2. Bersihkan remember cookie & session cookie di semua variasi domain (wildcard maupun host-only)
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($recaller));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($sessionCookie));
+        if ($sessionDomain) {
+            \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($recaller, '/', $sessionDomain));
+            \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($sessionCookie, '/', $sessionDomain));
+        }
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($recaller, '/', 'fayyfirshop.com'));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($recaller, '/', '.fayyfirshop.com'));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($sessionCookie, '/', 'fayyfirshop.com'));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget($sessionCookie, '/', '.fayyfirshop.com'));
 
         if (in_array($role, ['admin', 'super_admin'], true)) {
             $request->session()->flash('logout_status', 'success_admin');
