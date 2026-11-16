@@ -1634,5 +1634,11 @@
     "common.time_days": "Days",
     "common.time_hours": "Hours",
     "common.time_minutes": "Mins",
-    "common.time_seconds": "Secs"
+    "common.time_seconds": "Secs",
+    "checkout.payment_error.title": "Payment Method Unavailable",
+    "checkout.payment_error.maintenance": "Your selected payment method is currently under maintenance. Please choose another payment method or try again later.",
+    "checkout.payment_error.general": "We encountered an issue processing your payment. Please try again or use a different payment method.",
+    "checkout.payment_error.btn_change": "Change Payment Method",
+    "checkout.payment_error.btn_retry": "Try Again",
+    "checkout.error.generic": "An error occurred while processing your order."
 }

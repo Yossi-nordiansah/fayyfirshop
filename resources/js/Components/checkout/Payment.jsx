@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { router } from "@inertiajs/react";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 
 import PaymentHeader from "@/Components/checkout/payment/PaymentHeader";
 import ExpiryBanner from "@/Components/checkout/payment/ExpiryBanner";
@@ -23,6 +25,8 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
     const [activeAccordion, setActiveAccordion] = useState(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    const [paymentErrorModal, setPaymentErrorModal] = useState({ show: false, type: "general" });
+    const [failedMethod, setFailedMethod] = useState(null);
 
     /* ── Credit Card Form State ── */
     const [cardForm, setCardForm] = useState({
@@ -291,6 +295,7 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
 
     const handleMethodChange = (newMethod) => {
         setLoadingChange(true);
+        setFailedMethod(newMethod);
         axios
             .post(route("checkout.payment.change", order.id), { payment_method: newMethod })
             .then((res) => {
@@ -298,10 +303,55 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                     setIsChangingMethod(false);
                     router.reload();
                 } else {
-                    alert(res.data.message || "Gagal mengubah metode pembayaran.");
+                    const rawMsg = (res.data?.message || "").toLowerCase();
+                    const isPaymentErr = rawMsg.includes("payment") || rawMsg.includes("doku") || rawMsg.includes("va") || rawMsg.includes("channel") || rawMsg.includes("gagal mengubah metode");
+                    const isMaintErr = rawMsg.includes("maintenance") || rawMsg.includes("unavailable") || rawMsg.includes("disturbed") || rawMsg.includes("pemeliharaan");
+
+                    setIsChangingMethod(false);
+                    if (isMaintErr) {
+                        setPaymentErrorModal({ show: true, type: "maintenance" });
+                    } else if (isPaymentErr) {
+                        setPaymentErrorModal({ show: true, type: "general" });
+                    } else {
+                        setToastMessage(res.data.message || t("checkout.payment_error.general", "Gagal mengubah metode pembayaran."));
+                        setShowToast(true);
+                    }
                 }
             })
-            .catch((err) => alert(err.response?.data?.message || "Terjadi kesalahan."))
+            .catch((err) => {
+                console.error(err);
+                const status = err.response?.status;
+                const rawMsg = (err.response?.data?.message || "").toLowerCase();
+
+                const isMaintErr =
+                    status === 503 ||
+                    rawMsg.includes("maintenance") ||
+                    rawMsg.includes("unavailable") ||
+                    rawMsg.includes("not available") ||
+                    rawMsg.includes("service unavailable") ||
+                    rawMsg.includes("disturbed") ||
+                    rawMsg.includes("pemeliharaan");
+
+                const isPaymentErr =
+                    status === 500 && (
+                        rawMsg.includes("payment") ||
+                        rawMsg.includes("gateway") ||
+                        rawMsg.includes("doku") ||
+                        rawMsg.includes("va") ||
+                        rawMsg.includes("channel") ||
+                        rawMsg.includes("gagal mengubah")
+                    );
+
+                setIsChangingMethod(false);
+                if (isMaintErr) {
+                    setPaymentErrorModal({ show: true, type: "maintenance" });
+                } else if (isPaymentErr) {
+                    setPaymentErrorModal({ show: true, type: "general" });
+                } else {
+                    setToastMessage(err.response?.data?.message || t("checkout.payment_error.general", "Terjadi kesalahan saat mengubah metode pembayaran."));
+                    setShowToast(true);
+                }
+            })
             .finally(() => setLoadingChange(false));
     };
 
@@ -395,6 +445,87 @@ export default function Payment({ order, xenditPublicKey, isProduction, t, local
                 message={toastMessage}
                 onClose={() => setShowToast(false)}
             />
+
+            {/* Payment Error Modal */}
+            <AnimatePresence>
+                {paymentErrorModal.show && (
+                    <motion.div
+                        key="payment-error-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+                        style={{ backgroundColor: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)" }}
+                        onClick={() => setPaymentErrorModal({ show: false, type: "general" })}
+                    >
+                        <motion.div
+                            key="payment-error-box"
+                            initial={{ opacity: 0, scale: 0.88, y: 24 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.88, y: 24 }}
+                            transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                            className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                            dir={isRtl ? "rtl" : "ltr"}
+                        >
+                            {/* Top decorative strip */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500" />
+
+                            <div className="px-7 pt-7 pb-6 flex flex-col items-center text-center gap-4">
+                                {/* Icon */}
+                                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-100">
+                                    <AlertCircle className="w-8 h-8 text-amber-500" strokeWidth={2} />
+                                </div>
+
+                                {/* Title */}
+                                <h3 className="text-lg font-extrabold text-slate-900 leading-snug">
+                                    {t("checkout.payment_error.title", "Metode Pembayaran Tidak Tersedia")}
+                                </h3>
+
+                                {/* Message */}
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    {paymentErrorModal.type === "maintenance"
+                                        ? t(
+                                              "checkout.payment_error.maintenance",
+                                              "Metode pembayaran yang Anda pilih sedang dalam pemeliharaan sementara. Silakan pilih metode pembayaran lain atau coba beberapa saat lagi."
+                                          )
+                                        : t(
+                                              "checkout.payment_error.general",
+                                              "Terjadi kendala pada proses pembayaran Anda. Silakan coba lagi atau gunakan metode pembayaran yang berbeda."
+                                          )}
+                                </p>
+
+                                {/* Action buttons */}
+                                <div className="flex flex-col sm:flex-row gap-3 w-full pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentErrorModal({ show: false, type: "general" });
+                                            setIsChangingMethod(true);
+                                        }}
+                                        className="flex-1 py-3 px-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition-colors"
+                                    >
+                                        {t("checkout.payment_error.btn_change", "Pilih Metode Lain")}
+                                    </button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.97 }}
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentErrorModal({ show: false, type: "general" });
+                                            if (failedMethod) {
+                                                handleMethodChange(failedMethod);
+                                            }
+                                        }}
+                                        className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white text-sm font-bold shadow-lg hover:brightness-110 transition-all"
+                                    >
+                                        {t("checkout.payment_error.btn_retry", "Coba Lagi")}
+                                    </motion.button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

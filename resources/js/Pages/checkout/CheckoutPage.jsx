@@ -121,6 +121,9 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
     const [errorMsg, setErrorMsg] = useState("");
     const [backUrl, setBackUrl] = useState("/cart");
 
+    // Payment error modal state
+    const [paymentErrorModal, setPaymentErrorModal] = useState({ show: false, type: 'general' });
+
     // Load Cart Items and Check Branch Stock levels
     useEffect(() => {
         const checkoutKey = user ? `fayyfir_checkout_${user.id}` : "fayyfir_checkout";
@@ -570,14 +573,54 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
 
                     clearCartAndRedirect(res.data.order.id);
                 } else {
-                    setErrorMsg(res.data.message || "Gagal membuat pesanan.");
+                    const rawMsg = (res.data?.message || '').toLowerCase();
+                    const isPaymentErr = rawMsg.includes('payment') || rawMsg.includes('doku') || rawMsg.includes('va') || rawMsg.includes('virtual account') || rawMsg.includes('failed to place order') || rawMsg.includes('payment gateway');
+                    const isMaintErr = rawMsg.includes('maintenance') || rawMsg.includes('unavailable') || rawMsg.includes('disturbed');
+
+                    if (isMaintErr) {
+                        setPaymentErrorModal({ show: true, type: 'maintenance' });
+                    } else if (isPaymentErr) {
+                        setPaymentErrorModal({ show: true, type: 'general' });
+                    } else {
+                        setErrorMsg(res.data.message || t('checkout.error.generic', 'Gagal membuat pesanan.'));
+                    }
                     setIsPlacingOrder(false);
                 }
             })
             .catch(err => {
                 console.error(err);
-                setErrorMsg(err.response?.data?.message || "Terjadi kesalahan saat memproses pesanan Anda.");
                 setIsPlacingOrder(false);
+
+                const status = err.response?.status;
+                const rawMsg = (err.response?.data?.message || '').toLowerCase();
+
+                // Detect payment gateway / maintenance errors
+                const isPaymentError = status === 500 && (
+                    rawMsg.includes('payment gateway') ||
+                    rawMsg.includes('payment') ||
+                    rawMsg.includes('doku') ||
+                    rawMsg.includes('va') ||
+                    rawMsg.includes('virtual account') ||
+                    rawMsg.includes('failed to place order')
+                );
+
+                const isMaintenanceError =
+                    status === 503 ||
+                    rawMsg.includes('maintenance') ||
+                    rawMsg.includes('unavailable') ||
+                    rawMsg.includes('not available') ||
+                    rawMsg.includes('service unavailable') ||
+                    rawMsg.includes('temporary') ||
+                    rawMsg.includes('disturbed');
+
+                if (isMaintenanceError) {
+                    setPaymentErrorModal({ show: true, type: 'maintenance' });
+                } else if (isPaymentError) {
+                    setPaymentErrorModal({ show: true, type: 'general' });
+                } else {
+                    // Non-payment errors (validation, stock, etc.) still show inline
+                    setErrorMsg(err.response?.data?.message || t('checkout.error.generic', 'Terjadi kesalahan saat memproses pesanan Anda.'));
+                }
             });
     };
 
@@ -666,11 +709,13 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                             />
 
                             {/* Section 4: Metode Pembayaran (Payment Method) */}
-                            <PaymentMethodSelection
-                                t={t}
-                                paymentMethod={paymentMethod}
-                                setPaymentMethod={setPaymentMethod}
-                            />
+                            <div id="payment-method-section">
+                                <PaymentMethodSelection
+                                    t={t}
+                                    paymentMethod={paymentMethod}
+                                    setPaymentMethod={setPaymentMethod}
+                                />
+                            </div>
 
                             {/* Section 5: Catatan Pesanan */}
                             <OrderNotes
@@ -717,6 +762,84 @@ export default function CheckoutPage({ user, storeBranches, userVouchers = [], a
                     </div>
                 </div>
             </div>
+            {/* Payment Error Modal */}
+            <AnimatePresence>
+                {paymentErrorModal.show && (
+                    <motion.div
+                        key="payment-error-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        style={{ backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)' }}
+                        onClick={() => setPaymentErrorModal({ show: false, type: 'general' })}
+                    >
+                        <motion.div
+                            key="payment-error-box"
+                            initial={{ opacity: 0, scale: 0.88, y: 24 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.88, y: 24 }}
+                            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+                            className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                            dir={isRtl ? 'rtl' : 'ltr'}
+                        >
+                            {/* Top decorative strip */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500" />
+
+                            <div className="px-7 pt-7 pb-6 flex flex-col items-center text-center gap-4">
+                                {/* Icon */}
+                                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-100">
+                                    <AlertCircle className="w-8 h-8 text-amber-500" strokeWidth={2} />
+                                </div>
+
+                                {/* Title */}
+                                <h3 className="text-lg font-extrabold text-slate-900 leading-snug">
+                                    {t('checkout.payment_error.title', 'Metode Pembayaran Tidak Tersedia')}
+                                </h3>
+
+                                {/* Message */}
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    {paymentErrorModal.type === 'maintenance'
+                                        ? t('checkout.payment_error.maintenance', 'Metode pembayaran yang Anda pilih sedang dalam pemeliharaan sementara. Silakan pilih metode pembayaran lain atau coba beberapa saat lagi.')
+                                        : t('checkout.payment_error.general', 'Terjadi kendala pada proses pembayaran Anda. Silakan coba lagi atau gunakan metode pembayaran yang berbeda.')
+                                    }
+                                </p>
+
+                                {/* Action buttons */}
+                                <div className="flex flex-col sm:flex-row gap-3 w-full pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentErrorModal({ show: false, type: 'general' });
+                                            // Scroll to payment method section
+                                            setTimeout(() => {
+                                                document.getElementById('payment-method-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            }, 150);
+                                        }}
+                                        className="flex-1 py-3 px-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition-colors"
+                                    >
+                                        {t('checkout.payment_error.btn_change', 'Pilih Metode Lain')}
+                                    </button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.97 }}
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentErrorModal({ show: false, type: 'general' });
+                                            setTimeout(() => {
+                                                handlePlaceOrder({ preventDefault: () => {} });
+                                            }, 200);
+                                        }}
+                                        className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white text-sm font-bold shadow-lg hover:brightness-110 transition-all"
+                                    >
+                                        {t('checkout.payment_error.btn_retry', 'Coba Lagi')}
+                                    </motion.button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </MainLayout>
     );
 }

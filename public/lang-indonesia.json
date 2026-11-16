@@ -1638,5 +1638,11 @@
     "common.time_days": "Hari",
     "common.time_hours": "Jam",
     "common.time_minutes": "Menit",
-    "common.time_seconds": "Detik"
+    "common.time_seconds": "Detik",
+    "checkout.payment_error.title": "Metode Pembayaran Tidak Tersedia",
+    "checkout.payment_error.maintenance": "Metode pembayaran yang Anda pilih sedang dalam pemeliharaan sementara. Silakan pilih metode pembayaran lain atau coba beberapa saat lagi.",
+    "checkout.payment_error.general": "Terjadi kendala pada proses pembayaran Anda. Silakan coba lagi atau gunakan metode pembayaran yang berbeda.",
+    "checkout.payment_error.btn_change": "Pilih Metode Lain",
+    "checkout.payment_error.btn_retry": "Coba Lagi",
+    "checkout.error.generic": "Terjadi kesalahan saat memproses pesanan Anda."
 }

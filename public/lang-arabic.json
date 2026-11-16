@@ -1641,5 +1641,11 @@
     "common.time_days": "أيام",
     "common.time_hours": "ساعات",
     "common.time_minutes": "دقائق",
-    "common.time_seconds": "ثواني"
+    "common.time_seconds": "ثواني",
+    "checkout.payment_error.title": "طريقة الدفع غير متاحة",
+    "checkout.payment_error.maintenance": "طريقة الدفع التي اخترتها تخضع حاليًا للصيانة. يرجى اختيار طريقة دفع أخرى أو المحاولة مرة أخرى لاحقًا.",
+    "checkout.payment_error.general": "واجهنا مشكلة في معالجة دفعتك. يرجى المحاولة مرة أخرى أو استخدام طريقة دفع مختلفة.",
+    "checkout.payment_error.btn_change": "تغيير طريقة الدفع",
+    "checkout.payment_error.btn_retry": "حاول مرة أخرى",
+    "checkout.error.generic": "حدث خطأ أثناء معالجة طلبك."
 }
