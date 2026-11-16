@@ -590,6 +590,10 @@ class OrderController extends Controller
                         $order->refresh();
                     }
 
+                    // ✅ AUTO-SYNC ORDER STATUS: Sinkronkan status pesanan berdasarkan status terkini dari Biteship
+                    $this->syncOrderStatusFromBiteship($order, $biteshipStatus);
+                    $order->refresh();
+
                     // Extract history from courier object if present
                     if (isset($orderData['courier']['history']) && is_array($orderData['courier']['history']) && !empty($orderData['courier']['history'])) {
                         foreach ($orderData['courier']['history'] as $history) {
@@ -618,7 +622,15 @@ class OrderController extends Controller
 
                 if ($trackRes->successful()) {
                     $trackData = $trackRes->json();
-                    $biteshipStatus = $biteshipStatus ?: strtolower($trackData['status'] ?? '');
+                    $latestStatus = strtolower($trackData['status'] ?? '');
+                    $biteshipStatus = $biteshipStatus ?: $latestStatus;
+
+                    // ✅ AUTO-SYNC juga dari airwaybill tracking jika biteshipOrderId tidak tersedia
+                    if (!$biteshipOrderId && $latestStatus) {
+                        $this->syncOrderStatusFromBiteship($order, $latestStatus);
+                        $order->refresh();
+                    }
+
                     if (isset($trackData['history']) && is_array($trackData['history'])) {
                         foreach ($trackData['history'] as $history) {
                             $trackingLogs[] = [
@@ -665,7 +677,7 @@ class OrderController extends Controller
                 'desc' => 'Paket sedang dalam penanganan atau menunggu jadwal pengantaran berikutnya di hub ekspedisi.',
             ],
             'delivered' => [
-                'title' => 'Paket Terkirim',
+                'title' => 'Paket Diterima',
                 'desc' => 'Paket telah berhasil sampai di alamat tujuan dan diterima oleh pembeli.',
             ],
             'cancelled' => [
@@ -777,6 +789,10 @@ class OrderController extends Controller
                         $order->update(['tracking_number' => $fetchedWaybill]);
                         $order->refresh();
                     }
+                    // ✅ AUTO-SYNC: Update status pesanan berdasarkan status terkini dari Biteship
+                    $this->syncOrderStatusFromBiteship($order, $biteshipStatus);
+                    $order->refresh();
+
                     if (isset($orderData['courier']['history']) && !empty($orderData['courier']['history'])) {
                         foreach ($orderData['courier']['history'] as $history) {
                             $trackingLogs[] = [
@@ -798,7 +814,13 @@ class OrderController extends Controller
                 $trackRes = Http::withHeaders(['authorization' => $apiKey])->timeout(5)->get("https://api.biteship.com/v1/trackings/airwaybill/{$waybill}", ['courier' => $courierCode]);
                 if ($trackRes->successful()) {
                     $trackData = $trackRes->json();
-                    $biteshipStatus = $biteshipStatus ?: strtolower($trackData['status'] ?? '');
+                    $latestStatus = strtolower($trackData['status'] ?? '');
+                    $biteshipStatus = $biteshipStatus ?: $latestStatus;
+                    // ✅ AUTO-SYNC juga dari airwaybill tracking
+                    if (!$biteshipOrderId && $latestStatus) {
+                        $this->syncOrderStatusFromBiteship($order, $latestStatus);
+                        $order->refresh();
+                    }
                     foreach ($trackData['history'] ?? [] as $history) {
                         $trackingLogs[] = [
                             'date' => $history['updated_at'] ?? $history['date'] ?? '',
@@ -1052,11 +1074,51 @@ class OrderController extends Controller
     }
 
     /**
+     * Sinkronkan status pesanan berdasarkan status terkini dari Biteship.
+     * Digunakan baik dari webhook maupun dari halaman tracking (auto-sync fallback).
+     * Hanya update jika status baru lebih maju dari status pesanan saat ini.
+     */
+    protected function syncOrderStatusFromBiteship(Order $order, string $biteshipStatus): void
+    {
+        if (empty($biteshipStatus)) return;
+
+        // Urutan kemajuan status (semakin besar index = semakin maju)
+        $statusOrder = ['pending', 'processing', 'shipped', 'completed'];
+
+        $newOrderStatus = null;
+
+        if (in_array($biteshipStatus, ['picking_up', 'picked', 'dropping_off', 'in_transit', 'on_hold', 'courier_assigned', 'allocated', 'confirmed'])) {
+            $newOrderStatus = 'shipped';
+        } elseif ($biteshipStatus === 'delivered') {
+            $newOrderStatus = 'completed';
+        }
+
+        if (!$newOrderStatus) return;
+
+        // Hanya update jika status baru lebih maju (hindari downgrade status)
+        $currentIndex = array_search($order->status, $statusOrder);
+        $newIndex     = array_search($newOrderStatus, $statusOrder);
+
+        if ($newIndex === false || ($currentIndex !== false && $currentIndex >= $newIndex)) {
+            return; // Status sudah sama atau lebih maju, tidak perlu diupdate
+        }
+
+        $order->update(['status' => $newOrderStatus]);
+
+        Log::info('Auto-sync order status from Biteship tracking', [
+            'order_id'       => $order->id,
+            'invoice_number' => $order->invoice_number,
+            'old_status'     => $order->getOriginal('status'),
+            'new_status'     => $newOrderStatus,
+            'biteship_status'=> $biteshipStatus,
+        ]);
+    }
+
+    /**
      * Handle Biteship webhook callbacks for order status updates.
      * Called automatically by Biteship when shipment status changes.
      */
-    public function biteshipWebhook(Request $request)
-    {
+    public function biteshipWebhook(Request $request)    {
         \Illuminate\Support\Facades\Log::info('Biteship Webhook Received:', [
             'headers' => $request->headers->all(),
             'payload' => $request->all(),
@@ -1146,29 +1208,36 @@ class OrderController extends Controller
             $updates['tracking_number'] = $waybillId;
         }
 
-        if (in_array($newStatus, ['picking_up', 'picked', 'dropping_off', 'in_transit', 'on_hold', 'courier_assigned', 'allocated'])) {
-            // Courier is in action / picked up / in transit
-            $updates['status'] = 'shipped';
-        } elseif ($newStatus === 'delivered') {
-            // Order has been successfully delivered
-            $updates['status'] = 'completed';
-        } elseif (in_array($newStatus, ['cancelled', 'rejected', 'returned'])) {
-            // Revert status to processing and clear tracking if shipment cancelled
-            $updates['status'] = 'processing';
-            if (str_starts_with((string) $order->tracking_number, 'PENDING_')) {
-                $updates['tracking_number'] = null;
-            }
-        }
-
         if (!empty($updates)) {
             $order->update($updates);
-            \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order updated successfully', [
-                'order_id'        => $order->id,
-                'invoice_number'  => $order->invoice_number,
-                'new_status'      => $updates['status'] ?? $order->status,
-                'waybill'         => $updates['tracking_number'] ?? $order->tracking_number,
-                'biteship_status' => $newStatus,
-            ]);
+            $order->refresh();
+        }
+
+        // Gunakan helper syncOrderStatusFromBiteship untuk update status yang aman (anti-downgrade)
+        if ($newStatus) {
+            if (in_array($newStatus, ['cancelled', 'rejected', 'returned'])) {
+                // Batalkan: kembalikan ke processing, hapus tracking jika masih PENDING_
+                $cancelUpdates = ['status' => 'processing'];
+                if (str_starts_with((string) $order->tracking_number, 'PENDING_')) {
+                    $cancelUpdates['tracking_number'] = null;
+                }
+                $order->update($cancelUpdates);
+                \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order reverted to processing (shipment cancelled)', [
+                    'order_id'        => $order->id,
+                    'invoice_number'  => $order->invoice_number,
+                    'biteship_status' => $newStatus,
+                ]);
+            } else {
+                $this->syncOrderStatusFromBiteship($order, $newStatus);
+                $order->refresh();
+                \Illuminate\Support\Facades\Log::info('Biteship Webhook: Order status synced', [
+                    'order_id'        => $order->id,
+                    'invoice_number'  => $order->invoice_number,
+                    'new_status'      => $order->status,
+                    'waybill'         => $order->tracking_number,
+                    'biteship_status' => $newStatus,
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Webhook processed successfully'], 200);

@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Link, usePage, router } from "@inertiajs/react";
 import { useLanguage } from "@/Contexts/LanguageContext";
-import { ShoppingBag, Flame, ShoppingCart, Star } from "lucide-react";
+import { ShoppingBag, Flame, Star } from "lucide-react";
 
 const resolveProductImage = (img) => {
     if (!img) return "/images/placeholder.jpg";
@@ -385,7 +385,7 @@ const ProductCard = ({
             weight: parseWeightJs(activeVariant, product),
         };
 
-        const cartKey = `fayyfir_cart_${auth.user.id}`;
+        const cartKey = auth?.user ? `fayyfir_cart_${auth.user.id}` : "fayyfir_cart";
         const currentCart = JSON.parse(localStorage.getItem(cartKey) || "[]");
         const existingIndex = currentCart.findIndex(
             (item) =>
@@ -619,7 +619,7 @@ const ProductCard = ({
                         {title}
                     </h3>
 
-                    {/* Price Tag (Premium Component) */}
+                    {/* Price Tag */}
                     <div className="">
                         {displayDiscountPrice && displayDiscountPrice > 0 ? (
                             <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -637,6 +637,7 @@ const ProductCard = ({
                         )}
                     </div>
 
+                    {/* Rating */}
                     <div className="h-[14px] flex items-center">
                         {rating > 0 && (
                             <div
@@ -683,25 +684,14 @@ const ProductCard = ({
                         )}
                     </div>
 
-                    {/* Bottom Row */}
-                    <div className="flex items-center justify-between">
-                        {/* Sold Count */}
+                    {/* Bottom Row - Terjual di Kiri */}
+                    <div className="flex items-center">
                         <div className="flex items-center gap-1 text-zinc-500 text-xs">
                             <ShoppingBag size={13} className="text-zinc-400" />
                             <span className="text-zinc-600 font-medium text-[11px]">
                                 {renderSoldCount(effectiveSold)}
                             </span>
                         </div>
-
-                        {/* Premium Cart Button - Bubbles up to parent Product details Link */}
-                        <motion.div
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleAddToCartClick}
-                            className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-700 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors duration-300 shadow-sm cursor-pointer"
-                            aria-label="Add to cart"
-                        >
-                            <ShoppingCart size={14} />
-                        </motion.div>
                     </div>
                 </div>
             </motion.div>

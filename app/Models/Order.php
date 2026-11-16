@@ -38,6 +38,7 @@ class Order extends Model
         'notes',
         'cancellation_status',
         'cancellation_reason',
+        'is_stock_reduced',
     ];
 
     protected $casts = [
@@ -48,6 +49,7 @@ class Order extends Model
         'user_id' => 'integer',
         'store_branch_id' => 'integer',
         'payment_details' => 'array',
+        'is_stock_reduced' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -67,10 +69,19 @@ class Order extends Model
 
     public function restoreStock(): void
     {
-        foreach ($this->items as $item) {
+        if (!$this->is_stock_reduced) {
+            return;
+        }
+
+        $items = $this->relationLoaded('items') && $this->items->isNotEmpty()
+            ? $this->items
+            : $this->items()->get();
+
+        $branchId = $this->store_branch_id ?: (StoreBranch::where('is_default', true)->value('id') ?? StoreBranch::value('id') ?? 1);
+
+        foreach ($items as $item) {
             $product = Product::find($item->product_id);
             $variant = $item->product_variant_id ? ProductVariant::find($item->product_variant_id) : null;
-            $branchId = $this->store_branch_id;
 
             $capacity = $this->parseCapacity($variant);
 
@@ -121,7 +132,7 @@ class Order extends Model
                     }
                 } else {
                     $deduction = $item->quantity;
-                    if ($product && !in_array(strtolower($product->unit), ['pcs', 'pack', 'box'])) {
+                    if ($product && !in_array(strtolower($product->unit ?? ''), ['pcs', 'pack', 'box'])) {
                         $deduction = $item->quantity * ($product->capacity ?? 1);
                     }
                     ProductBranchStock::where([
@@ -135,6 +146,8 @@ class Order extends Model
                 }
             }
         }
+
+        $this->updateQuietly(['is_stock_reduced' => false]);
     }
 
     protected static function boot()
@@ -142,10 +155,6 @@ class Order extends Model
         parent::boot();
 
         static::created(function ($order) {
-            $reduced = ['shipped', 'completed'];
-            if (in_array($order->status, $reduced)) {
-                $order->reduceStock();
-            }
             if ($order->isSoldState()) {
                 $order->updateProductsSold();
             }
@@ -156,14 +165,13 @@ class Order extends Model
                 $oldStatus = $order->getOriginal('status');
                 $newStatus = $order->status;
 
-                $reduced = ['shipped', 'completed'];
-                $wasReduced = in_array($oldStatus, $reduced);
-                $isReduced = in_array($newStatus, $reduced);
-
-                if (!$wasReduced && $isReduced) {
-                    $order->reduceStock();
-                } elseif ($wasReduced && !$isReduced) {
+                // Jika pesanan dibatalkan (cancelled), kembalikan stok jika sebelumnya sudah terpotong
+                if ($newStatus === 'cancelled' && $order->is_stock_reduced) {
                     $order->restoreStock();
+                } 
+                // Jika pesanan yang dibatalkan diaktifkan kembali ke status aktif, potong stok lagi
+                elseif ($oldStatus === 'cancelled' && $newStatus !== 'cancelled' && !$order->is_stock_reduced) {
+                    $order->reduceStock();
                 }
             }
         });
@@ -175,6 +183,10 @@ class Order extends Model
         });
 
         static::deleted(function ($order) {
+            // Jika pesanan dihapus sebelum completed dan stok masih berstatus terpotong, kembalikan stok
+            if ($order->is_stock_reduced && $order->status !== 'completed') {
+                $order->restoreStock();
+            }
             $order->updateProductsSold();
         });
     }
@@ -197,10 +209,19 @@ class Order extends Model
 
     public function reduceStock(): void
     {
-        foreach ($this->items as $item) {
+        if ($this->is_stock_reduced) {
+            return;
+        }
+
+        $items = $this->relationLoaded('items') && $this->items->isNotEmpty()
+            ? $this->items
+            : $this->items()->get();
+
+        $branchId = $this->store_branch_id ?: (StoreBranch::where('is_default', true)->value('id') ?? StoreBranch::value('id') ?? 1);
+
+        foreach ($items as $item) {
             $product = Product::find($item->product_id);
             $variant = $item->product_variant_id ? ProductVariant::find($item->product_variant_id) : null;
-            $branchId = $this->store_branch_id;
 
             $capacity = $this->parseCapacity($variant);
 
@@ -251,7 +272,7 @@ class Order extends Model
                     }
                 } else {
                     $deduction = $item->quantity;
-                    if ($product && !in_array(strtolower($product->unit), ['pcs', 'pack', 'box'])) {
+                    if ($product && !in_array(strtolower($product->unit ?? ''), ['pcs', 'pack', 'box'])) {
                         $deduction = $item->quantity * ($product->capacity ?? 1);
                     }
                     ProductBranchStock::where([
@@ -265,6 +286,8 @@ class Order extends Model
                 }
             }
         }
+
+        $this->updateQuietly(['is_stock_reduced' => true]);
     }
 
     /**

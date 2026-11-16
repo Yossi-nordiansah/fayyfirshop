@@ -48,7 +48,7 @@ export default function Orders({ orders = [], status }) {
             case 'dropping_off':
             case 'in_transit': return 'Sedang Diantar ke Tujuan';
             case 'on_hold': return 'Paket Tertahan di Transit';
-            case 'delivered': return 'Paket Terkirim';
+            case 'delivered': return 'Paket Diterima';
             case 'cancelled': return 'Pengiriman Dibatalkan';
             case 'shipped': return 'Sedang Dikirim';
             case 'completed': return 'Selesai';

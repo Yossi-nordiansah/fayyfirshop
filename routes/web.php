@@ -515,13 +515,209 @@ Route::middleware('auth')->group(function () {
 require __DIR__ . '/auth.php';
 
 Route::get('/api/provinces', function () {
-    return response()->json(\Laravolt\Indonesia\Models\Province::orderBy('name')->get());
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('indonesia_provinces')) {
+            $provinces = \Laravolt\Indonesia\Models\Province::orderBy('name')->get();
+            if ($provinces->isNotEmpty()) {
+                return response()->json($provinces);
+            }
+        }
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Laravolt provinces DB query failed, falling back to CSV: ' . $e->getMessage());
+    }
+
+    // Fallback to CSV
+    $csvPath = base_path('vendor/laravolt/indonesia/resources/csv/provinces.csv');
+    if (file_exists($csvPath)) {
+        $data = [];
+        $handle = fopen($csvPath, 'r');
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty($row[0]) && !empty($row[1])) {
+                $data[] = [
+                    'code' => (string) $row[0],
+                    'name' => trim((string) $row[1]),
+                ];
+            }
+        }
+        fclose($handle);
+        usort($data, fn($a, $b) => strcmp($a['name'], $b['name']));
+        return response()->json($data);
+    }
+
+    return response()->json([]);
 })->name('api.provinces');
 
+Route::get('/api/cities', function () {
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('indonesia_cities')) {
+            $cities = \Laravolt\Indonesia\Models\City::with('province')->orderBy('name')->get();
+            if ($cities->isNotEmpty()) {
+                return response()->json($cities);
+            }
+        }
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Laravolt cities DB query failed, falling back to CSV: ' . $e->getMessage());
+    }
+
+    // Fallback to CSV
+    $csvPath = base_path('vendor/laravolt/indonesia/resources/csv/cities.csv');
+    $provCsvPath = base_path('vendor/laravolt/indonesia/resources/csv/provinces.csv');
+
+    $provMap = [];
+    if (file_exists($provCsvPath)) {
+        $pHandle = fopen($provCsvPath, 'r');
+        while (($pRow = fgetcsv($pHandle)) !== false) {
+            if (!empty($pRow[0]) && !empty($pRow[1])) {
+                $provMap[(string)$pRow[0]] = trim((string)$pRow[1]);
+            }
+        }
+        fclose($pHandle);
+    }
+
+    if (file_exists($csvPath)) {
+        $data = [];
+        $handle = fopen($csvPath, 'r');
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty($row[0]) && !empty($row[2])) {
+                $provCode = (string) ($row[1] ?? '');
+                $data[] = [
+                    'code' => (string) $row[0],
+                    'province_code' => $provCode,
+                    'name' => trim((string) $row[2]),
+                    'province' => isset($provMap[$provCode]) ? ['code' => $provCode, 'name' => $provMap[$provCode]] : null,
+                ];
+            }
+        }
+        fclose($handle);
+        usort($data, fn($a, $b) => strcmp($a['name'], $b['name']));
+        return response()->json($data);
+    }
+
+    return response()->json([]);
+})->name('api.cities.all');
+
 Route::get('/api/cities/{province_code}', function ($province_code) {
-    return response()->json(\Laravolt\Indonesia\Models\City::where('province_code', $province_code)->orderBy('name')->get());
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('indonesia_cities')) {
+            $cities = \Laravolt\Indonesia\Models\City::where('province_code', $province_code)->orderBy('name')->get();
+            if ($cities->isNotEmpty()) {
+                return response()->json($cities);
+            }
+        }
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Laravolt cities by province DB query failed, falling back to CSV: ' . $e->getMessage());
+    }
+
+    $csvPath = base_path('vendor/laravolt/indonesia/resources/csv/cities.csv');
+    if (file_exists($csvPath)) {
+        $data = [];
+        $handle = fopen($csvPath, 'r');
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty($row[0]) && (string)($row[1] ?? '') === (string)$province_code) {
+                $data[] = [
+                    'code' => (string) $row[0],
+                    'province_code' => (string) $row[1],
+                    'name' => trim((string) $row[2]),
+                ];
+            }
+        }
+        fclose($handle);
+        usort($data, fn($a, $b) => strcmp($a['name'], $b['name']));
+        return response()->json($data);
+    }
+
+    return response()->json([]);
 })->name('api.cities');
 
 Route::get('/api/districts/{city_code}', function ($city_code) {
-    return response()->json(\Laravolt\Indonesia\Models\District::where('city_code', $city_code)->orderBy('name')->get());
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('indonesia_districts')) {
+            $districts = \Laravolt\Indonesia\Models\District::where('city_code', $city_code)->orderBy('name')->get();
+            if ($districts->isNotEmpty()) {
+                return response()->json($districts);
+            }
+        }
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Laravolt districts DB query failed, falling back to CSV: ' . $e->getMessage());
+    }
+
+    $csvPath = base_path('vendor/laravolt/indonesia/resources/csv/districts.csv');
+    if (file_exists($csvPath)) {
+        $data = [];
+        $handle = fopen($csvPath, 'r');
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty($row[0]) && (string)($row[1] ?? '') === (string)$city_code) {
+                $data[] = [
+                    'code' => (string) $row[0],
+                    'city_code' => (string) $row[1],
+                    'name' => trim((string) $row[2]),
+                ];
+            }
+        }
+        fclose($handle);
+        usort($data, fn($a, $b) => strcmp($a['name'], $b['name']));
+        return response()->json($data);
+    }
+
+    return response()->json([]);
 })->name('api.districts');
+
+Route::get('/api/postal-code', function (\Illuminate\Http\Request $request) {
+    $district = trim((string) $request->query('district', ''));
+    $city = trim((string) $request->query('city', ''));
+    $province = trim((string) $request->query('province', ''));
+
+    if (empty($district) && empty($city)) {
+        return response()->json(['success' => false, 'postal_code' => null]);
+    }
+
+    $apiKey = config('services.biteship.api_key') ?? env('BITESHIP_API_KEY');
+    if (empty($apiKey)) {
+        return response()->json(['success' => false, 'postal_code' => null]);
+    }
+
+    // Bersihkan prefix umum (Kecamatan, Kota, Kabupaten, dll) agar pencarian di Biteship akurat
+    $cleanDistrict = preg_replace('/^(kecamatan|kec\.)\s+/i', '', $district);
+    $cleanCity = preg_replace('/^(kota\s+adm\.|kota|kabupaten|kab\.)\s+/i', '', $city);
+    $cleanProvince = preg_replace('/^(provinsi|prov\.)\s+/i', '', $province);
+
+    $parts = array_filter([$cleanDistrict, $cleanCity, $cleanProvince]);
+    $searchQuery = implode(' ', $parts);
+
+    try {
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'authorization' => $apiKey,
+        ])->get('https://api.biteship.com/v1/maps/areas', [
+            'countries' => 'ID',
+            'input' => $searchQuery,
+            'type' => 'single',
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            if (!empty($data['areas']) && is_array($data['areas'])) {
+                foreach ($data['areas'] as $area) {
+                    $foundPostal = null;
+                    if (!empty($area['postal_code'])) {
+                        $foundPostal = (string) $area['postal_code'];
+                    } elseif (!empty($area['name']) && preg_match('/\b(\d{5})\b/', $area['name'], $m)) {
+                        $foundPostal = $m[1];
+                    }
+
+                    if ($foundPostal) {
+                        return response()->json([
+                            'success' => true,
+                            'postal_code' => $foundPostal,
+                            'area_id' => $area['id'] ?? null,
+                            'name' => $area['name'] ?? null,
+                        ]);
+                    }
+                }
+            }
+        }
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error fetching postal code from Biteship: ' . $e->getMessage());
+    }
+
+    return response()->json(['success' => false, 'postal_code' => null]);
+})->name('api.postal-code');

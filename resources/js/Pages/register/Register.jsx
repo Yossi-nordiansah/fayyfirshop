@@ -130,7 +130,7 @@ export default function Register({ auth, flash }) {
 
     // Load provinces and countries on mount
     useEffect(() => {
-        axios.get(route('api.provinces'))
+        axios.get('/api/provinces')
             .then((res) => setProvinces(res.data))
             .catch((err) => console.error("Error fetching provinces:", err));
 

@@ -72,7 +72,7 @@ class CheckoutController extends Controller
             $branchStocks = [];
             foreach ($request->items as $item) {
                 $productId = $item['id'];
-                $variantId = $item['variantId'];
+                $variantId = $item['variantId'] ?? null;
                 $stock = 0;
 
                 if ($variantId) {
@@ -167,9 +167,50 @@ class CheckoutController extends Controller
             }
         }
 
+        // Hitung stok siap pakai per item untuk halaman Cart (support sinkronisasi real-time)
+        $defaultBranch = $branches->firstWhere('is_default', true) ?? $branches->first();
+        $targetBranchId = $request->input('branch_id', $defaultBranch ? $defaultBranch->id : null);
+
+        $itemStocks = [];
+        foreach ($request->items as $item) {
+            $productId = $item['id'];
+            $variantId = $item['variantId'] ?? null;
+            $key = $productId . '-' . ($variantId ?? 'null');
+
+            $branchStock = 0;
+            $totalStock = 0;
+            $maxBranchStock = 0;
+
+            foreach ($branches as $branch) {
+                $bStockArr = $stockData[$branch->id] ?? [];
+                foreach ($bStockArr as $bs) {
+                    if ((int)$bs['id'] === (int)$productId && (string)($bs['variantId'] ?? 'null') === (string)($variantId ?? 'null')) {
+                        $s = (int) $bs['stock'];
+                        $totalStock += $s;
+                        if ($s > $maxBranchStock) {
+                            $maxBranchStock = $s;
+                        }
+                        if ($targetBranchId && (int)$branch->id === (int)$targetBranchId) {
+                            $branchStock = $s;
+                        }
+                    }
+                }
+            }
+
+            // Gunakan stok target/default branch, atau fallback ke stok tertinggi cabang yang ada jika target kosong
+            $effectiveStock = ($branchStock > 0) ? $branchStock : $maxBranchStock;
+
+            $itemStocks[$key] = [
+                'stock' => $effectiveStock,
+                'branch_stock' => $branchStock,
+                'total_stock' => $totalStock,
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'stocks' => $stockData,
+            'item_stocks' => $itemStocks,
             'weights' => $weights,
             'prices' => $prices,
         ]);
@@ -643,7 +684,10 @@ class CheckoutController extends Controller
             }
         }
 
-        // Validate standard product stocks
+        // Validate standard product and variant stocks (aggregated for multi-item orders)
+        $standardVariantQuantities = [];
+        $standardProductQuantities = [];
+
         foreach ($items as $item) {
             $productId = $item['id'];
             $variantId = $item['variantId'] ?? null;
@@ -662,30 +706,41 @@ class CheckoutController extends Controller
             }
 
             if ($variantId) {
-                $stockRecord = ProductVariantBranchStock::where([
-                    'product_variant_id' => $variantId,
-                    'store_branch_id' => $branchId
-                ])->first();
-
-                if (!$stockRecord || $stockRecord->stock < $qty) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Stock for variant "' . ($variant ? $variant->name : $variantId) . '" is insufficient.'
-                    ], 422);
-                }
+                $standardVariantQuantities[$variantId] = ($standardVariantQuantities[$variantId] ?? 0) + $qty;
             } else {
-                $stockRecord = ProductBranchStock::where([
-                    'product_id' => $productId,
-                    'store_branch_id' => $branchId
-                ])->first();
+                $standardProductQuantities[$productId] = ($standardProductQuantities[$productId] ?? 0) + $qty;
+            }
+        }
 
-                if (!$stockRecord || $stockRecord->stock < $qty) {
-                    $product = Product::find($productId);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Stock for product "' . ($product ? $product->title : $productId) . '" is insufficient.'
-                    ], 422);
-                }
+        foreach ($standardVariantQuantities as $variantId => $totalQty) {
+            $stockRecord = ProductVariantBranchStock::where([
+                'product_variant_id' => $variantId,
+                'store_branch_id' => $branchId
+            ])->first();
+
+            $availableStock = $stockRecord ? $stockRecord->stock : 0;
+            if ($availableStock < $totalQty) {
+                $variant = ProductVariant::find($variantId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stock for variant "' . ($variant ? $variant->name : $variantId) . '" is insufficient.'
+                ], 422);
+            }
+        }
+
+        foreach ($standardProductQuantities as $productId => $totalQty) {
+            $stockRecord = ProductBranchStock::where([
+                'product_id' => $productId,
+                'store_branch_id' => $branchId
+            ])->first();
+
+            $availableStock = $stockRecord ? $stockRecord->stock : 0;
+            if ($availableStock < $totalQty) {
+                $product = Product::find($productId);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stock for product "' . ($product ? $product->title : $productId) . '" is insufficient.'
+                ], 422);
             }
         }
 
@@ -954,6 +1009,10 @@ class CheckoutController extends Controller
                 foreach ($orderItemsData as $itemData) {
                     $order->items()->create($itemData);
                 }
+
+                // Potong stok cabang & produk secara instan saat checkout
+                $order->load('items');
+                $order->reduceStock();
 
                 if ($request->payment_method !== 'cod') {
                     try {
@@ -1799,6 +1858,20 @@ class CheckoutController extends Controller
                         \Midtrans\Transaction::cancel($order->payment_details['midtrans_order_id']);
                     } catch (\Throwable $cancelEx) {}
                 }
+            }
+
+            if ($order->payment_status === 'unpaid') {
+                $order->update([
+                    'status' => 'cancelled',
+                    'payment_status' => 'expired',
+                    'cancellation_status' => 'approved',
+                    'cancellation_reason' => 'Dibatalkan oleh customer dari halaman pembayaran.'
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pesanan berhasil dibatalkan dan stok produk telah dikembalikan.'
+                ]);
             }
 
             $order->update([

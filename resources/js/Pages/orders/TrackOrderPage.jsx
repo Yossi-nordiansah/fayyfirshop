@@ -50,7 +50,7 @@ export default function TrackOrderPage({ order, trackingLogs = [], biteshipStatu
             case "on_hold":
                 return "Paket Tertahan di Transit";
             case "delivered":
-                return "Paket Terkirim";
+                return "Paket Diterima";
             case "cancelled":
                 return "Pengiriman Dibatalkan";
             case "rejected":

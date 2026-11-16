@@ -1,7 +1,309 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Compass, Home, Phone, User, Globe, Loader2, Check } from 'lucide-react';
+import { X, MapPin, Compass, Home, Phone, User, Globe, Loader2, Check, ChevronDown } from 'lucide-react';
+
+function AutocompleteInput({
+    id,
+    label,
+    value,
+    onChange,
+    options = [],
+    placeholder = '',
+    disabled = false,
+    loading = false,
+    error = null,
+    icon: Icon = MapPin,
+    noOptionsText = '',
+    required = false,
+    disabledPlaceholder = '',
+    showProvinceBadge = false,
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(value || '');
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const containerRef = useRef(null);
+    const inputRef = useRef(null);
+    const listRef = useRef(null);
+
+    // Sinkronkan input ketika value dari parent berubah
+    useEffect(() => {
+        setSearchTerm(value || '');
+    }, [value]);
+
+    // Filter daftar opsi sesuai teks pencarian
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm || !searchTerm.trim()) return options;
+        const q = searchTerm.toLowerCase().trim();
+        // Bersihkan prefix umum Indonesia dari kata kunci pencarian
+        const cleanQ = q.replace(/^(kota|kabupaten|kab\.|kecamatan|kec\.|provinsi|prov\.)\s+/i, '');
+
+        return options.filter((opt) => {
+            if (!opt.name) return false;
+            const optNameLower = opt.name.toLowerCase();
+            const optClean = optNameLower.replace(/^(kota|kabupaten|kab\.|kecamatan|kec\.|provinsi|prov\.)\s+/i, '');
+            const provNameLower = opt.province?.name?.toLowerCase() || '';
+
+            return (
+                optNameLower.includes(q) ||
+                optClean.includes(cleanQ) ||
+                provNameLower.includes(q)
+            );
+        });
+    }, [options, searchTerm]);
+
+    // Reset highlighted index ketika daftar filter berubah
+    useEffect(() => {
+        setHighlightedIndex(-1);
+    }, [filteredOptions]);
+
+    // Auto-scroll item terpilih ke view
+    useEffect(() => {
+        if (highlightedIndex >= 0 && listRef.current) {
+            const items = listRef.current.querySelectorAll('[data-option-item]');
+            if (items[highlightedIndex]) {
+                items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }, [highlightedIndex]);
+
+    const resolveSelectionOnBlur = () => {
+        if (!searchTerm || !searchTerm.trim()) {
+            onChange(null);
+            setSearchTerm('');
+            return;
+        }
+
+        const q = searchTerm.trim().toLowerCase();
+        const cleanQ = q.replace(/^(kota|kabupaten|kab\.|kecamatan|kec\.|provinsi|prov\.)\s+/i, '');
+
+        // 1. Exact match
+        let match = options.find(opt => opt.name && opt.name.toLowerCase() === q);
+
+        // 2. Prefix-cleaned match (contoh user ketik "surabaya", cocok dengan "KOTA SURABAYA")
+        if (!match) {
+            match = options.find(opt => {
+                if (!opt.name) return false;
+                const optClean = opt.name.toLowerCase().replace(/^(kota|kabupaten|kab\.|kecamatan|kec\.|provinsi|prov\.)\s+/i, '');
+                return optClean === cleanQ || optClean === q;
+            });
+        }
+
+        // 3. Jika hanya tersisa 1 opsi hasil pencarian
+        if (!match && filteredOptions.length === 1) {
+            match = filteredOptions[0];
+        }
+
+        if (match) {
+            onChange(match);
+            setSearchTerm(match.name);
+        } else if (value) {
+            // Pulihkan nilai valid sebelumnya jika user mengetik yang tidak valid
+            setSearchTerm(value);
+        } else {
+            onChange(null);
+            setSearchTerm('');
+        }
+    };
+
+    // Handle klik di luar dropdown untuk menutup menu
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                if (isOpen) {
+                    setIsOpen(false);
+                    resolveSelectionOnBlur();
+                }
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen, options, filteredOptions, searchTerm, value]);
+
+    const handleInputChange = (e) => {
+        setSearchTerm(e.target.value);
+        if (!isOpen) setIsOpen(true);
+    };
+
+    const handleSelect = (opt) => {
+        onChange(opt);
+        setSearchTerm(opt.name);
+        setIsOpen(false);
+    };
+
+    const handleClear = (e) => {
+        e.stopPropagation();
+        onChange(null);
+        setSearchTerm('');
+        setIsOpen(false);
+        if (inputRef.current) inputRef.current.focus();
+    };
+
+    const handleFocus = () => {
+        if (!disabled) {
+            setIsOpen(true);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (disabled) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isOpen) {
+                setIsOpen(true);
+            } else {
+                setHighlightedIndex(prev => (prev < filteredOptions.length - 1 ? prev + 1 : prev));
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (isOpen) {
+                setHighlightedIndex(prev => (prev > 0 ? prev - 1 : 0));
+            }
+        } else if (e.key === 'Enter') {
+            // PENTING: Cegah form submit saat menekan Enter di input autocomplete
+            e.preventDefault();
+            if (isOpen && filteredOptions.length > 0) {
+                const targetOpt = highlightedIndex >= 0 && highlightedIndex < filteredOptions.length
+                    ? filteredOptions[highlightedIndex]
+                    : filteredOptions[0];
+                handleSelect(targetOpt);
+            }
+        } else if (e.key === 'Escape') {
+            setIsOpen(false);
+        } else if (e.key === 'Tab') {
+            if (isOpen && filteredOptions.length === 1) {
+                handleSelect(filteredOptions[0]);
+            } else if (isOpen) {
+                setIsOpen(false);
+                resolveSelectionOnBlur();
+            }
+        }
+    };
+
+    return (
+        <div className="space-y-1.5" ref={containerRef}>
+            <label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1 flex items-center justify-between">
+                <span>
+                    {label} {required && <span className="text-amber-600">*</span>}
+                </span>
+                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />}
+            </label>
+
+            <div className="relative">
+                {/* Icon Kiri */}
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Icon size={18} />
+                </div>
+
+                {/* Text Input Autocomplete */}
+                <input
+                    ref={inputRef}
+                    id={id}
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleInputChange}
+                    onFocus={handleFocus}
+                    onKeyDown={handleKeyDown}
+                    disabled={disabled}
+                    autoComplete="off"
+                    placeholder={disabled && disabledPlaceholder ? disabledPlaceholder : placeholder}
+                    className={`w-full bg-slate-50 text-slate-900 py-3 pl-10 pr-16 rounded-xl border outline-none transition-all focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 disabled:cursor-not-allowed ${
+                        error ? 'border-red-500' : 'border-slate-200'
+                    }`}
+                />
+
+                {/* Tombol Clear & Chevron Kanan */}
+                <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1">
+                    {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-500 mr-1" />
+                    ) : (
+                        <>
+                            {searchTerm && !disabled && (
+                                <button
+                                    type="button"
+                                    onClick={handleClear}
+                                    className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
+                                    tabIndex={-1}
+                                    title="Hapus"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => !disabled && setIsOpen(prev => !prev)}
+                                className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
+                                tabIndex={-1}
+                                disabled={disabled}
+                            >
+                                <ChevronDown
+                                    size={16}
+                                    className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-amber-600' : ''}`}
+                                />
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                {/* Dropdown Hasil Autocomplete */}
+                <AnimatePresence>
+                    {isOpen && !disabled && (
+                        <motion.div
+                            ref={listRef}
+                            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 right-0 top-full mt-1.5 z-[100] max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10"
+                        >
+                            {filteredOptions.length > 0 ? (
+                                filteredOptions.map((opt, idx) => {
+                                    const isSelected = value && value.toLowerCase() === opt.name.toLowerCase();
+                                    const isHighlighted = idx === highlightedIndex;
+
+                                    return (
+                                        <button
+                                            key={opt.code || opt.id || opt.name}
+                                            type="button"
+                                            data-option-item
+                                            onClick={() => handleSelect(opt)}
+                                            onMouseEnter={() => setHighlightedIndex(idx)}
+                                            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl text-left transition-colors ${
+                                                isSelected
+                                                    ? 'bg-amber-50 text-amber-900 font-bold'
+                                                    : isHighlighted
+                                                    ? 'bg-slate-100 text-slate-900'
+                                                    : 'text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col truncate pr-2">
+                                                <span className="truncate">{opt.name}</span>
+                                                {showProvinceBadge && opt.province?.name && (
+                                                    <span className="text-[10px] text-slate-400 font-normal">
+                                                        {opt.province.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isSelected && <Check size={14} className="text-amber-600 shrink-0 ml-2" />}
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <div className="py-3 px-3 text-center text-xs text-slate-400">
+                                    {noOptionsText || 'Tidak ditemukan pilihan'}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {error && <p className="text-xs text-red-500 px-1">{error}</p>}
+        </div>
+    );
+}
 
 export default function AddressModal({ isOpen, onClose, onSave, address = null, t, locale }) {
     const isRtl = locale === 'arabic' || locale === 'ar';
@@ -10,18 +312,21 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     const [phone, setPhone] = useState('');
     const [country, setCountry] = useState('ID');
     const [province, setProvince] = useState('');
+    const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
     const [city, setCity] = useState('');
+    const [selectedCityCode, setSelectedCityCode] = useState('');
     const [district, setDistrict] = useState('');
     const [postalCode, setPostalCode] = useState('');
     const [detailAddress, setDetailAddress] = useState('');
 
     // Dynamic Lists & Loaders for Indonesia
     const [provinces, setProvinces] = useState([]);
-    const [cities, setCities] = useState([]);
+    const [allCities, setAllCities] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [loadingProvinces, setLoadingProvinces] = useState(false);
     const [loadingCities, setLoadingCities] = useState(false);
     const [loadingDistricts, setLoadingDistricts] = useState(false);
+    const [loadingPostalCode, setLoadingPostalCode] = useState(false);
 
     // International Countries List
     const [countries, setCountries] = useState([]);
@@ -48,37 +353,102 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 setPhone('');
                 setCountry('ID');
                 setProvince('');
+                setSelectedProvinceCode('');
                 setCity('');
+                setSelectedCityCode('');
                 setDistrict('');
+                setDistricts([]);
                 setPostalCode('');
                 setDetailAddress('');
             }
         }
     }, [isOpen, address]);
 
-    // Load countries on mount or registration type change
+    const loadDistricts = (cityCode, currentDistrictName = '') => {
+        if (!cityCode) return;
+        setLoadingDistricts(true);
+        axios.get(`/api/districts/${cityCode}`)
+            .then((res) => {
+                const list = res.data || [];
+                setDistricts(list);
+                setLoadingDistricts(false);
+
+                if (currentDistrictName) {
+                    const targetDist = currentDistrictName.trim().toLowerCase();
+                    const cleanTargetDist = targetDist.replace(/^(kecamatan|kec\.)\s+/i, '');
+                    const matchedDist = list.find(d => {
+                        if (!d.name) return false;
+                        const dLower = d.name.trim().toLowerCase();
+                        const dClean = dLower.replace(/^(kecamatan|kec\.)\s+/i, '');
+                        return dLower === targetDist || dClean === cleanTargetDist;
+                    });
+                    if (matchedDist) {
+                        setDistrict(matchedDist.name);
+                    }
+                }
+            })
+            .catch(() => setLoadingDistricts(false));
+    };
+
+    // Load regions when modal opens
     useEffect(() => {
         if (!isOpen) return;
 
         if (country === 'ID') {
             setLoadingProvinces(true);
-            axios.get(route('api.provinces'))
-                .then((res) => {
-                    setProvinces(res.data);
-                    setLoadingProvinces(false);
+            setLoadingCities(true);
 
-                    // Hydrate existing address cities/districts if editing
-                    if (address && address.country === 'ID' && address.province) {
-                        const matchedProv = res.data.find(p => p.name === address.province);
+            Promise.all([
+                axios.get('/api/provinces'),
+                axios.get('/api/cities')
+            ])
+            .then(([provRes, cityRes]) => {
+                const provList = provRes.data || [];
+                const cityList = cityRes.data || [];
+                setProvinces(provList);
+                setAllCities(cityList);
+                setLoadingProvinces(false);
+                setLoadingCities(false);
+
+                // Hydrate existing address cities/districts if editing
+                if (address && address.country === 'ID') {
+                    let matchedProv = null;
+                    if (address.province) {
+                        const targetProv = address.province.trim().toLowerCase();
+                        matchedProv = provList.find(p => p.name && p.name.trim().toLowerCase() === targetProv);
                         if (matchedProv) {
-                            loadCities(matchedProv.code, address.city);
+                            setSelectedProvinceCode(matchedProv.code);
                         }
                     }
-                })
-                .catch((err) => {
-                    console.error("Error loading provinces:", err);
-                    setLoadingProvinces(false);
-                });
+
+                    if (address.city) {
+                        const targetCity = address.city.trim().toLowerCase();
+                        const cleanTargetCity = targetCity.replace(/^(kota|kabupaten|kab\.)\s+/i, '');
+
+                        const matchedCity = cityList.find(c => {
+                            if (!c.name) return false;
+                            const cLower = c.name.trim().toLowerCase();
+                            const cClean = cLower.replace(/^(kota|kabupaten|kab\.)\s+/i, '');
+                            return cLower === targetCity || cClean === cleanTargetCity;
+                        });
+
+                        if (matchedCity) {
+                            setSelectedCityCode(matchedCity.code);
+                            if (!matchedProv && matchedCity.province_code) {
+                                setSelectedProvinceCode(matchedCity.province_code);
+                                const foundProv = provList.find(p => String(p.code) === String(matchedCity.province_code));
+                                if (foundProv) setProvince(foundProv.name);
+                            }
+                            loadDistricts(matchedCity.code, address.district);
+                        }
+                    }
+                }
+            })
+            .catch((err) => {
+                console.error("Error loading Indonesia regions:", err);
+                setLoadingProvinces(false);
+                setLoadingCities(false);
+            });
         } else {
             setLoadingCountries(true);
             axios.get('/api/countries')
@@ -93,61 +463,103 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
         }
     }, [isOpen, country]);
 
-    const loadCities = (provCode, currentCityName = '') => {
-        setLoadingCities(true);
-        axios.get(`/api/cities/${provCode}`)
-            .then((res) => {
-                setCities(res.data);
-                setLoadingCities(false);
+    // Opsi Kota yang tersedia: jika provinsi dipilih, filter berdasarkan provinsi tsb. Jika belum, tampilkan semua kota!
+    const availableCities = useMemo(() => {
+        if (selectedProvinceCode) {
+            return allCities.filter(c => String(c.province_code) === String(selectedProvinceCode));
+        }
+        return allCities;
+    }, [allCities, selectedProvinceCode]);
 
-                if (currentCityName) {
-                    const matchedCity = res.data.find(c => c.name === currentCityName);
-                    if (matchedCity) {
-                        loadDistricts(matchedCity.code);
-                    }
-                }
-            })
-            .catch(() => setLoadingCities(false));
-    };
+    const handleProvinceSelect = (selectedProv) => {
+        if (!selectedProv) {
+            setProvince('');
+            setSelectedProvinceCode('');
+            return;
+        }
 
-    const loadDistricts = (cityCode) => {
-        setLoadingDistricts(true);
-        axios.get(`/api/districts/${cityCode}`)
-            .then((res) => {
-                setDistricts(res.data);
-                setLoadingDistricts(false);
-            })
-            .catch(() => setLoadingDistricts(false));
-    };
+        setProvince(selectedProv.name);
+        setSelectedProvinceCode(selectedProv.code);
 
-    const handleProvinceChange = (e) => {
-        const provCode = e.target.value;
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        const provName = selectedOption ? selectedOption.text : '';
-
-        setProvince(provCode ? provName : '');
-        setCity('');
-        setDistrict('');
-        setCities([]);
-        setDistricts([]);
-
-        if (provCode) {
-            loadCities(provCode);
+        // Jika kota yang sudah dipilih sebelumnya bukan dari provinsi ini, reset kota & kecamatan
+        if (city && selectedCityCode) {
+            const cityBelongs = allCities.some(
+                c => String(c.code) === String(selectedCityCode) && String(c.province_code) === String(selectedProv.code)
+            );
+            if (!cityBelongs) {
+                setCity('');
+                setSelectedCityCode('');
+                setDistrict('');
+                setDistricts([]);
+            }
         }
     };
 
-    const handleCityChange = (e) => {
-        const cityCode = e.target.value;
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        const cityName = selectedOption ? selectedOption.text : '';
+    const handleCitySelect = (selectedCity) => {
+        if (!selectedCity) {
+            setCity('');
+            setSelectedCityCode('');
+            setDistrict('');
+            setDistricts([]);
+            return;
+        }
 
-        setCity(cityCode ? cityName : '');
+        setCity(selectedCity.name);
+        setSelectedCityCode(selectedCity.code);
         setDistrict('');
         setDistricts([]);
 
-        if (cityCode) {
-            loadDistricts(cityCode);
+        // Otomatis sinkronkan provinsi jika belum dipilih atau berbeda
+        if (selectedCity.province_code) {
+            setSelectedProvinceCode(selectedCity.province_code);
+            const provObj = provinces.find(p => String(p.code) === String(selectedCity.province_code));
+            if (provObj) {
+                setProvince(provObj.name);
+            } else if (selectedCity.province?.name) {
+                setProvince(selectedCity.province.name);
+            }
         }
+
+        // Muat kecamatan untuk kota terpilih
+        loadDistricts(selectedCity.code);
+    };
+
+    const fetchPostalCode = (districtName, cityName, provinceName) => {
+        const d = districtName || district || '';
+        const c = cityName || city || '';
+        const p = provinceName || province || '';
+
+        if (!d && !c) return;
+        setLoadingPostalCode(true);
+        axios.get('/api/postal-code', {
+            params: {
+                district: d,
+                city: c,
+                province: p,
+            }
+        })
+        .then((res) => {
+            if (res.data?.success && res.data?.postal_code) {
+                setPostalCode(String(res.data.postal_code));
+            }
+        })
+        .catch((err) => {
+            console.error("Error auto-fetching postal code:", err);
+        })
+        .finally(() => {
+            setLoadingPostalCode(false);
+        });
+    };
+
+    const handleDistrictSelect = (selectedDistrict) => {
+        if (!selectedDistrict) {
+            setDistrict('');
+            return;
+        }
+        setDistrict(selectedDistrict.name);
+
+        // Otomatis deteksi kode pos dari Biteship berdasarkan kecamatan, kota, provinsi
+        fetchPostalCode(selectedDistrict.name, city, province);
     };
 
     const validate = () => {
@@ -360,86 +772,68 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Province */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1">
-                                                {t('register.province', 'Provinsi')} <span className="text-amber-600">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                                    <Compass size={18} />
-                                                </div>
-                                                <select
-                                                    id="province"
-                                                    value={provinces.find(p => p.name === province)?.code || ''}
-                                                    onChange={handleProvinceChange}
-                                                    className={`w-full bg-slate-50 text-slate-900 appearance-none py-3 pl-10 pr-8 rounded-xl border outline-none transition-all focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${errors.province ? 'border-red-500' : 'border-slate-200'}`}
-                                                    disabled={loadingProvinces}
-                                                >
-                                                    <option value="">-- {t('register.select_province', 'Pilih Provinsi')} --</option>
-                                                    {provinces.map(p => (
-                                                        <option key={p.code} value={p.code}>{p.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {errors.province && <p className="text-xs text-red-500 px-1">{errors.province}</p>}
-                                        </div>
+                                        <AutocompleteInput
+                                            id="province"
+                                            label={t('register.province', 'Provinsi')}
+                                            value={province}
+                                            onChange={handleProvinceSelect}
+                                            options={provinces}
+                                            placeholder={t('register.search_province', 'Ketik atau pilih provinsi...')}
+                                            loading={loadingProvinces}
+                                            error={errors.province}
+                                            icon={Compass}
+                                            required
+                                            noOptionsText={t('register.no_options_found', 'Provinsi tidak ditemukan')}
+                                        />
 
                                         {/* City */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1">
-                                                {t('register.city', 'Kota / Kabupaten')} {loadingCities && <Loader2 className="inline-block w-4 h-4 ml-1 animate-spin text-amber-500" />} <span className="text-amber-600">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                                    <Home size={18} />
-                                                </div>
-                                                <select
-                                                    id="city"
-                                                    value={cities.find(c => c.name === city)?.code || ''}
-                                                    onChange={handleCityChange}
-                                                    disabled={loadingCities || cities.length === 0}
-                                                    className={`w-full bg-slate-50 text-slate-900 appearance-none py-3 pl-10 pr-8 rounded-xl border outline-none transition-all focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${errors.city ? 'border-red-500' : 'border-slate-200'}`}
-                                                >
-                                                    <option value="">-- {t('register.select_city', 'Pilih Kota')} --</option>
-                                                    {cities.map(c => (
-                                                        <option key={c.code} value={c.code}>{c.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {errors.city && <p className="text-xs text-red-500 px-1">{errors.city}</p>}
-                                        </div>
+                                        <AutocompleteInput
+                                            id="city"
+                                            label={t('register.city', 'Kota / Kabupaten')}
+                                            value={city}
+                                            onChange={handleCitySelect}
+                                            options={availableCities}
+                                            placeholder={t('register.search_city', 'Ketik atau pilih kota / kabupaten...')}
+                                            disabled={loadingCities}
+                                            loading={loadingCities}
+                                            error={errors.city}
+                                            icon={Home}
+                                            required
+                                            showProvinceBadge={!selectedProvinceCode}
+                                            noOptionsText={t('register.no_options_found', 'Kota / Kabupaten tidak ditemukan')}
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* District */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1">
-                                                {t('register.district', 'Kecamatan')} {loadingDistricts && <Loader2 className="inline-block w-4 h-4 ml-1 animate-spin text-amber-500" />} <span className="text-amber-600">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                                    <MapPin size={18} />
-                                                </div>
-                                                <select
-                                                    id="district"
-                                                    value={district}
-                                                    onChange={e => setDistrict(e.target.value)}
-                                                    disabled={loadingDistricts || districts.length === 0}
-                                                    className={`w-full bg-slate-50 text-slate-900 appearance-none py-3 pl-10 pr-8 rounded-xl border outline-none transition-all focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-60 ${errors.district ? 'border-red-500' : 'border-slate-200'}`}
-                                                >
-                                                    <option value="">-- {t('register.select_district', 'Pilih Kecamatan')} --</option>
-                                                    {districts.map(d => (
-                                                        <option key={d.code} value={d.name}>{d.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {errors.district && <p className="text-xs text-red-500 px-1">{errors.district}</p>}
-                                        </div>
+                                        <AutocompleteInput
+                                            id="district"
+                                            label={t('register.district', 'Kecamatan')}
+                                            value={district}
+                                            onChange={handleDistrictSelect}
+                                            options={districts}
+                                            placeholder={t('register.search_district', 'Ketik atau pilih kecamatan...')}
+                                            disabled={!selectedCityCode || loadingDistricts}
+                                            disabledPlaceholder={!selectedCityCode ? t('register.select_city_first', 'Pilih kota terlebih dahulu') : ''}
+                                            loading={loadingDistricts}
+                                            error={errors.district}
+                                            icon={MapPin}
+                                            required
+                                            noOptionsText={t('register.no_options_found', 'Kecamatan tidak ditemukan')}
+                                        />
 
                                         {/* Postal Code */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1">
-                                                {t('register.postal_code', 'Kode Pos')} <span className="text-amber-600">*</span>
+                                            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 px-1 flex items-center justify-between">
+                                                <span>
+                                                    {t('register.postal_code', 'Kode Pos')} <span className="text-amber-600">*</span>
+                                                </span>
+                                                {loadingPostalCode && (
+                                                    <span className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold lowercase">
+                                                        <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                                                        <span>{t('register.auto_detecting_postal', 'mencari kode pos otomatis...')}</span>
+                                                    </span>
+                                                )}
                                             </label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -450,9 +844,27 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                                                     type="text"
                                                     value={postalCode}
                                                     onChange={e => setPostalCode(e.target.value)}
-                                                    placeholder="Contoh: 40123"
-                                                    className={`w-full bg-slate-50 text-slate-900 py-3 pl-10 pr-4 rounded-xl border outline-none transition-all duration-300 focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${errors.postal_code ? 'border-red-500' : 'border-slate-200'}`}
+                                                    placeholder={loadingPostalCode ? t('register.auto_detecting_postal', 'Mencari kode pos otomatis...') : "Contoh: 40123"}
+                                                    className={`w-full bg-slate-50 text-slate-900 py-3 pl-10 pr-16 rounded-xl border outline-none transition-all duration-300 focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 ${errors.postal_code ? 'border-red-500' : 'border-slate-200'}`}
                                                 />
+                                                {loadingPostalCode ? (
+                                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                        <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                                    </div>
+                                                ) : (
+                                                    (district || city) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => fetchPostalCode(district, city, province)}
+                                                            title="Deteksi ulang kode pos otomatis dari Biteship"
+                                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                                                        >
+                                                            <span className="text-[11px] bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-700 px-2 py-0.5 rounded-lg active:scale-95 transition-all">
+                                                                Auto
+                                                            </span>
+                                                        </button>
+                                                    )
+                                                )}
                                             </div>
                                             {errors.postal_code && <p className="text-xs text-red-500 px-1">{errors.postal_code}</p>}
                                         </div>

@@ -25,39 +25,123 @@ export default function CartPage() {
 
     const [cartItems, setCartItems] = useState([]);
     const [checkedKeys, setCheckedKeys] = useState([]);
+    const [stockAlert, setStockAlert] = useState(null);
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
 
     const getItemKey = (item) =>
         `${item.id}-${item.variantId || "base"}-${item.color || "none"}-${item.size || "none"}`;
+
+    // Fungsi sinkronisasi harga & stok riil dari server
+    const syncCartData = async (manualItems = null) => {
+        const currentStored = manualItems || JSON.parse(localStorage.getItem(cartKey) || "[]");
+        if (!currentStored || currentStored.length === 0) {
+            setCartItems([]);
+            return [];
+        }
+
+        try {
+            const res = await axios.post(route('checkout.check-stock'), {
+                items: currentStored.map(item => ({ id: item.id, variantId: item.variantId }))
+            });
+
+            if (res.data) {
+                let hasAdjusted = false;
+                let adjustedNames = [];
+
+                const freshItems = currentStored.map(item => {
+                    const key = `${item.id}-${item.variantId ?? 'null'}`;
+                    const pInfo = res.data.prices?.[key];
+                    const sInfo = res.data.item_stocks?.[key];
+
+                    const freshStock = sInfo !== undefined ? Number(sInfo.stock) : (item.stock || 0);
+                    const freshPrice = pInfo ? Number(pInfo.price) : item.price;
+                    const freshOrigPrice = pInfo ? Number(pInfo.original_price) : item.original_price;
+                    const freshDiscPrice = pInfo ? (pInfo.discount_price ? Number(pInfo.discount_price) : null) : item.discount_price;
+
+                    let quantity = item.quantity;
+                    if (freshStock <= 0) {
+                        if (quantity > 0) {
+                            hasAdjusted = true;
+                            adjustedNames.push(item.title_translations?.[locale] || item.title);
+                        }
+                    } else if (quantity > freshStock) {
+                        quantity = freshStock;
+                        hasAdjusted = true;
+                        adjustedNames.push(item.title_translations?.[locale] || item.title);
+                    }
+
+                    return {
+                        ...item,
+                        price: freshPrice,
+                        original_price: freshOrigPrice,
+                        discount_price: freshDiscPrice,
+                        stock: freshStock,
+                        quantity: quantity,
+                    };
+                });
+
+                setCartItems(freshItems);
+                localStorage.setItem(cartKey, JSON.stringify(freshItems));
+
+                // Otomatis lepaskan centang item yang stoknya habis dari pilihan checkout
+                setCheckedKeys(prev => prev.filter(k => {
+                    const found = freshItems.find(it => getItemKey(it) === k);
+                    return found && found.stock > 0;
+                }));
+
+                if (hasAdjusted) {
+                    const uniqueNames = [...new Set(adjustedNames)];
+                    setStockAlert(
+                        t("cart.stock_adjusted_alert", "Kuantitas produk {names} disesuaikan karena stok baru saja berkurang.")
+                            .replace("{names}", uniqueNames.slice(0, 2).join(", ") + (uniqueNames.length > 2 ? ` (+${uniqueNames.length - 2})` : ""))
+                    );
+                }
+
+                window.dispatchEvent(new Event("fayyfir-cart-updated"));
+                return freshItems;
+            }
+        } catch (err) {
+            console.error("Gagal sinkronisasi stok keranjang:", err);
+        }
+        return currentStored;
+    };
 
     useEffect(() => {
         const items = JSON.parse(localStorage.getItem(cartKey) || "[]");
         setCartItems(items);
         setCheckedKeys([]);
 
-        if (items.length > 0) {
-            axios.post(route('checkout.check-stock'), {
-                items: items.map(item => ({ id: item.id, variantId: item.variantId }))
-            }).then(res => {
-                if (res.data?.prices) {
-                    const freshItems = items.map(item => {
-                        const key = `${item.id}-${item.variantId ?? 'null'}`;
-                        const pInfo = res.data.prices[key];
-                        if (pInfo) {
-                            return {
-                                ...item,
-                                price: Number(pInfo.price),
-                                original_price: Number(pInfo.original_price),
-                                discount_price: pInfo.discount_price ? Number(pInfo.discount_price) : null,
-                            };
-                        }
-                        return item;
-                    });
-                    setCartItems(freshItems);
-                    localStorage.setItem(cartKey, JSON.stringify(freshItems));
-                }
-            }).catch(() => {});
-        }
-    }, [user]);
+        // 1. Sinkronisasi data saat pertama kali halaman keranjang dimuat
+        syncCartData(items);
+
+        // 2. Window Focus listener: saat jendela browser kembali aktif
+        const handleFocus = () => {
+            syncCartData();
+        };
+
+        // 3. Visibility Change listener: saat user kembali membuka tab keranjang ini
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                syncCartData();
+            }
+        };
+
+        // 4. Polling berkala: cek setiap 25 detik selama tab aktif
+        const intervalId = setInterval(() => {
+            if (document.visibilityState === "visible") {
+                syncCartData();
+            }
+        }, 25000);
+
+        window.addEventListener("focus", handleFocus);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener("focus", handleFocus);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            clearInterval(intervalId);
+        };
+    }, [user, cartKey, locale]);
 
     const saveCart = (nextCart) => {
         setCartItems(nextCart);
@@ -84,7 +168,8 @@ export default function CartPage() {
     const updateQuantity = (index, nextQuantity) => {
         const nextCart = cartItems.map((item, itemIndex) => {
             if (itemIndex !== index) return item;
-            const quantity = Math.max(1, Math.min(nextQuantity, item.stock || 999));
+            const maxAllowed = item.stock > 0 ? item.stock : 1;
+            const quantity = Math.max(1, Math.min(nextQuantity, maxAllowed));
             return { ...item, quantity };
         });
         saveCart(nextCart);
@@ -103,6 +188,7 @@ export default function CartPage() {
     };
 
     const toggleCheckItem = (item) => {
+        if (item.stock <= 0) return; // Tidak dapat memilih produk yang stoknya habis
         const key = getItemKey(item);
         if (checkedKeys.includes(key)) {
             setCheckedKeys(checkedKeys.filter(k => k !== key));
@@ -111,11 +197,16 @@ export default function CartPage() {
         }
     };
 
+    const availableItems = useMemo(
+        () => cartItems.filter(item => item.stock > 0),
+        [cartItems]
+    );
+
     const toggleSelectAll = () => {
-        if (checkedKeys.length === cartItems.length) {
+        if (checkedKeys.length === availableItems.length && availableItems.length > 0) {
             setCheckedKeys([]);
         } else {
-            setCheckedKeys(cartItems.map(getItemKey));
+            setCheckedKeys(availableItems.map(getItemKey));
         }
     };
 
@@ -125,14 +216,41 @@ export default function CartPage() {
         setCheckedKeys([]);
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         const checkoutItems = cartItems.filter(item => checkedKeys.includes(getItemKey(item)));
-        if (checkoutItems.length === 0) return;
+        if (checkoutItems.length === 0 || isCheckingOut) return;
 
-        const sourceKey = user ? `fayyfir_checkout_source_${user.id}` : "fayyfir_checkout_source";
-        localStorage.setItem(checkoutKey, JSON.stringify(checkoutItems));
-        localStorage.setItem(sourceKey, 'cart');
-        router.visit('/checkout');
+        setIsCheckingOut(true);
+
+        try {
+            // Lakukan sinkronisasi validasi stok final sebelum diarahkan ke checkout
+            const freshItems = await syncCartData(cartItems);
+            const freshCheckoutItems = (freshItems || cartItems).filter(item => checkedKeys.includes(getItemKey(item)));
+
+            // Periksa jika ada item yang habis atau kuantitasnya melebihi stok yang tersisa
+            const invalidItem = freshCheckoutItems.find(item => item.stock <= 0 || item.quantity > item.stock);
+            if (invalidItem) {
+                setStockAlert(
+                    t("cart.stock_insufficient_alert", "Beberapa produk yang dipilih telah habis atau stoknya berkurang karena baru saja dibeli pembeli lain. Silakan periksa kembali keranjang Anda.")
+                );
+                setIsCheckingOut(false);
+                return;
+            }
+
+            if (freshCheckoutItems.length === 0) {
+                setStockAlert(t("cart.no_available_items", "Tidak ada produk dengan stok tersedia yang dipilih."));
+                setIsCheckingOut(false);
+                return;
+            }
+
+            const sourceKey = user ? `fayyfir_checkout_source_${user.id}` : "fayyfir_checkout_source";
+            localStorage.setItem(checkoutKey, JSON.stringify(freshCheckoutItems));
+            localStorage.setItem(sourceKey, 'cart');
+            router.visit('/checkout');
+        } catch (e) {
+            setIsCheckingOut(false);
+            router.visit('/checkout');
+        }
     };
 
     const subtotal = useMemo(
@@ -173,8 +291,8 @@ export default function CartPage() {
                             </p>
                             <div className="flex flex-col gap-3 mt-6 sm:flex-row">
                                 <button
-                                     onClick={() => window.dispatchEvent(new Event("fayyfir-open-login"))}
-                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white transition-colors bg-blue-700 shadow-lg rounded-xl shadow-blue-900/20 hover:bg-blue-800"
+                                    onClick={() => window.dispatchEvent(new Event("fayyfir-open-login"))}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white transition-colors bg-blue-700 shadow-lg rounded-xl shadow-blue-900/20 hover:bg-blue-800"
                                 >
                                     <Check size={17} />
                                     {t("nav.account.login", "Masuk Akun")}
@@ -247,12 +365,16 @@ export default function CartPage() {
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={toggleSelectAll}
-                                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${checkedKeys.length === cartItems.length && cartItems.length > 0
-                                                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
-                                                        : "border-zinc-300 hover:border-blue-400 bg-white"
-                                                        }`}
+                                                    disabled={availableItems.length === 0}
+                                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                                                        availableItems.length === 0
+                                                            ? "border-zinc-200 bg-zinc-100 cursor-not-allowed opacity-50"
+                                                            : checkedKeys.length === availableItems.length && availableItems.length > 0
+                                                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                                                            : "border-zinc-300 hover:border-blue-400 bg-white"
+                                                    }`}
                                                 >
-                                                    {checkedKeys.length === cartItems.length && cartItems.length > 0 && (
+                                                    {checkedKeys.length === availableItems.length && availableItems.length > 0 && (
                                                         <Check size={14} strokeWidth={3} />
                                                     )}
                                                 </button>
@@ -271,117 +393,172 @@ export default function CartPage() {
                                             )}
                                         </div>
 
-                                        <AnimatePresence initial={false}>
-                                            {cartItems.map((item, index) => (
-                                                <motion.div
-                                                    key={getItemKey(item)}
-                                                    initial={{ opacity: 0, y: 12 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, x: -20 }}
-                                                    className="grid grid-cols-[auto_88px_1fr] gap-3 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm sm:grid-cols-[auto_112px_1fr_auto] sm:gap-4 items-center"
+                                        {/* Notifikasi Perubahan Stok Realtime */}
+                                        {stockAlert && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -6 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="flex items-start justify-between p-4 border rounded-2xl bg-amber-50/90 border-amber-200 text-amber-900"
+                                            >
+                                                <div className="flex items-start gap-3 text-sm">
+                                                    <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded-full bg-amber-500 shrink-0 mt-0.5">!</span>
+                                                    <p className="font-semibold leading-relaxed">{stockAlert}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setStockAlert(null)}
+                                                    className="p-1 transition-colors rounded-lg text-amber-600 hover:bg-amber-100 hover:text-amber-800 shrink-0 ml-2"
                                                 >
-                                                    {/* Checkbox */}
-                                                    <div className="flex items-center justify-center pr-1 sm:pr-2">
-                                                        <button
-                                                            onClick={() => toggleCheckItem(item)}
-                                                            className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${checkedKeys.includes(getItemKey(item))
-                                                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
-                                                                : "border-zinc-300 hover:border-blue-400 bg-white"
-                                                                }`}
-                                                        >
-                                                            {checkedKeys.includes(getItemKey(item)) && <Check size={14} strokeWidth={3} />}
-                                                        </button>
-                                                    </div>
+                                                    <X size={16} />
+                                                </button>
+                                            </motion.div>
+                                        )}
 
-                                                    <Link href={`/product/${item.slug}`} className="block overflow-hidden rounded-xl bg-zinc-100">
-                                                        <img
-                                                            src={item.image || "/images/default-product.png"}
-                                                            alt={item.title}
-                                                            className="object-cover w-full h-24 sm:h-28"
-                                                        />
-                                                    </Link>
+                                        <AnimatePresence initial={false}>
+                                            {cartItems.map((item, index) => {
+                                                const isOutOfStock = !item.stock || item.stock <= 0;
+                                                const isLowStock = !isOutOfStock && item.stock <= 5;
 
-                                                    <div className="min-w-0">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
-                                                                {item.subCategory || item.category}
-                                                            </span>
-                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
-                                                                <Package size={10} />
-                                                                {formatNumber(item.stock)} {t("cart.stock_label", "stok")}
-                                                            </span>
-                                                        </div>
-
-                                                        <Link
-                                                            href={`/product/${item.slug}`}
-                                                            className="block mt-2 text-base font-bold truncate transition-colors text-zinc-900 hover:text-blue-700"
-                                                        >
-                                                            {item.title_translations?.[locale] || item.title}
-                                                        </Link>
-
-                                                        <div className="flex flex-wrap mt-1 text-xs gap-x-3 gap-y-1 text-zinc-500">
-                                                            {item.variantNameTranslations?.[locale] || item.variantName ? (
-                                                                <span>{t("cart.variant_label", "Varian")}: <strong>{item.variantNameTranslations?.[locale] || item.variantName}</strong></span>
-                                                            ) : (
-                                                                item.color && <span>{t("cart.color_label", "Warna")}: <strong>{item.color}</strong></span>
-                                                            )}
-                                                            {item.subVariantNameTranslations?.[locale] || item.subVariantName ? (
-                                                                <span>{t("cart.sub_variant_label", "Sub Varian")}: <strong>{item.subVariantNameTranslations?.[locale] || item.subVariantName}</strong></span>
-                                                            ) : (
-                                                                item.size && <span>{t("cart.size_label", "Ukuran")}: <strong>{item.size}</strong></span>
-                                                            )}
-                                                            {item.sku && <span>SKU: {item.sku}</span>}
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-4 mt-4">
-                                                            <div className="flex overflow-hidden border rounded-xl border-zinc-200">
-                                                                <button
-                                                                    onClick={() => updateQuantity(index, item.quantity - 1)}
-                                                                    className="flex items-center justify-center w-10 h-10 transition-colors text-zinc-500 hover:bg-blue-50 hover:text-blue-700"
-                                                                >
-                                                                    <Minus size={14} />
-                                                                </button>
-                                                                <div className="flex items-center justify-center w-12 h-10 text-sm font-bold border-x border-zinc-200 text-zinc-900">
-                                                                    {formatNumber(item.quantity)}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => updateQuantity(index, item.quantity + 1)}
-                                                                    className="flex items-center justify-center w-10 h-10 transition-colors text-zinc-500 hover:bg-blue-50 hover:text-blue-700"
-                                                                >
-                                                                    <Plus size={14} />
-                                                                </button>
-                                                            </div>
-
+                                                return (
+                                                    <motion.div
+                                                        key={getItemKey(item)}
+                                                        initial={{ opacity: 0, y: 12 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, x: -20 }}
+                                                        className={`grid grid-cols-[auto_88px_1fr] gap-3 rounded-2xl border p-4 shadow-sm sm:grid-cols-[auto_112px_1fr_auto] sm:gap-4 items-center transition-all ${
+                                                            isOutOfStock
+                                                                ? "border-rose-100 bg-rose-50/20 opacity-80"
+                                                                : "border-zinc-100 bg-white"
+                                                        }`}
+                                                    >
+                                                        {/* Checkbox */}
+                                                        <div className="flex items-center justify-center pr-1 sm:pr-2">
                                                             <button
-                                                                onClick={() => removeItem(index)}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-red-500 transition-colors hover:text-red-700"
+                                                                onClick={() => toggleCheckItem(item)}
+                                                                disabled={isOutOfStock}
+                                                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                                                                    isOutOfStock
+                                                                        ? "border-zinc-200 bg-zinc-100 cursor-not-allowed opacity-50"
+                                                                        : checkedKeys.includes(getItemKey(item))
+                                                                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                                                                        : "border-zinc-300 hover:border-blue-400 bg-white"
+                                                                }`}
                                                             >
-                                                                <Trash2 size={14} />
-                                                                {t("cart.remove", "Hapus")}
+                                                                {checkedKeys.includes(getItemKey(item)) && <Check size={14} strokeWidth={3} />}
                                                             </button>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="flex items-center justify-between col-span-3 pt-4 border-t border-zinc-100 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
-                                                        <p className="text-sm font-semibold text-zinc-500 sm:hidden">
-                                                            {t("cart.subtotal", "Subtotal")}
-                                                        </p>
-                                                        <div className="flex flex-col sm:items-end">
-                                                            <p className={`text-base font-extrabold ${item.original_price && Number(item.original_price) > Number(item.price) ? "text-rose-600" : "text-blue-900"}`}>
-                                                                {formatPrice(item.price * item.quantity)}
-                                                            </p>
-                                                            {item.original_price && Number(item.original_price) > Number(item.price) && (
-                                                                <p className="text-xs text-zinc-400 line-through">
-                                                                    {formatPrice(item.original_price * item.quantity)}
-                                                                </p>
+                                                        <Link href={`/product/${item.slug}`} className="block overflow-hidden rounded-xl bg-zinc-100 relative">
+                                                            <img
+                                                                src={item.image || "/images/default-product.png"}
+                                                                alt={item.title}
+                                                                className={`object-cover w-full h-24 sm:h-28 ${isOutOfStock ? "grayscale opacity-75" : ""}`}
+                                                            />
+                                                            {isOutOfStock && (
+                                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                                    <span className="text-[10px] font-extrabold text-white uppercase tracking-wider px-2 py-0.5 bg-rose-600 rounded">
+                                                                        {t("cart.out_of_stock", "Stok Habis")}
+                                                                    </span>
+                                                                </div>
                                                             )}
+                                                        </Link>
+
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-700">
+                                                                    {item.subCategory || item.category}
+                                                                </span>
+
+                                                                {/* Badge Stok Realtime */}
+                                                                {isOutOfStock ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-rose-600 border border-rose-200">
+                                                                        <Package size={10} />
+                                                                        {t("cart.out_of_stock", "Stok Habis")}
+                                                                    </span>
+                                                                ) : isLowStock ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700 border border-amber-200">
+                                                                        <Package size={10} />
+                                                                        {t("cart.stock_remaining", "Sisa {count}").replace("{count}", formatNumber(item.stock))}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                                                                        <Package size={10} />
+                                                                        {formatNumber(item.stock)} {t("cart.stock_label", "stok")}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <Link
+                                                                href={`/product/${item.slug}`}
+                                                                className="block mt-2 text-base font-bold truncate transition-colors text-zinc-900 hover:text-blue-700"
+                                                            >
+                                                                {item.title_translations?.[locale] || item.title}
+                                                            </Link>
+
+                                                            <div className="flex flex-wrap mt-1 text-xs gap-x-3 gap-y-1 text-zinc-500">
+                                                                {item.variantNameTranslations?.[locale] || item.variantName ? (
+                                                                    <span>{t("cart.variant_label", "Varian")}: <strong>{item.variantNameTranslations?.[locale] || item.variantName}</strong></span>
+                                                                ) : (
+                                                                    item.color && <span>{t("cart.color_label", "Warna")}: <strong>{item.color}</strong></span>
+                                                                )}
+                                                                {item.subVariantNameTranslations?.[locale] || item.subVariantName ? (
+                                                                    <span>{t("cart.sub_variant_label", "Sub Varian")}: <strong>{item.subVariantNameTranslations?.[locale] || item.subVariantName}</strong></span>
+                                                                ) : (
+                                                                    item.size && <span>{t("cart.size_label", "Ukuran")}: <strong>{item.size}</strong></span>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="flex flex-wrap items-center gap-4 mt-4">
+                                                                <div className="flex overflow-hidden border rounded-xl border-zinc-200 bg-white">
+                                                                    <button
+                                                                        onClick={() => updateQuantity(index, item.quantity - 1)}
+                                                                        disabled={item.quantity <= 1 || isOutOfStock}
+                                                                        className="flex items-center justify-center w-10 h-10 transition-colors text-zinc-500 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed hover:disabled:bg-transparent"
+                                                                    >
+                                                                        <Minus size={14} />
+                                                                    </button>
+                                                                    <div className="flex items-center justify-center w-12 h-10 text-sm font-bold border-x border-zinc-200 text-zinc-900">
+                                                                        {formatNumber(item.quantity)}
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(index, item.quantity + 1)}
+                                                                        disabled={isOutOfStock || item.quantity >= item.stock}
+                                                                        className="flex items-center justify-center w-10 h-10 transition-colors text-zinc-500 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed hover:disabled:bg-transparent"
+                                                                    >
+                                                                        <Plus size={14} />
+                                                                    </button>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => removeItem(index)}
+                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-red-500 transition-colors hover:text-red-700"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                    {t("cart.remove", "Hapus")}
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <p className="mt-1 text-xs text-zinc-400">
-                                                            {t("cart.price_per_item", "{price} / item").replace("{price}", formatPrice(item.price))}
-                                                        </p>
-                                                    </div>
-                                                </motion.div>
-                                            ))}
+
+                                                        <div className="flex items-center justify-between col-span-3 pt-4 border-t border-zinc-100 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
+                                                            <p className="text-sm font-semibold text-zinc-500 sm:hidden">
+                                                                {t("cart.subtotal", "Subtotal")}
+                                                            </p>
+                                                            <div className="flex flex-col sm:items-end">
+                                                                <p className={`text-base font-extrabold ${item.original_price && Number(item.original_price) > Number(item.price) ? "text-rose-600" : "text-blue-900"}`}>
+                                                                    {formatPrice(item.price * item.quantity)}
+                                                                </p>
+                                                                {item.original_price && Number(item.original_price) > Number(item.price) && (
+                                                                    <p className="text-xs text-zinc-400 line-through">
+                                                                        {formatPrice(item.original_price * item.quantity)}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <p className="mt-1 text-xs text-zinc-400">
+                                                                {t("cart.price_per_item", "{price} / item").replace("{price}", formatPrice(item.price))}
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
                                         </AnimatePresence>
                                     </div>
 
@@ -409,11 +586,20 @@ export default function CartPage() {
                                         </div>
                                         <button
                                             onClick={handleCheckout}
-                                            disabled={checkedKeys.length === 0}
+                                            disabled={checkedKeys.length === 0 || isCheckingOut}
                                             className="flex items-center justify-center w-full gap-2 px-5 py-4 mt-6 text-sm font-bold text-white transition-colors shadow-lg rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 shadow-blue-900/20 hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            <Check size={17} />
-                                            {t("cart.checkout", "Checkout")}
+                                            {isCheckingOut ? (
+                                                <span className="inline-flex items-center gap-2">
+                                                    <span className="w-4 h-4 border-2 border-white rounded-full animate-spin border-t-transparent" />
+                                                    {t("cart.checking_stock", "Memeriksa Stok...")}
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <Check size={17} />
+                                                    {t("cart.checkout", "Checkout")}
+                                                </>
+                                            )}
                                         </button>
                                         <p className="mt-3 text-xs text-center text-zinc-400">
                                             {t("cart.checkout_note", "Checkout akan memakai item yang ada di keranjang ini.")}

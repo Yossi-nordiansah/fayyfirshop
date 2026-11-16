@@ -1117,17 +1117,12 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
     const isOutOfStock = currentStock === 0;
     const canBuy = !isOutOfStock && currentPrice > 0;
-    const [cartNotice, setCartNotice] = useState("");
+    const [isAddedSuccess, setIsAddedSuccess] = useState(false);
 
     const handleAddToCart = () => {
         if (!canBuy) return;
 
-        if (!auth?.user) {
-            window.dispatchEvent(new Event("fayyfir-open-login"));
-            return;
-        }
-
-        const cartKey = `fayyfir_cart_${auth.user.id}`;
+        const cartKey = auth?.user ? `fayyfir_cart_${auth.user.id}` : "fayyfir_cart";
 
         // Resolusi nama kategori & subkategori yang kompatibel
         const categoryName = typeof product.category === 'object' && product.category !== null
@@ -1237,8 +1232,19 @@ export default function DetailProduct({ product: initialProduct, slug }) {
 
         localStorage.setItem(cartKey, JSON.stringify(currentCart));
         window.dispatchEvent(new Event("fayyfir-cart-updated"));
-        setCartNotice(t("cart.added", "Produk ditambahkan ke keranjang"));
-        setTimeout(() => setCartNotice(""), 2200);
+
+        window.dispatchEvent(
+            new CustomEvent("fayyfir-show-toast", {
+                detail: {
+                    message: t("cart.added", "Produk ditambahkan ke keranjang"),
+                    actionLabel: t("cart.view", "Lihat Cart"),
+                    actionUrl: "/cart",
+                },
+            })
+        );
+
+        setIsAddedSuccess(true);
+        setTimeout(() => setIsAddedSuccess(false), 1800);
     };
 
     const handleBuyNow = () => {
@@ -1941,13 +1947,49 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                             {/* Action Buttons */}
                             <div className="flex gap-3">
                                 <motion.button
-                                    whileTap={{ scale: 0.97 }}
+                                    whileTap={{ scale: 0.96 }}
                                     disabled={!canBuy}
                                     onClick={handleAddToCart}
-                                    className="flex-1 px-4 flex items-center justify-center gap-2.5 py-4 rounded-2xl border-2 border-blue-600 text-blue-700 font-bold text-sm hover:bg-blue-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-nowrap"
+                                    animate={isAddedSuccess ? { scale: [1, 1.04, 1] } : {}}
+                                    transition={{ duration: 0.3 }}
+                                    className={`flex-1 px-4 flex items-center justify-center gap-2.5 py-4 rounded-2xl border-2 font-bold text-sm transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed text-nowrap ${
+                                        isAddedSuccess
+                                            ? "border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-500/25"
+                                            : "border-blue-600 text-blue-700 hover:bg-blue-50"
+                                    }`}
                                 >
-                                    <ShoppingCart size={18} />
-                                    {t("product.detail.cart_btn", "Keranjang")}
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        {isAddedSuccess ? (
+                                            <motion.span
+                                                key="success"
+                                                initial={{ scale: 0.6, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0.6, opacity: 0 }}
+                                                transition={{ type: "spring", stiffness: 450, damping: 22 }}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <motion.div
+                                                    initial={{ scale: 0, rotate: -30 }}
+                                                    animate={{ scale: [0, 1.35, 1], rotate: 0 }}
+                                                    transition={{ duration: 0.35, ease: "easeOut" }}
+                                                >
+                                                    <Check size={20} strokeWidth={3} className="text-white" />
+                                                </motion.div>
+                                                <span>{t("cart.added_short", "Ditambahkan! ✓")}</span>
+                                            </motion.span>
+                                        ) : (
+                                            <motion.span
+                                                key="cart"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <ShoppingCart size={18} />
+                                                <span>{t("product.detail.cart_btn", "Keranjang")}</span>
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
                                 </motion.button>
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
@@ -1969,20 +2011,6 @@ export default function DetailProduct({ product: initialProduct, slug }) {
                                 <Check size={18} />
                                 {t("product.detail.buy_btn", "Beli Sekarang")}
                             </motion.button>
-                            {cartNotice && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -6 }}
-                                    className="flex items-center gap-2 px-4 py-3 text-sm font-semibold border rounded-xl border-emerald-200 bg-emerald-50 text-emerald-700"
-                                >
-                                    <Check size={16} />
-                                    {cartNotice}
-                                    <Link href="/cart" className="ml-auto text-blue-700 hover:underline">
-                                        {t("cart.view", "Lihat Cart")}
-                                    </Link>
-                                </motion.div>
-                            )}
 
                             {/* Payment Method */}
                             <div className="flex flex-col items-center gap-2 px-4 py-2 border shadow-lg rounded-2xl bg-zinc-100 border-zinc-100">
